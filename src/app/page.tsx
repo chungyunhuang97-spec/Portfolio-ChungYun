@@ -3,6 +3,8 @@ import { ArrowRight, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { getAllSiteContent, getPublishedProjects } from "@/lib/data";
 import { FadeIn } from "@/components/FadeIn";
 
+export const revalidate = 60;
+
 export default async function Home() {
   const [siteContent, caseStudies, sideProjects] = await Promise.all([
     getAllSiteContent(),

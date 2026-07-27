@@ -1,0 +1,180 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, ArrowRight, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
+import { getAdjacentProjects, getProjectWithSections } from "@/lib/data";
+import { FadeIn } from "@/components/FadeIn";
+import { SectionBlock } from "@/components/SectionBlock";
+
+export const revalidate = 60;
+
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const result = await getProjectWithSections(slug);
+
+  if (!result) {
+    return { title: "Not found" };
+  }
+
+  return {
+    title: `${result.project.title} — Chung Yun Huang`,
+    description: result.project.subtitle ?? undefined,
+  };
+}
+
+export default async function ProjectPage({ params }: PageProps) {
+  const { slug } = await params;
+  const result = await getProjectWithSections(slug);
+
+  if (!result) {
+    notFound();
+  }
+
+  const { project, sections } = result;
+  const heroSection = sections.find((s) => s.section_type === "hero");
+  const bodySections = sections.filter((s) => s.section_type !== "hero");
+
+  const heroTitle = (heroSection?.content.title as string | undefined) ?? project.title;
+  const heroSubtitle =
+    (heroSection?.content.subtitle as string | undefined) ?? project.subtitle ?? null;
+  const heroTagline = heroSection?.content.tagline as string | undefined;
+
+  const metaItems = [project.category, project.role, project.timeframe, project.client, project.team].filter(
+    (v): v is string => Boolean(v)
+  );
+
+  const { prev, next } = await getAdjacentProjects(slug);
+
+  return (
+    <main className="flex-1">
+      <div className="mx-auto max-w-[1400px] px-6 pt-10 md:px-10">
+        <Link
+          href="/#work"
+          className="inline-flex items-center gap-2 text-xs tracking-[0.15em] text-ink-faint transition-colors hover:text-ink"
+        >
+          <ArrowLeft size={14} weight="light" />
+          ALL WORK
+        </Link>
+      </div>
+
+      <section className="mx-auto max-w-[1400px] px-6 pb-16 pt-8 md:px-10 md:pb-24 md:pt-10">
+        <FadeIn>
+          {heroTagline && (
+            <p className="text-xs tracking-[0.25em] text-accent">{heroTagline.toUpperCase()}</p>
+          )}
+          <h1 className="mt-4 max-w-[20ch] text-3xl leading-tight tracking-tight md:text-5xl">
+            {heroTitle}
+          </h1>
+          {heroSubtitle && (
+            <p className="mt-6 max-w-[60ch] text-lg leading-relaxed text-ink-muted">
+              {heroSubtitle}
+            </p>
+          )}
+
+          {metaItems.length > 0 && (
+            <p className="mt-8 flex flex-wrap gap-x-2 gap-y-1 text-sm text-ink-faint">
+              {metaItems.map((item, i) => (
+                <span key={item}>
+                  {item}
+                  {i < metaItems.length - 1 && <span className="mx-2">·</span>}
+                </span>
+              ))}
+            </p>
+          )}
+
+          {project.tags.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1">
+              {project.tags.map((tag) => (
+                <span key={tag} className="text-[11px] tracking-[0.15em] text-ink-faint">
+                  {tag.toUpperCase()}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {project.external_url && (
+            <a
+              href={project.external_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-8 inline-flex items-center gap-2 border-b border-ink pb-1 text-sm tracking-wide transition-colors hover:border-accent hover:text-accent"
+            >
+              View live
+              <ArrowUpRight size={16} weight="light" />
+            </a>
+          )}
+        </FadeIn>
+      </section>
+
+      <section className="border-t border-line">
+        <div className="mx-auto max-w-[1400px] divide-y divide-line px-6 md:px-10">
+          {bodySections.map((section) => (
+            <FadeIn key={section.id}>
+              <SectionBlock section={section} />
+            </FadeIn>
+          ))}
+        </div>
+      </section>
+
+      {(prev || next) && (
+        <section className="border-t border-line">
+          <div className="mx-auto grid max-w-[1400px] grid-cols-1 divide-y divide-line md:grid-cols-2 md:divide-x md:divide-y-0 md:px-10">
+            {prev ? (
+              <Link
+                href={`/work/${prev.slug}`}
+                className="group flex items-center justify-between gap-4 px-6 py-8 md:px-10"
+              >
+                <div>
+                  <p className="text-xs tracking-[0.2em] text-ink-faint">PREVIOUS</p>
+                  <p className="mt-2 text-lg transition-colors group-hover:text-accent">
+                    {prev.title}
+                  </p>
+                </div>
+                <ArrowLeft
+                  size={18}
+                  weight="light"
+                  className="shrink-0 text-ink-faint transition-transform group-hover:-translate-x-1 group-hover:text-accent"
+                />
+              </Link>
+            ) : (
+              <div className="hidden md:block" />
+            )}
+            {next ? (
+              <Link
+                href={`/work/${next.slug}`}
+                className="group flex items-center justify-between gap-4 px-6 py-8 md:px-10"
+              >
+                <div className="md:text-right md:ml-auto">
+                  <p className="text-xs tracking-[0.2em] text-ink-faint">NEXT</p>
+                  <p className="mt-2 text-lg transition-colors group-hover:text-accent">
+                    {next.title}
+                  </p>
+                </div>
+                <ArrowRight
+                  size={18}
+                  weight="light"
+                  className="shrink-0 text-ink-faint transition-transform group-hover:translate-x-1 group-hover:text-accent md:order-first"
+                />
+              </Link>
+            ) : (
+              <div className="hidden md:block" />
+            )}
+          </div>
+        </section>
+      )}
+
+      <footer className="border-t border-line">
+        <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-6 py-10 text-sm text-ink-faint md:flex-row md:items-center md:justify-between md:px-10">
+          <p>© {new Date().getFullYear()} Chung Yun Huang</p>
+          <a href="mailto:chungyunhuang97@gmail.com" className="transition-colors hover:text-ink">
+            chungyunhuang97@gmail.com
+          </a>
+        </div>
+      </footer>
+    </main>
+  );
+}
