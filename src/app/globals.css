@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #fafaf9;
+  --color-bg-inverse: #111110;
+  --color-ink: #171716;
+  --color-ink-muted: #57534e;
+  --color-ink-faint: #a8a29e;
+  --color-accent: #2f4f78;
+  --color-accent-soft: #eef2f6;
+  --color-line: #e7e5e4;
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-bg-inverse: var(--color-bg-inverse);
+  --color-ink: var(--color-ink);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-ink-faint: var(--color-ink-faint);
+  --color-accent: var(--color-accent);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-line: var(--color-line);
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-outfit);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  overflow-x: clip;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-style: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
