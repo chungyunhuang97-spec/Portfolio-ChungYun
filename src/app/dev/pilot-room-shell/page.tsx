@@ -31,7 +31,10 @@ export default function PilotRoomShellPage() {
           <CameraToyModel scale={0.6} />
         </group>
 
-        <group position={[0, 0, 0.5]} rotation={[0, Math.PI, 0]}>
+        {/* No rotation here — CharacterModel is built with its front
+            (face, chest circuit panel, knees, toes) facing local +Z, which
+            already points roughly toward this camera's position. */}
+        <group position={[0, 0, 0.3]}>
           <CharacterModel scale={1.1} />
         </group>
 
