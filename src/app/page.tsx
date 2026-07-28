@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { getAllSiteContent, getPublishedProjects } from "@/lib/data";
 import { FadeIn } from "@/components/FadeIn";
+import { ScrollHero } from "@/components/ScrollHero";
 
 export const revalidate = 60;
 
@@ -19,46 +20,8 @@ export default async function Home() {
 
   return (
     <main className="flex-1">
-      {/* Hero — split, asymmetric. Right pane reserved for the 3D / scroll-world treatment. */}
-      <section className="mx-auto max-w-[1400px] px-6 pt-20 pb-16 md:px-10 md:pt-28 md:pb-24">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-[1.1fr_0.9fr] md:gap-8">
-          <FadeIn>
-            <p className="text-xs tracking-[0.25em] text-ink-faint">PRODUCT DESIGNER — REMOTE</p>
-            <h1 className="mt-4 text-4xl leading-none tracking-tight md:text-6xl">
-              黃崇耘
-              <span className="block text-2xl font-normal text-ink-muted md:text-3xl">
-                Chung Yun Huang
-              </span>
-            </h1>
-            <p className="mt-8 max-w-[52ch] text-lg leading-relaxed text-ink-muted">
-              {heroTagline}
-            </p>
-            <div className="mt-10 flex flex-wrap items-center gap-6">
-              <a
-                href="mailto:chungyunhuang97@gmail.com"
-                className="group inline-flex items-center gap-2 border-b border-ink pb-1 text-sm tracking-wide transition-colors hover:border-accent hover:text-accent"
-              >
-                Get in touch
-                <ArrowUpRight size={16} weight="light" />
-              </a>
-              <a
-                href="#work"
-                className="inline-flex items-center gap-2 text-sm tracking-wide text-ink-muted transition-colors hover:text-ink"
-              >
-                View case studies
-              </a>
-            </div>
-          </FadeIn>
-
-          <FadeIn delay={0.1}>
-            <div className="relative flex h-full min-h-[280px] items-center justify-center border border-dashed border-line bg-accent-soft/60 p-8 text-center md:min-h-[420px]">
-              <p className="text-xs tracking-[0.2em] text-accent">
-                HERO VISUAL — 3D / SCROLL-WORLD TREATMENT LANDS HERE NEXT
-              </p>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
+      {/* Hero — scroll-scrubbed video journey through the room. */}
+      <ScrollHero tagline={heroTagline} />
 
       {/* About + positioning */}
       <section className="border-t border-line">
