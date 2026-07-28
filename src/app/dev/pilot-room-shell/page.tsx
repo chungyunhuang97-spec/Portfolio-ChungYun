@@ -4,11 +4,13 @@ import { Canvas } from "@react-three/fiber";
 import { Environment, OrbitControls } from "@react-three/drei";
 import { RoomShellModel } from "@/components/three/RoomShellModel";
 import { CameraToyModel } from "@/components/three/CameraToyModel";
+import { CharacterModel } from "@/components/three/CharacterModel";
 
 // Pilot preview for the room "shell" (architecture only: walls, floor, trim,
 // doorway, alcove, wall plaques). The camera-toy module is dropped into the
-// alcove just to sanity-check that furnishings will read correctly at scale
-// once composed into this coordinate frame — it is not final placement.
+// alcove and the seated character is dropped near room-center just to
+// sanity-check that furnishings will read correctly at scale once composed
+// into this coordinate frame — neither placement is final.
 export default function PilotRoomShellPage() {
   return (
     <div className="h-dvh w-full bg-[#cfcabf]">
@@ -27,6 +29,10 @@ export default function PilotRoomShellPage() {
 
         <group position={[2.6, 4.3, -1.1]} rotation={[0, -Math.PI / 8, 0]}>
           <CameraToyModel scale={0.6} />
+        </group>
+
+        <group position={[0, 0, 0.5]} rotation={[0, Math.PI, 0]}>
+          <CharacterModel scale={1.1} />
         </group>
 
         <OrbitControls target={[0, 3, -1]} enablePan minDistance={4} maxDistance={20} />
