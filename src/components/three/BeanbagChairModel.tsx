@@ -1,11 +1,12 @@
 "use client";
 
-// Beanbag chair (ref: generated close-up) — a squashed glossy pouf with a
-// concave pinch/dent at the top center (not a smooth round dome — the seams
-// converge into an actual crater, like a real bean-bag's stitched top).
-// Body is a lathed profile (bottom pole -> belly -> shoulder -> dimple rim ->
-// down into the dimple floor) so the dent is real geometry, not just a
-// texture trick. Seams are tubes following that same surface path.
+// Beanbag chair (ref: generated close-up) — a puffy glossy body with a real
+// seat pocket dented into the top center: deep enough that it reads as
+// "someone could sit down into the middle of it", not just a shallow dimple.
+// The pocket is actual geometry (a lathed profile that rises to a rim then
+// drops steeply to a floor well below it), and the radial seams are tubes
+// that ride that same rim-then-drop path so they visually converge at the
+// bottom of the seat pocket.
 export const SCULPT_MODULE_ID = "beanbag-chair";
 
 import { useMemo } from "react";
@@ -25,46 +26,49 @@ function Glossy({ color, roughness = 0.16 }: { color: string; roughness?: number
 }
 
 // Cross-section profile in unit space: [radius, height], traced from the
-// bottom pole, out through the belly, up the shoulder, over the outer rim of
-// the top dimple (the highest point), then back down and in to the dimple's
-// center floor — that last up-then-down segment is what creates the dent.
+// bottom pole, out through the belly, up the shoulder, up to the raised rim
+// of the seat pocket (the highest point), then steeply back down and in to
+// the pocket floor — a big rim-to-floor drop so the dent reads as a real
+// seat, not a surface crease.
 const BODY_PROFILE: [number, number][] = [
   [0.0, 0.0],
-  [0.55, 0.02],
-  [0.92, 0.18],
-  [1.0, 0.42],
-  [0.9, 0.68],
-  [0.62, 0.86],
-  [0.34, 0.955], // outer rim of the dimple — highest point
-  [0.14, 0.9], // dimple inner wall, curving back down
-  [0.0, 0.845], // dimple floor / seam convergence point (lower than the rim)
+  [0.5, 0.02],
+  [0.88, 0.16],
+  [1.0, 0.4], // widest belly
+  [0.95, 0.62], // shoulder
+  [0.8, 0.8], // rising toward the seat rim
+  [0.6, 0.94], // seat rim — highest point
+  [0.46, 0.88], // just inside the rim, start of the inner wall
+  [0.28, 0.62], // steep inner wall dropping into the seat pocket
+  [0.12, 0.46],
+  [0.0, 0.42], // seat pocket floor — well below the rim (0.94 -> 0.42)
 ];
 
-// Same path, trimmed to just the upper portion (shoulder -> dimple floor)
+// Same path, trimmed to just the upper portion (shoulder -> pocket floor)
 // since the reference shows seam creases only on the upper dome, fading out
 // before the wide belly.
 const SEAM_PROFILE: [number, number][] = [
-  [0.92, 0.18],
-  [1.0, 0.42],
-  [0.9, 0.68],
-  [0.62, 0.86],
-  [0.34, 0.955],
-  [0.14, 0.9],
-  [0.0, 0.845],
+  [0.95, 0.62],
+  [0.8, 0.8],
+  [0.6, 0.94],
+  [0.46, 0.88],
+  [0.28, 0.62],
+  [0.12, 0.46],
+  [0.0, 0.42],
 ];
 
 function useBodyGeometry() {
   return useMemo(() => {
     const spline = new THREE.SplineCurve(BODY_PROFILE.map(([r, y]) => new THREE.Vector2(r, y)));
-    const pts = spline.getPoints(48);
-    return new THREE.LatheGeometry(pts, 48);
+    const pts = spline.getPoints(56);
+    return new THREE.LatheGeometry(pts, 56);
   }, []);
 }
 
 function useSeamCurve(angle: number, scaleX: number, scaleY: number) {
   return useMemo(() => {
     const spline = new THREE.SplineCurve(SEAM_PROFILE.map(([r, y]) => new THREE.Vector2(r, y)));
-    const pts2d = spline.getPoints(24);
+    const pts2d = spline.getPoints(28);
     const points = pts2d.map(
       (p) => new THREE.Vector3(Math.cos(angle) * p.x * scaleX, p.y * scaleY, Math.sin(angle) * p.x * scaleX)
     );
@@ -89,7 +93,7 @@ function Seam({
   const curve = useSeamCurve(angle, scaleX, scaleY);
   return (
     <mesh>
-      <tubeGeometry args={[curve, 24, 0.042, 8, false]} />
+      <tubeGeometry args={[curve, 28, 0.042, 8, false]} />
       <Glossy color={color} roughness={0.28} />
     </mesh>
   );
