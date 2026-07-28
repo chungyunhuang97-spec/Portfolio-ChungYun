@@ -1,9 +1,11 @@
 "use client";
 
-// Beanbag chair (ref: generated close-up) — a squashed glossy dome with
-// radial seam creases converging at a top-center pinch point, matching the
-// vinyl bean-bag look. Seams are built as tubes following the dome surface
-// (not straight lines) so they read as pinched fabric, not sticks.
+// Beanbag chair (ref: generated close-up) — a squashed glossy pouf with a
+// concave pinch/dent at the top center (not a smooth round dome — the seams
+// converge into an actual crater, like a real bean-bag's stitched top).
+// Body is a lathed profile (bottom pole -> belly -> shoulder -> dimple rim ->
+// down into the dimple floor) so the dent is real geometry, not just a
+// texture trick. Seams are tubes following that same surface path.
 export const SCULPT_MODULE_ID = "beanbag-chair";
 
 import { useMemo } from "react";
@@ -22,38 +24,72 @@ function Glossy({ color, roughness = 0.16 }: { color: string; roughness?: number
   );
 }
 
-function useSeamCurve(radiusX: number, radiusY: number, angle: number, rimDrop: number) {
+// Cross-section profile in unit space: [radius, height], traced from the
+// bottom pole, out through the belly, up the shoulder, over the outer rim of
+// the top dimple (the highest point), then back down and in to the dimple's
+// center floor — that last up-then-down segment is what creates the dent.
+const BODY_PROFILE: [number, number][] = [
+  [0.0, 0.0],
+  [0.55, 0.02],
+  [0.92, 0.18],
+  [1.0, 0.42],
+  [0.9, 0.68],
+  [0.62, 0.86],
+  [0.34, 0.955], // outer rim of the dimple — highest point
+  [0.14, 0.9], // dimple inner wall, curving back down
+  [0.0, 0.845], // dimple floor / seam convergence point (lower than the rim)
+];
+
+// Same path, trimmed to just the upper portion (shoulder -> dimple floor)
+// since the reference shows seam creases only on the upper dome, fading out
+// before the wide belly.
+const SEAM_PROFILE: [number, number][] = [
+  [0.92, 0.18],
+  [1.0, 0.42],
+  [0.9, 0.68],
+  [0.62, 0.86],
+  [0.34, 0.955],
+  [0.14, 0.9],
+  [0.0, 0.845],
+];
+
+function useBodyGeometry() {
   return useMemo(() => {
-    const points: THREE.Vector3[] = [];
-    const steps = 6;
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps; // 0 = top pole, 1 = rim
-      const phi = (Math.PI / 2) * t; // polar angle from top pole down to equator-ish
-      const r = Math.sin(phi);
-      const y = Math.cos(phi) * radiusY - rimDrop * t * t;
-      points.push(
-        new THREE.Vector3(Math.cos(angle) * r * radiusX, y, Math.sin(angle) * r * radiusX)
-      );
-    }
+    const spline = new THREE.SplineCurve(BODY_PROFILE.map(([r, y]) => new THREE.Vector2(r, y)));
+    const pts = spline.getPoints(48);
+    return new THREE.LatheGeometry(pts, 48);
+  }, []);
+}
+
+function useSeamCurve(angle: number, scaleX: number, scaleY: number) {
+  return useMemo(() => {
+    const spline = new THREE.SplineCurve(SEAM_PROFILE.map(([r, y]) => new THREE.Vector2(r, y)));
+    const pts2d = spline.getPoints(24);
+    const points = pts2d.map(
+      (p) => new THREE.Vector3(Math.cos(angle) * p.x * scaleX, p.y * scaleY, Math.sin(angle) * p.x * scaleX)
+    );
     return new THREE.CatmullRomCurve3(points);
-  }, [radiusX, radiusY, angle, rimDrop]);
+  }, [angle, scaleX, scaleY]);
 }
 
 function Seam({
-  radiusX,
-  radiusY,
   angle,
+  scaleX,
+  scaleY,
   color,
 }: {
-  radiusX: number;
-  radiusY: number;
   angle: number;
+  scaleX: number;
+  scaleY: number;
   color: string;
 }) {
-  const curve = useSeamCurve(radiusX * 1.01, radiusY * 1.01, angle, radiusY * 0.15);
+  // Scale is baked directly into the curve's point positions (not a group
+  // scale) so the tube's circular cross-section doesn't get squashed into an
+  // ellipse by non-uniform x/y scaling.
+  const curve = useSeamCurve(angle, scaleX, scaleY);
   return (
     <mesh>
-      <tubeGeometry args={[curve, 20, 0.045, 8, false]} />
+      <tubeGeometry args={[curve, 24, 0.042, 8, false]} />
       <Glossy color={color} roughness={0.28} />
     </mesh>
   );
@@ -64,24 +100,22 @@ export function BeanbagChairModel(props: { color?: string; scale?: number; seams
   const radiusX = 1.15;
   const radiusY = 0.95;
   const seamColor = new THREE.Color(color).offsetHSL(0, 0.05, -0.08).getStyle();
+  const bodyGeometry = useBodyGeometry();
 
   return (
     <group scale={scale} name={SCULPT_MODULE_ID}>
-      <mesh position={[0, radiusY * 0.55, 0]} scale={[radiusX, radiusY, radiusX]}>
-        <sphereGeometry args={[1, 48, 32]} />
+      <mesh geometry={bodyGeometry} scale={[radiusX, radiusY, radiusX]}>
         <Glossy color={color} />
       </mesh>
-      <group position={[0, radiusY * 0.55, 0]}>
-        {Array.from({ length: seams }).map((_, i) => (
-          <Seam
-            key={i}
-            radiusX={radiusX}
-            radiusY={radiusY}
-            angle={(i / seams) * Math.PI * 2}
-            color={seamColor}
-          />
-        ))}
-      </group>
+      {Array.from({ length: seams }).map((_, i) => (
+        <Seam
+          key={i}
+          angle={(i / seams) * Math.PI * 2}
+          scaleX={radiusX * 1.01}
+          scaleY={radiusY * 1.01}
+          color={seamColor}
+        />
+      ))}
     </group>
   );
 }
