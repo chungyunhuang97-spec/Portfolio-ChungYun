@@ -49,26 +49,28 @@ const PALETTE = {
   decal: "#2b2925",
 };
 
-function Matte({ color, roughness = 0.55 }: { color: string; roughness?: number }) {
+function Matte({ color, roughness = 0.4 }: { color: string; roughness?: number }) {
   return (
     <meshPhysicalMaterial
       color={color}
       roughness={roughness}
       metalness={0}
-      clearcoat={0.15}
-      clearcoatRoughness={0.4}
+      clearcoat={0.5}
+      clearcoatRoughness={0.2}
+      envMapIntensity={1.1}
     />
   );
 }
 
-function Porcelain({ color = PALETTE.skin, roughness = 0.42 }: { color?: string; roughness?: number }) {
+function Porcelain({ color = PALETTE.skin, roughness = 0.28 }: { color?: string; roughness?: number }) {
   return (
     <meshPhysicalMaterial
       color={color}
       roughness={roughness}
       metalness={0}
-      clearcoat={0.35}
-      clearcoatRoughness={0.25}
+      clearcoat={0.6}
+      clearcoatRoughness={0.15}
+      envMapIntensity={1.2}
     />
   );
 }
@@ -100,97 +102,86 @@ function HoodieShell({ dense = false }: { dense?: boolean }) {
   );
 }
 
-// Procedural circuit-board texture: a central "chip" square plus right-angle
-// traces radiating outward with small pads at each bend, glowing blue on a
-// transparent ground. Baked once with a seeded PRNG so the board is stable
-// across re-renders. A second, sparser variant (fewer/shorter traces, no
-// chip) is used for the sleeve bleed-over patches.
-function useCircuitTexture(withChip: boolean, seed: number) {
-  return useMemo(() => {
-    const size = 512;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return new THREE.Texture();
-    ctx.clearRect(0, 0, size, size);
+// Circuit-board glow, built from literal glowing 3D line segments instead
+// of a canvas texture — a texture-on-curved-geometry approach was rendering
+// at near-zero visibility (likely a colorSpace/UV interaction on the
+// partial-cylinder wrap) and wasn't worth further blind debugging. Solid
+// unlit geometry can't fail to show up. Each "trace" is a bright core line
+// plus a wider, dimmer halo box behind it to fake a soft glow without real
+// bloom post-processing.
+function CircuitTrace({
+  x,
+  y,
+  w,
+  h,
+}: {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}) {
+  return (
+    <group position={[x, y, 0]}>
+      <mesh position={[0, 0, -0.006]}>
+        <boxGeometry args={[w + 0.03, h + 0.03, 0.006]} />
+        <meshBasicMaterial color="#4fc8ff" transparent opacity={0.55} toneMapped={false} depthWrite={false} />
+      </mesh>
+      <mesh>
+        <boxGeometry args={[w, h, 0.012]} />
+        <meshBasicMaterial color="#eafcff" toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
 
-    const drawGlowLine = (x1: number, y1: number, x2: number, y2: number, w: number) => {
-      ctx.strokeStyle = "rgba(120,200,255,0.85)";
-      ctx.lineWidth = w * 3;
-      ctx.shadowColor = "rgba(90,180,255,0.9)";
-      ctx.shadowBlur = w * 4;
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "#eaf6ff";
-      ctx.lineWidth = w;
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-    };
+function CircuitPad({ x, y }: { x: number; y: number }) {
+  return (
+    <mesh position={[x, y, -0.003]}>
+      <cylinderGeometry args={[0.02, 0.02, 0.01, 12]} />
+      <meshBasicMaterial color="#bfe9ff" transparent opacity={0.85} toneMapped={false} depthWrite={false} />
+    </mesh>
+  );
+}
 
-    const cx = size / 2;
-    const cy = withChip ? size * 0.4 : size * 0.5;
+// Chip + radiating right-angle traces, laid out on a flat XY plane in
+// local units matching the torso's front face. Mirrored L-R so it reads
+// as a deliberate board rather than random noise.
+function CircuitBoard({ scale = 1 }: { scale?: number }) {
+  const s = scale;
+  return (
+    <group scale={s}>
+      {/* central chip */}
+      <mesh>
+        <boxGeometry args={[0.09, 0.09, 0.014]} />
+        <meshBasicMaterial color="#eafcff" toneMapped={false} />
+      </mesh>
+      <mesh position={[0, 0, -0.006]}>
+        <boxGeometry args={[0.13, 0.13, 0.006]} />
+        <meshBasicMaterial color="#4fc8ff" transparent opacity={0.55} toneMapped={false} depthWrite={false} />
+      </mesh>
 
-    let s = seed;
-    const rand = () => {
-      s = (s * 9301 + 49297) % 233280;
-      return s / 233280;
-    };
+      {/* traces radiating out — mirrored pairs */}
+      <CircuitTrace x={0} y={0.14} w={0.014} h={0.16} />
+      <CircuitPad x={0} y={0.22} />
+      <CircuitTrace x={0} y={-0.15} w={0.014} h={0.16} />
+      <CircuitPad x={0} y={-0.23} />
 
-    if (withChip) {
-      const chip = size * 0.16;
-      ctx.shadowColor = "rgba(90,180,255,0.9)";
-      ctx.shadowBlur = 26;
-      ctx.fillStyle = "rgba(140,210,255,0.85)";
-      ctx.fillRect(cx - chip / 2, cy - chip / 2, chip, chip);
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "#eaf6ff";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(cx - chip / 2, cy - chip / 2, chip, chip);
-    }
+      {[-1, 1].map((side) => (
+        <group key={side}>
+          <CircuitTrace x={side * 0.13} y={0.05} w={0.14} h={0.013} />
+          <CircuitTrace x={side * 0.2} y={0.05} w={0.013} h={0.12} />
+          <CircuitPad x={side * 0.2} y={0.11} />
 
-    const traceCount = withChip ? 18 : 9;
-    const startR = withChip ? size * 0.08 + 4 : 6;
-    for (let i = 0; i < traceCount; i++) {
-      const angle = (i / traceCount) * Math.PI * 2;
-      let x = cx + Math.cos(angle) * startR;
-      let y = cy + Math.sin(angle) * startR;
-      const segs = 2 + Math.floor(rand() * 2);
-      for (let sgi = 0; sgi < segs; sgi++) {
-        const horizontal = rand() > 0.5;
-        const len = (withChip ? 26 : 20) + rand() * (withChip ? 60 : 46);
-        const nx = horizontal ? x + (rand() > 0.5 ? len : -len) : x;
-        const ny = horizontal ? y : y + (rand() > 0.5 ? len : -len);
-        drawGlowLine(x, y, nx, ny, 2 + rand() * 1.4);
-        ctx.fillStyle = "rgba(160,220,255,0.9)";
-        ctx.beginPath();
-        ctx.arc(nx, ny, 3, 0, Math.PI * 2);
-        ctx.fill();
-        x = nx;
-        y = ny;
-      }
-    }
+          <CircuitTrace x={side * 0.12} y={-0.06} w={0.13} h={0.013} />
+          <CircuitTrace x={side * 0.185} y={-0.12} w={0.013} h={0.12} />
+          <CircuitPad x={side * 0.185} y={-0.18} />
 
-    if (withChip) {
-      for (let i = 0; i < 5; i++) {
-        const y = size * 0.06 + i * (size * 0.02);
-        drawGlowLine(size * 0.06, y, size * 0.34, y, 1.3);
-      }
-      for (let i = 0; i < 5; i++) {
-        const y = size * 0.82 + i * (size * 0.02);
-        drawGlowLine(size * 0.62, y, size * 0.94, y, 1.3);
-      }
-    }
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
-  }, [withChip, seed]);
+          <CircuitTrace x={side * 0.06} y={0.16} w={0.013} h={0.1} />
+          <CircuitTrace x={side * 0.1} y={0.21} w={0.09} h={0.012} />
+        </group>
+      ))}
+    </group>
+  );
 }
 
 // A capsule "bone" drawn between two points — reused for thighs, shins,
@@ -230,35 +221,6 @@ function Limb({
       <mesh>
         <capsuleGeometry args={[radius, Math.max(length - radius * 1.4, 0.02), 6, 12]} />
         <Matte color={color} roughness={roughness} />
-      </mesh>
-    </group>
-  );
-}
-
-// Small curved circuit-glow patch on the outer face of the upper sleeve —
-// the reference shows the chest circuit pattern bleeding down onto the
-// arms, not stopping cleanly at the shoulder seam.
-function SleeveCircuitPatch({
-  start,
-  end,
-  radius,
-  side,
-  texture,
-}: {
-  start: [number, number, number];
-  end: [number, number, number];
-  radius: number;
-  side: 1 | -1;
-  texture: THREE.Texture;
-}) {
-  const { mid, quat } = segmentTransform(start, end);
-  return (
-    <group position={mid} quaternion={quat}>
-      {/* offset + rotated so the patch sits on the outer-front face of the
-          limb rather than wrapping it symmetrically */}
-      <mesh rotation={[0, side * 0.9, 0]}>
-        <cylinderGeometry args={[radius + 0.01, radius + 0.01, 0.42, 16, 1, true, Math.PI * 0.2, Math.PI * 0.7]} />
-        <meshBasicMaterial map={texture} transparent toneMapped={false} side={THREE.DoubleSide} />
       </mesh>
     </group>
   );
@@ -384,7 +346,7 @@ function Head({ y }: { y: number }) {
       </mesh>
       {/* ears */}
       {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * (headR * 0.97), 0.36, 0.02]} scale={[0.35, 0.55, 0.22]}>
+        <mesh key={s} position={[s * (headR * 0.92), 0.38, 0.01]} scale={[0.24, 0.36, 0.16]}>
           <sphereGeometry args={[headR, 16, 16]} />
           <Porcelain />
         </mesh>
@@ -424,8 +386,6 @@ function Head({ y }: { y: number }) {
 
 export function CharacterModel(props: { scale?: number }) {
   const scale = props.scale ?? 1;
-  const chestCircuit = useCircuitTexture(true, 7);
-  const sleeveCircuit = useCircuitTexture(false, 23);
 
   const hipY = 1.0;
   // Torso box half-extents — cropped short, hem sits just above the
@@ -503,15 +463,11 @@ export function CharacterModel(props: { scale?: number }) {
   <HoodieShell />
         </RoundedBox>
 
-        {/* circuit panel showing through the chest — curved partial
-            cylinder wrapping the front of the torso, arc centered on +Z
-            (theta=PI/2) so it faces forward with no extra rotation. */}
-        <mesh position={[0, torsoCenterY + 0.04, 0]}>
-          <cylinderGeometry
-            args={[torsoHalfD + 0.03, torsoHalfD + 0.03, 0.5, 24, 1, true, Math.PI * 0.12, Math.PI * 0.76]}
-          />
-          <meshBasicMaterial map={chestCircuit} transparent toneMapped={false} side={THREE.DoubleSide} />
-        </mesh>
+        {/* circuit board glowing through the chest — flat geometric
+            traces sitting just proud of the torso's front face */}
+        <group position={[0, torsoCenterY + 0.05, torsoHalfD + 0.008]}>
+          <CircuitBoard scale={1.05} />
+        </group>
 
         {/* zipper */}
         <mesh position={[0, torsoCenterY, torsoHalfD + 0.01]}>
@@ -555,8 +511,19 @@ export function CharacterModel(props: { scale?: number }) {
       <Limb start={armElbow(-1)} end={armWrist(-1)} radius={0.1} color={PALETTE.hoodieShell} roughness={0.28} />
 
       {/* circuit bleed-over patches on the outer upper sleeves */}
-      <SleeveCircuitPatch start={armShoulder(1)} end={armElbow(1)} radius={0.16} side={1} texture={sleeveCircuit} />
-      <SleeveCircuitPatch start={armShoulder(-1)} end={armElbow(-1)} radius={0.16} side={-1} texture={sleeveCircuit} />
+      {[1, -1].map((side) => {
+        const { mid, quat } = segmentTransform(armShoulder(side as 1 | -1), armElbow(side as 1 | -1));
+        // Two nested groups: outer aligns to the limb's own orientation
+        // (quaternion), inner applies an additional twist so the little
+        // board faces outward from the arm rather than straight up.
+        return (
+          <group key={side} position={mid} quaternion={quat}>
+            <group rotation={[0, side * 1.1, 0]} position={[0, 0, 0.16]}>
+              <CircuitBoard scale={0.4} />
+            </group>
+          </group>
+        );
+      })}
 
       {/* ribbed cuff rings at the wrist */}
       {[armWrist(1), armWrist(-1)].map((p, i) => (
