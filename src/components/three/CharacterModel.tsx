@@ -286,38 +286,33 @@ function DrawstringCord({ side }: { side: 1 | -1 }) {
   );
 }
 
+// Simple, deliberately safe chair: a flat backrest panel instead of a
+// wraparound lathe shell. The previous lathe-revolve backrest had its
+// open-gap orientation miscalculated and its profile reached y=1.68 (world
+// y ~2.5, at/above head height) with a radius (0.6) wider than the torso
+// — it was silently enveloping the entire seated figure. A flat panel with
+// explicit, easy-to-verify bounds removes that whole failure mode.
 function DeskChair() {
-  const backProfile = useMemo(() => {
-    const pts: [number, number][] = [
-      [0.02, 0.0],
-      [0.42, 0.03],
-      [0.6, 0.16],
-      [0.57, 0.5],
-      [0.54, 0.95],
-      [0.49, 1.35],
-      [0.42, 1.6],
-      [0.3, 1.68],
-    ];
-    const spline = new THREE.SplineCurve(pts.map(([r, y]) => new THREE.Vector2(r, y)));
-    const points = spline.getPoints(48);
-    return new THREE.LatheGeometry(points, 48, Math.PI * 0.79, Math.PI * 1.72);
-  }, []);
-
   return (
-    <group position={[0, 0, -0.15]} name="desk-chair">
-      <mesh position={[0, 0.42, 0]}>
+    <group position={[0, 0, -0.4]} name="desk-chair">
+      {/* pedestal */}
+      <mesh position={[0, 0.42, 0.4]}>
         <cylinderGeometry args={[0.09, 0.13, 0.84, 20]} />
         <meshPhysicalMaterial color={PALETTE.pedestal} roughness={0.35} metalness={0.4} />
       </mesh>
-      <mesh position={[0, 0.03, 0]}>
+      <mesh position={[0, 0.03, 0.4]}>
         <cylinderGeometry args={[0.34, 0.36, 0.06, 28]} />
         <meshPhysicalMaterial color={PALETTE.pedestal} roughness={0.4} metalness={0.35} />
       </mesh>
-      <mesh geometry={backProfile} position={[0, 0.82, 0]}>
-        <Matte color={PALETTE.chairFabric} roughness={0.6} />
-      </mesh>
-      <RoundedBox args={[0.9, 0.12, 0.84]} radius={0.08} smoothness={4} position={[0, 0.94, 0.2]}>
+      {/* seat cushion */}
+      <RoundedBox args={[0.9, 0.12, 0.84]} radius={0.08} smoothness={4} position={[0, 0.94, 0.6]}>
         <Matte color={PALETTE.chairFabricShadow} roughness={0.65} />
+      </RoundedBox>
+      {/* backrest — a flat, gently curved panel, clearly narrower and
+          shorter than the figure, sitting well behind it (z=0) with no
+          wraparound geometry at all */}
+      <RoundedBox args={[0.78, 0.9, 0.12]} radius={0.14} smoothness={4} position={[0, 1.15, 0]} rotation={[-0.06, 0, 0]}>
+        <Matte color={PALETTE.chairFabric} roughness={0.6} />
       </RoundedBox>
     </group>
   );
@@ -381,8 +376,7 @@ function Head({ y }: { y: number }) {
       {/* cranium */}
       <mesh position={[0, 0.4, 0]} scale={[0.96, 1.04, 0.94]}>
         <sphereGeometry args={[headR, 32, 32]} />
-        {/* DEBUG: cranium/head = ORANGE */}
-        <meshBasicMaterial color="#ff8800" />
+<Porcelain />
       </mesh>
       {/* jaw taper */}
       <mesh position={[0, 0.22, 0.02]} scale={[0.8, 0.6, 0.8]}>
@@ -399,8 +393,7 @@ function Head({ y }: { y: number }) {
       {/* hair — short side-swept cap over the crown, slightly asymmetric */}
       <mesh position={[0, 0.42, -0.01]} rotation={[0, 0, -0.06]} scale={[1.03, 1, 1.01]}>
         <sphereGeometry args={[headR * 1.05, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
-        {/* DEBUG: hair cap = MAGENTA */}
-        <meshBasicMaterial color="#ff00c8" side={THREE.DoubleSide} />
+<Matte color={PALETTE.hair} roughness={0.42} />
       </mesh>
       {/* eyebrows */}
       {[-1, 1].map((s) => (
@@ -508,8 +501,7 @@ export function CharacterModel(props: { scale?: number }) {
           smoothness={4}
           position={[0, torsoCenterY, 0]}
         >
-          {/* DEBUG: torso body = RED */}
-          <meshBasicMaterial color="#ff2d2d" />
+  <HoodieShell />
         </RoundedBox>
 
         {/* circuit panel showing through the chest — curved partial
@@ -532,8 +524,7 @@ export function CharacterModel(props: { scale?: number }) {
             the back rises up high behind the neck */}
         <mesh position={[0, torsoHalfH * 2 + torsoCenterY - 0.16, -0.02]} rotation={[0.55, 0, 0]}>
           <torusGeometry args={[0.26, 0.075, 12, 28]} />
-          {/* DEBUG: hood collar ring = GREEN */}
-          <meshBasicMaterial color="#22cc44" />
+<HoodieShell dense />
         </mesh>
 
         {/* hood volume — big rounded dome sitting behind the neck/shoulders */}
@@ -542,8 +533,7 @@ export function CharacterModel(props: { scale?: number }) {
           scale={[1, 0.85, 0.8]}
         >
           <sphereGeometry args={[0.34, 28, 28, 0, Math.PI * 2, 0, Math.PI * 0.66]} />
-          {/* DEBUG: hood dome = YELLOW */}
-          <meshBasicMaterial color="#ffd400" side={THREE.DoubleSide} />
+<HoodieShell dense />
         </mesh>
         {/* center back seam on the hood */}
         <mesh
