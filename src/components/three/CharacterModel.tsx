@@ -68,9 +68,9 @@ function Porcelain({ color = PALETTE.skin, roughness = 0.28 }: { color?: string;
       color={color}
       roughness={roughness}
       metalness={0}
-      clearcoat={0.6}
-      clearcoatRoughness={0.15}
-      envMapIntensity={1.2}
+      clearcoat={0.65}
+      clearcoatRoughness={0.1}
+      envMapIntensity={1.5}
     />
   );
 }
@@ -92,11 +92,11 @@ function HoodieShell({ dense = false }: { dense?: boolean }) {
   return (
     <meshPhysicalMaterial
       color={PALETTE.hoodieShell}
-      roughness={dense ? 0.3 : 0.22}
+      roughness={dense ? 0.26 : 0.18}
       metalness={0}
-      clearcoat={0.7}
-      clearcoatRoughness={0.12}
-      envMapIntensity={1.1}
+      clearcoat={0.85}
+      clearcoatRoughness={0.08}
+      envMapIntensity={1.6}
       side={THREE.DoubleSide}
     />
   );
@@ -122,13 +122,13 @@ function CircuitTrace({
 }) {
   return (
     <group position={[x, y, 0]}>
-      <mesh position={[0, 0, -0.006]}>
-        <boxGeometry args={[w + 0.03, h + 0.03, 0.006]} />
-        <meshBasicMaterial color="#4fc8ff" transparent opacity={0.55} toneMapped={false} depthWrite={false} />
+      <mesh position={[0, 0, -0.007]}>
+        <boxGeometry args={[w + 0.045, h + 0.045, 0.007]} />
+        <meshBasicMaterial color="#eaffff" transparent opacity={0.7} toneMapped={false} depthWrite={false} />
       </mesh>
       <mesh>
-        <boxGeometry args={[w, h, 0.012]} />
-        <meshBasicMaterial color="#eafcff" toneMapped={false} />
+        <boxGeometry args={[w, h, 0.014]} />
+        <meshBasicMaterial color="#ffffff" toneMapped={false} />
       </mesh>
     </group>
   );
@@ -137,8 +137,8 @@ function CircuitTrace({
 function CircuitPad({ x, y }: { x: number; y: number }) {
   return (
     <mesh position={[x, y, -0.003]}>
-      <cylinderGeometry args={[0.02, 0.02, 0.01, 12]} />
-      <meshBasicMaterial color="#bfe9ff" transparent opacity={0.85} toneMapped={false} depthWrite={false} />
+      <cylinderGeometry args={[0.022, 0.022, 0.012, 12]} />
+      <meshBasicMaterial color="#ffffff" transparent opacity={0.95} toneMapped={false} depthWrite={false} />
     </mesh>
   );
 }
@@ -152,12 +152,12 @@ function CircuitBoard({ scale = 1 }: { scale?: number }) {
     <group scale={s}>
       {/* central chip */}
       <mesh>
-        <boxGeometry args={[0.09, 0.09, 0.014]} />
-        <meshBasicMaterial color="#eafcff" toneMapped={false} />
+        <boxGeometry args={[0.1, 0.1, 0.016]} />
+        <meshBasicMaterial color="#ffffff" toneMapped={false} />
       </mesh>
-      <mesh position={[0, 0, -0.006]}>
-        <boxGeometry args={[0.13, 0.13, 0.006]} />
-        <meshBasicMaterial color="#4fc8ff" transparent opacity={0.55} toneMapped={false} depthWrite={false} />
+      <mesh position={[0, 0, -0.007]}>
+        <boxGeometry args={[0.16, 0.16, 0.007]} />
+        <meshBasicMaterial color="#eaffff" transparent opacity={0.7} toneMapped={false} depthWrite={false} />
       </mesh>
 
       {/* traces radiating out — mirrored pairs */}
@@ -392,7 +392,7 @@ export function CharacterModel(props: { scale?: number }) {
   // waistband (a thin sliver of waistband is visible below the hem).
   const torsoHalfW = 0.55;
   const torsoHalfH = 0.34;
-  const torsoHalfD = 0.27;
+  const torsoHalfD = 0.21;
   const torsoCenterY = 0.39; // local, relative to hipY
   const shoulderY = hipY + torsoCenterY + torsoHalfH - 0.05;
 
@@ -456,7 +456,7 @@ export function CharacterModel(props: { scale?: number }) {
       <group position={[0, hipY, 0]}>
         <RoundedBox
           args={[torsoHalfW * 2, torsoHalfH * 2, torsoHalfD * 2]}
-          radius={0.06}
+          radius={0.045}
           smoothness={4}
           position={[0, torsoCenterY, 0]}
         >
@@ -466,7 +466,7 @@ export function CharacterModel(props: { scale?: number }) {
         {/* circuit board glowing through the chest — flat geometric
             traces sitting just proud of the torso's front face */}
         <group position={[0, torsoCenterY + 0.05, torsoHalfD + 0.008]}>
-          <CircuitBoard scale={1.05} />
+          <CircuitBoard scale={1.5} />
         </group>
 
         {/* zipper */}
@@ -475,11 +475,21 @@ export function CharacterModel(props: { scale?: number }) {
           <meshPhysicalMaterial color={PALETTE.zipper} roughness={0.3} metalness={0.4} />
         </mesh>
 
+        {/* kangaroo pocket — flat, slightly proud panel on the lower front */}
+        <RoundedBox
+          args={[torsoHalfW * 0.82, torsoHalfH * 0.62, 0.05]}
+          radius={0.035}
+          smoothness={3}
+          position={[0, torsoCenterY - torsoHalfH * 0.62, torsoHalfD + 0.015]}
+        >
+          <HoodieShell dense />
+        </RoundedBox>
+
         {/* hood collar ring — tilted so the front dips toward the chest and
             the back rises up high behind the neck */}
         <mesh position={[0, torsoHalfH * 2 + torsoCenterY - 0.16, -0.02]} rotation={[0.55, 0, 0]}>
           <torusGeometry args={[0.26, 0.075, 12, 28]} />
-<HoodieShell dense />
+          <meshPhysicalMaterial color="#3aa8d6" roughness={0.26} clearcoat={0.7} clearcoatRoughness={0.12} envMapIntensity={1.2} side={THREE.DoubleSide} />
         </mesh>
 
         {/* hood volume — big rounded dome sitting behind the neck/shoulders */}
@@ -488,7 +498,7 @@ export function CharacterModel(props: { scale?: number }) {
           scale={[1, 0.85, 0.8]}
         >
           <sphereGeometry args={[0.34, 28, 28, 0, Math.PI * 2, 0, Math.PI * 0.66]} />
-<HoodieShell dense />
+          <meshPhysicalMaterial color="#3aa8d6" roughness={0.26} clearcoat={0.7} clearcoatRoughness={0.12} envMapIntensity={1.2} side={THREE.DoubleSide} />
         </mesh>
         {/* center back seam on the hood */}
         <mesh

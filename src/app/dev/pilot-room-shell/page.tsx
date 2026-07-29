@@ -23,7 +23,12 @@ export default function PilotRoomShellPage() {
           shadow-mapSize={[2048, 2048]}
         />
         <ambientLight intensity={0.45} />
-        <Environment preset="apartment" environmentIntensity={0.5} />
+        <directionalLight
+          position={[5, 3, 6]}
+          intensity={0.9}
+          color="#eaf6ff"
+        />
+        <Environment preset="apartment" environmentIntensity={0.65} />
 
         <RoomShellModel />
 
