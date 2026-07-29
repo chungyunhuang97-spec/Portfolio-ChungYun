@@ -392,7 +392,7 @@ function Head({ y }: { y: number }) {
       ))}
       {/* hair — short side-swept cap over the crown, slightly asymmetric */}
       <mesh position={[0, 0.42, -0.01]} rotation={[0, 0, -0.06]} scale={[1.03, 1, 1.01]}>
-        <sphereGeometry args={[headR * 1.05, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
+        <sphereGeometry args={[headR * 1.05, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.34]} />
 <Matte color={PALETTE.hair} roughness={0.42} />
       </mesh>
       {/* eyebrows */}
