@@ -77,25 +77,25 @@ function Porcelain({ color = PALETTE.skin, roughness = 0.42 }: { color?: string;
 // circuit panel underneath reads as "glowing through" rather than printed
 // on top. Transmission kept modest (not full glass) so it reads as thick
 // coated fabric/PVC rather than a glass bottle.
+// DIAGNOSTIC PASS: temporarily replaced the transmission-based glass
+// material with a plain, stable, lightly-transparent material. Physically
+// based `transmission` needs a correctly configured render target/
+// background to resolve, and is the leading suspect for why the hoodie
+// was reading as a single featureless blob with a black hole instead of a
+// boxy garment with a visible chest panel and hood ring. This version has
+// NO transmission — just flat color + opacity — so we can confirm the
+// underlying geometry reads correctly before re-introducing a translucent
+// look (via a safer approach: plain transparency, no physical refraction).
 function HoodieShell({ dense = false }: { dense?: boolean }) {
   return (
     <meshPhysicalMaterial
       color={PALETTE.hoodieShell}
-      roughness={0.24}
+      roughness={0.35}
       metalness={0}
-      transmission={dense ? 0.12 : 0.35}
-      thickness={0.5}
-      ior={1.35}
-      clearcoat={0.5}
-      clearcoatRoughness={0.18}
-      envMapIntensity={0.9}
+      clearcoat={0.4}
+      clearcoatRoughness={0.2}
       transparent
-      opacity={dense ? 0.98 : 0.94}
-      // Open partial-sphere/torus shapes (the hood dome, collar ring) show
-      // their backface from some angles — without DoubleSide that backface
-      // is invisible and renders through to whatever is behind it (a black
-      // void), which is what made the hood read as a hollow black hole in
-      // the first render of this pass.
+      opacity={dense ? 0.95 : 0.8}
       side={THREE.DoubleSide}
     />
   );
@@ -502,7 +502,7 @@ export function CharacterModel(props: { scale?: number }) {
       <group position={[0, hipY, 0]}>
         <RoundedBox
           args={[torsoHalfW * 2, torsoHalfH * 2, torsoHalfD * 2]}
-          radius={0.2}
+          radius={0.1}
           smoothness={4}
           position={[0, torsoCenterY, 0]}
         >
