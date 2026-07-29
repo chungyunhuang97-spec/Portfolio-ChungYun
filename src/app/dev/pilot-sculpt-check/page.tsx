@@ -12,13 +12,13 @@ import { SculptGeneratedCharacterBlockout } from "@/components/three/SculptGener
 export default function PilotSculptCheckPage() {
   return (
     <div className="h-dvh w-full bg-[#cfcabf]">
-      <Canvas shadows camera={{ position: [3, 2, 3.5], fov: 35 }}>
+      <Canvas shadows camera={{ position: [2.5, 3.4, 3.2], fov: 35 }}>
         <color attach="background" args={["#cfcabf"]} />
         <directionalLight position={[-3, 4, 2]} intensity={2.2} castShadow />
         <ambientLight intensity={0.5} />
         <Environment preset="apartment" environmentIntensity={0.6} />
         <SculptGeneratedCharacterBlockout scale={1.4} />
-        <OrbitControls />
+        <OrbitControls target={[0, 1.95, 0]} />
       </Canvas>
     </div>
   );
