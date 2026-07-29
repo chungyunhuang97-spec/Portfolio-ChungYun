@@ -36,7 +36,7 @@ const PALETTE = {
   hair: "#1d1a17",
   fabricLight: "#f1efe9", // sweatpants
   sneaker: "#f6f5f0",
-  hoodieShell: "#cdeaf7",
+  hoodieShell: "#4fc3ea",
   drawstring: "#f2efe6",
   zipper: "#c7cdd2",
   chairFabric: "#e7e1d3",
@@ -90,12 +90,11 @@ function HoodieShell({ dense = false }: { dense?: boolean }) {
   return (
     <meshPhysicalMaterial
       color={PALETTE.hoodieShell}
-      roughness={0.35}
+      roughness={dense ? 0.3 : 0.22}
       metalness={0}
-      clearcoat={0.4}
-      clearcoatRoughness={0.2}
-      transparent
-      opacity={dense ? 0.95 : 0.8}
+      clearcoat={0.7}
+      clearcoatRoughness={0.12}
+      envMapIntensity={1.1}
       side={THREE.DoubleSide}
     />
   );
@@ -497,7 +496,7 @@ export function CharacterModel(props: { scale?: number }) {
       <group position={[0, hipY, 0]}>
         <RoundedBox
           args={[torsoHalfW * 2, torsoHalfH * 2, torsoHalfD * 2]}
-          radius={0.1}
+          radius={0.06}
           smoothness={4}
           position={[0, torsoCenterY, 0]}
         >
@@ -509,7 +508,7 @@ export function CharacterModel(props: { scale?: number }) {
             (theta=PI/2) so it faces forward with no extra rotation. */}
         <mesh position={[0, torsoCenterY + 0.04, 0]}>
           <cylinderGeometry
-            args={[torsoHalfD + 0.015, torsoHalfD + 0.015, 0.5, 24, 1, true, Math.PI * 0.12, Math.PI * 0.76]}
+            args={[torsoHalfD + 0.03, torsoHalfD + 0.03, 0.5, 24, 1, true, Math.PI * 0.12, Math.PI * 0.76]}
           />
           <meshBasicMaterial map={chestCircuit} transparent toneMapped={false} side={THREE.DoubleSide} />
         </mesh>
@@ -550,14 +549,14 @@ export function CharacterModel(props: { scale?: number }) {
 
       {/* arms — puffy balloon sleeves bent forward at the elbow toward the
           laptop keyboard, cinched to a ribbed cuff at the wrist */}
-      <Limb start={armShoulder(1)} end={armElbow(1)} radius={0.175} color={PALETTE.hoodieShell} roughness={0.3} />
-      <Limb start={armShoulder(-1)} end={armElbow(-1)} radius={0.175} color={PALETTE.hoodieShell} roughness={0.3} />
-      <Limb start={armElbow(1)} end={armWrist(1)} radius={0.115} color={PALETTE.hoodieShell} roughness={0.3} />
-      <Limb start={armElbow(-1)} end={armWrist(-1)} radius={0.115} color={PALETTE.hoodieShell} roughness={0.3} />
+      <Limb start={armShoulder(1)} end={armElbow(1)} radius={0.16} color={PALETTE.hoodieShell} roughness={0.28} />
+      <Limb start={armShoulder(-1)} end={armElbow(-1)} radius={0.16} color={PALETTE.hoodieShell} roughness={0.28} />
+      <Limb start={armElbow(1)} end={armWrist(1)} radius={0.1} color={PALETTE.hoodieShell} roughness={0.28} />
+      <Limb start={armElbow(-1)} end={armWrist(-1)} radius={0.1} color={PALETTE.hoodieShell} roughness={0.28} />
 
       {/* circuit bleed-over patches on the outer upper sleeves */}
-      <SleeveCircuitPatch start={armShoulder(1)} end={armElbow(1)} radius={0.175} side={1} texture={sleeveCircuit} />
-      <SleeveCircuitPatch start={armShoulder(-1)} end={armElbow(-1)} radius={0.175} side={-1} texture={sleeveCircuit} />
+      <SleeveCircuitPatch start={armShoulder(1)} end={armElbow(1)} radius={0.16} side={1} texture={sleeveCircuit} />
+      <SleeveCircuitPatch start={armShoulder(-1)} end={armElbow(-1)} radius={0.16} side={-1} texture={sleeveCircuit} />
 
       {/* ribbed cuff rings at the wrist */}
       {[armWrist(1), armWrist(-1)].map((p, i) => (
