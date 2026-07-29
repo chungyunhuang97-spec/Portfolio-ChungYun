@@ -91,6 +91,12 @@ function HoodieShell({ dense = false }: { dense?: boolean }) {
       envMapIntensity={0.9}
       transparent
       opacity={dense ? 0.98 : 0.94}
+      // Open partial-sphere/torus shapes (the hood dome, collar ring) show
+      // their backface from some angles — without DoubleSide that backface
+      // is invisible and renders through to whatever is behind it (a black
+      // void), which is what made the hood read as a hollow black hole in
+      // the first render of this pass.
+      side={THREE.DoubleSide}
     />
   );
 }
@@ -260,12 +266,15 @@ function SleeveCircuitPatch({
 }
 
 function DrawstringCord({ side }: { side: 1 | -1 }) {
+  // Local to the hip-offset torso group: hangs from just below the hood
+  // collar ring (~0.86) down to mid-chest (~0.46), hugging the front face
+  // of the (now much shorter, cropped) torso box.
   const curve = useMemo(() => {
     const points = [
-      new THREE.Vector3(side * 0.07, 1.6, 0.24),
-      new THREE.Vector3(side * 0.1, 1.42, 0.28),
-      new THREE.Vector3(side * 0.075, 1.24, 0.3),
-      new THREE.Vector3(side * 0.045, 1.1, 0.28),
+      new THREE.Vector3(side * 0.06, 0.86, 0.29),
+      new THREE.Vector3(side * 0.09, 0.72, 0.32),
+      new THREE.Vector3(side * 0.07, 0.58, 0.33),
+      new THREE.Vector3(side * 0.045, 0.46, 0.3),
     ];
     return new THREE.CatmullRomCurve3(points);
   }, [side]);
@@ -528,7 +537,7 @@ export function CharacterModel(props: { scale?: number }) {
           position={[0, torsoHalfH * 2 + torsoCenterY + 0.02, -0.22]}
           scale={[1, 0.85, 0.8]}
         >
-          <sphereGeometry args={[0.34, 28, 28, 0, Math.PI * 2, 0, Math.PI * 0.75]} />
+          <sphereGeometry args={[0.34, 28, 28, 0, Math.PI * 2, 0, Math.PI * 0.66]} />
           <HoodieShell dense />
         </mesh>
         {/* center back seam on the hood */}
