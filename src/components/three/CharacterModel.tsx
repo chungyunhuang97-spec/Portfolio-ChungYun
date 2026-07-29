@@ -381,7 +381,8 @@ function Head({ y }: { y: number }) {
       {/* cranium */}
       <mesh position={[0, 0.4, 0]} scale={[0.96, 1.04, 0.94]}>
         <sphereGeometry args={[headR, 32, 32]} />
-        <Porcelain />
+        {/* DEBUG: cranium/head = ORANGE */}
+        <meshBasicMaterial color="#ff8800" />
       </mesh>
       {/* jaw taper */}
       <mesh position={[0, 0.22, 0.02]} scale={[0.8, 0.6, 0.8]}>
@@ -398,7 +399,8 @@ function Head({ y }: { y: number }) {
       {/* hair — short side-swept cap over the crown, slightly asymmetric */}
       <mesh position={[0, 0.42, -0.01]} rotation={[0, 0, -0.06]} scale={[1.03, 1, 1.01]}>
         <sphereGeometry args={[headR * 1.05, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
-        <Matte color={PALETTE.hair} roughness={0.42} />
+        {/* DEBUG: hair cap = MAGENTA */}
+        <meshBasicMaterial color="#ff00c8" side={THREE.DoubleSide} />
       </mesh>
       {/* eyebrows */}
       {[-1, 1].map((s) => (
@@ -506,7 +508,8 @@ export function CharacterModel(props: { scale?: number }) {
           smoothness={4}
           position={[0, torsoCenterY, 0]}
         >
-          <HoodieShell />
+          {/* DEBUG: torso body = RED */}
+          <meshBasicMaterial color="#ff2d2d" />
         </RoundedBox>
 
         {/* circuit panel showing through the chest — curved partial
@@ -529,7 +532,8 @@ export function CharacterModel(props: { scale?: number }) {
             the back rises up high behind the neck */}
         <mesh position={[0, torsoHalfH * 2 + torsoCenterY - 0.16, -0.02]} rotation={[0.55, 0, 0]}>
           <torusGeometry args={[0.26, 0.075, 12, 28]} />
-          <HoodieShell dense />
+          {/* DEBUG: hood collar ring = GREEN */}
+          <meshBasicMaterial color="#22cc44" />
         </mesh>
 
         {/* hood volume — big rounded dome sitting behind the neck/shoulders */}
@@ -538,7 +542,8 @@ export function CharacterModel(props: { scale?: number }) {
           scale={[1, 0.85, 0.8]}
         >
           <sphereGeometry args={[0.34, 28, 28, 0, Math.PI * 2, 0, Math.PI * 0.66]} />
-          <HoodieShell dense />
+          {/* DEBUG: hood dome = YELLOW */}
+          <meshBasicMaterial color="#ffd400" side={THREE.DoubleSide} />
         </mesh>
         {/* center back seam on the hood */}
         <mesh
