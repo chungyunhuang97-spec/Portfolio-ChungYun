@@ -2,14 +2,14 @@
 
 // Standalone wooden shelf unit inside its blue arch frame (ref: generated
 // empty-shelf close-up). Distinct from RoomShellModel's wall-recessed
-// ArchFrame — this is the freestanding furniture version so it can be
+// ArchFrame -- this is the freestanding furniture version so it can be
 // dropped into the room shell's alcove and later hold the camera / blocks /
 // radio modules as children.
 export const SCULPT_MODULE_ID = "shelf-unit";
 
 import { RoundedBox } from "@react-three/drei";
 
-function GlossyTrim({ color = "#1f6fca" }: { color?: string }) {
+function GlossyTrim({ color = "#1860be" }: { color?: string }) {
   return (
     <meshPhysicalMaterial
       color={color}
@@ -21,14 +21,14 @@ function GlossyTrim({ color = "#1f6fca" }: { color?: string }) {
   );
 }
 
-function Wood({ color = "#d98f3e" }: { color?: string }) {
+function Wood({ color = "#dc842c" }: { color?: string }) {
   return <meshPhysicalMaterial color={color} roughness={0.35} clearcoat={0.4} metalness={0} />;
 }
 
 export function ShelfUnitModel(props: { scale?: number }) {
   const scale = props.scale ?? 1;
   const width = 2.4;
-  const height = 3.6;
+  const height = 3.42; // measured ratio ~1:1.42 (width:height) from reference photo
   const depth = 0.9;
   const radius = width / 2;
   const legHeight = height - radius;
