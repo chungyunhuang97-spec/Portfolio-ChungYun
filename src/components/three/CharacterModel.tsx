@@ -1,30 +1,18 @@
 "use client";
 
-// Seated character at the desk. Rev 3 — rebuilt against a proper 3-view
-// turnaround sheet (front / side / back) generated from the approved
-// reference art, so proportions below are traced from real orthographic
-// views instead of guessed from a single 3/4 photo.
+// Seated character at the desk. Rev 4 — face + chair updated against the
+// approved isolated character turnaround (front / side / back, plain
+// background, seated on the actual desk-chair design instead of the old
+// placeholder panel chair).
 //
-// Key corrections from the turnaround:
-//  - Head is proportionally larger (~1/6.8 of standing height) than a
-//    realistic figure — toy/collectible proportions, not human ones.
-//  - Short, dark, side-swept hair (a rounded "cap" over the crown), not
-//    bald, and not a buzzcut.
-//  - Face is flat 2D-decal style: short dash eyes + dash eyebrows + a small
-//    dash nose + a dash mouth. No sculpted 3D nose.
-//  - Ears are visible small bumps.
-//  - Hoodie is cropped MUCH shorter than the first two passes — it ends
-//    right at/just above the waistband, exposing the sweatpants' drawstring
-//    waistband underneath.
-//  - Hood is a big rounded volume (a dome + a tilted collar ring), not a
-//    thin flat pad — the back view shows a substantial rounded shape with a
-//    center seam, sitting high behind the neck.
-//  - Sleeves are balloon-puffy through the arm and cinch to a distinct
-//    ribbed cuff at the wrist. The circuit-board glow is not chest-only —
-//    it bleeds down onto the upper sleeves too.
-//
-// This module still bundles a placeholder scoop desk chair since no
-// separate chair/desk module exists yet ("桌面小物" comes after this pass).
+// Changes from rev3:
+//  - Eyebrows: stronger inward/downward angle for a more deliberate,
+//    focused expression (was a near-flat 0.05 rad tilt).
+//  - DeskChair: replaced the flat-panel placeholder with a real swivel
+//    office chair — 5-arm star wheelbase with casters, gas-lift column,
+//    swivel disc, and plump rounded seat + backrest cushions, traced from
+//    the approved reference (deep glossy blue, distinct from the
+//    character's cyan hoodie).
 export const SCULPT_MODULE_ID = "character-seated-desk";
 
 import { useMemo } from "react";
@@ -41,6 +29,8 @@ const PALETTE = {
   zipper: "#c7cdd2",
   chairFabric: "#e7e1d3",
   chairFabricShadow: "#d3ccbb",
+  chairBlue: "#2f6fd1",
+  chairBlueDark: "#254f9e",
   pedestal: "#9a948a",
   laptopBody: "#d8d8d6",
   laptopScreen: "#14171c",
@@ -75,19 +65,6 @@ function Porcelain({ color = PALETTE.skin, roughness = 0.28 }: { color?: string;
   );
 }
 
-// Translucent hoodie shell — frosted, semi-see-through fabric so the
-// circuit panel underneath reads as "glowing through" rather than printed
-// on top. Transmission kept modest (not full glass) so it reads as thick
-// coated fabric/PVC rather than a glass bottle.
-// DIAGNOSTIC PASS: temporarily replaced the transmission-based glass
-// material with a plain, stable, lightly-transparent material. Physically
-// based `transmission` needs a correctly configured render target/
-// background to resolve, and is the leading suspect for why the hoodie
-// was reading as a single featureless blob with a black hole instead of a
-// boxy garment with a visible chest panel and hood ring. This version has
-// NO transmission — just flat color + opacity — so we can confirm the
-// underlying geometry reads correctly before re-introducing a translucent
-// look (via a safer approach: plain transparency, no physical refraction).
 function HoodieShell({ dense = false }: { dense?: boolean }) {
   return (
     <meshPhysicalMaterial
@@ -102,13 +79,6 @@ function HoodieShell({ dense = false }: { dense?: boolean }) {
   );
 }
 
-// Circuit-board glow, built from literal glowing 3D line segments instead
-// of a canvas texture — a texture-on-curved-geometry approach was rendering
-// at near-zero visibility (likely a colorSpace/UV interaction on the
-// partial-cylinder wrap) and wasn't worth further blind debugging. Solid
-// unlit geometry can't fail to show up. Each "trace" is a bright core line
-// plus a wider, dimmer halo box behind it to fake a soft glow without real
-// bloom post-processing.
 function CircuitTrace({
   x,
   y,
@@ -143,14 +113,10 @@ function CircuitPad({ x, y }: { x: number; y: number }) {
   );
 }
 
-// Chip + radiating right-angle traces, laid out on a flat XY plane in
-// local units matching the torso's front face. Mirrored L-R so it reads
-// as a deliberate board rather than random noise.
 function CircuitBoard({ scale = 1 }: { scale?: number }) {
   const s = scale;
   return (
     <group scale={s}>
-      {/* central chip */}
       <mesh>
         <boxGeometry args={[0.1, 0.1, 0.016]} />
         <meshBasicMaterial color="#ffffff" toneMapped={false} />
@@ -160,7 +126,6 @@ function CircuitBoard({ scale = 1 }: { scale?: number }) {
         <meshBasicMaterial color="#eaffff" transparent opacity={0.7} toneMapped={false} depthWrite={false} />
       </mesh>
 
-      {/* traces radiating out — mirrored pairs */}
       <CircuitTrace x={0} y={0.14} w={0.014} h={0.16} />
       <CircuitPad x={0} y={0.22} />
       <CircuitTrace x={0} y={-0.15} w={0.014} h={0.16} />
@@ -184,11 +149,6 @@ function CircuitBoard({ scale = 1 }: { scale?: number }) {
   );
 }
 
-// A capsule "bone" drawn between two points — reused for thighs, shins,
-// upper arms and forearms so limbs can be posed by moving joint points
-// rather than hand-rotating each mesh. Also returns its own transform so
-// callers (like the sleeve circuit patch) can attach decals in the same
-// local frame.
 function segmentTransform(start: [number, number, number], end: [number, number, number]) {
   const a = new THREE.Vector3(...start);
   const b = new THREE.Vector3(...end);
@@ -227,9 +187,6 @@ function Limb({
 }
 
 function DrawstringCord({ side }: { side: 1 | -1 }) {
-  // Local to the hip-offset torso group: hangs from just below the hood
-  // collar ring (~0.86) down to mid-chest (~0.46), hugging the front face
-  // of the (now much shorter, cropped) torso box.
   const curve = useMemo(() => {
     const points = [
       new THREE.Vector3(side * 0.06, 0.86, 0.29),
@@ -247,33 +204,41 @@ function DrawstringCord({ side }: { side: 1 | -1 }) {
   );
 }
 
-// Simple, deliberately safe chair: a flat backrest panel instead of a
-// wraparound lathe shell. The previous lathe-revolve backrest had its
-// open-gap orientation miscalculated and its profile reached y=1.68 (world
-// y ~2.5, at/above head height) with a radius (0.6) wider than the torso
-// — it was silently enveloping the entire seated figure. A flat panel with
-// explicit, easy-to-verify bounds removes that whole failure mode.
 function DeskChair() {
+  const legCount = 5;
+  const legLen = 0.4;
   return (
     <group position={[0, 0, -0.4]} name="desk-chair">
-      {/* pedestal */}
+      {Array.from({ length: legCount }).map((_, i) => {
+        const angle = (i / legCount) * Math.PI * 2;
+        const ex = Math.cos(angle) * legLen;
+        const ez = Math.sin(angle) * legLen;
+        return (
+          <group key={i}>
+            <mesh position={[ex * 0.55, 0.05, 0.4 + ez * 0.55]} rotation={[0, -angle, 0]}>
+              <boxGeometry args={[legLen, 0.05, 0.07]} />
+              <meshPhysicalMaterial color={PALETTE.chairBlueDark} roughness={0.3} metalness={0.25} clearcoat={0.6} />
+            </mesh>
+            <mesh position={[ex, 0.045, 0.4 + ez]}>
+              <cylinderGeometry args={[0.045, 0.045, 0.055, 12]} />
+              <meshPhysicalMaterial color={PALETTE.chairBlueDark} roughness={0.35} metalness={0.3} />
+            </mesh>
+          </group>
+        );
+      })}
       <mesh position={[0, 0.42, 0.4]}>
-        <cylinderGeometry args={[0.09, 0.13, 0.84, 20]} />
-        <meshPhysicalMaterial color={PALETTE.pedestal} roughness={0.35} metalness={0.4} />
+        <cylinderGeometry args={[0.065, 0.085, 0.72, 16]} />
+        <meshPhysicalMaterial color={PALETTE.chairBlueDark} roughness={0.3} metalness={0.3} clearcoat={0.6} />
       </mesh>
-      <mesh position={[0, 0.03, 0.4]}>
-        <cylinderGeometry args={[0.34, 0.36, 0.06, 28]} />
-        <meshPhysicalMaterial color={PALETTE.pedestal} roughness={0.4} metalness={0.35} />
+      <mesh position={[0, 0.79, 0.4]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.05, 20]} />
+        <meshPhysicalMaterial color={PALETTE.chairBlueDark} roughness={0.35} metalness={0.3} />
       </mesh>
-      {/* seat cushion */}
-      <RoundedBox args={[0.9, 0.12, 0.84]} radius={0.08} smoothness={4} position={[0, 0.94, 0.6]}>
-        <Matte color={PALETTE.chairFabricShadow} roughness={0.65} />
+      <RoundedBox args={[0.88, 0.18, 0.82]} radius={0.16} smoothness={4} position={[0, 0.92, 0.6]}>
+        <meshPhysicalMaterial color={PALETTE.chairBlue} roughness={0.22} metalness={0} clearcoat={0.8} clearcoatRoughness={0.1} envMapIntensity={1.4} />
       </RoundedBox>
-      {/* backrest — a flat, gently curved panel, clearly narrower and
-          shorter than the figure, sitting well behind it (z=0) with no
-          wraparound geometry at all */}
-      <RoundedBox args={[0.78, 0.9, 0.12]} radius={0.14} smoothness={4} position={[0, 1.15, 0]} rotation={[-0.06, 0, 0]}>
-        <Matte color={PALETTE.chairFabric} roughness={0.6} />
+      <RoundedBox args={[0.74, 0.92, 0.18]} radius={0.3} smoothness={4} position={[0, 1.28, 0.04]} rotation={[-0.08, 0, 0]}>
+        <meshPhysicalMaterial color={PALETTE.chairBlue} roughness={0.22} metalness={0} clearcoat={0.8} clearcoatRoughness={0.1} envMapIntensity={1.4} />
       </RoundedBox>
     </group>
   );
@@ -322,60 +287,48 @@ function Mug() {
   );
 }
 
-// Head sits at the given world Y (top of neck). Larger, toy-proportioned
-// head; short dark side-swept hair cap; flat 2D-decal facial features
-// (dash eyes/brows/nose/mouth) instead of sculpted features; visible ears.
 function Head({ y }: { y: number }) {
   const headR = 0.32;
   return (
     <group position={[0, y, 0.01]}>
-      {/* neck */}
       <mesh position={[0, 0.09, 0]}>
         <cylinderGeometry args={[0.13, 0.15, 0.16, 16]} />
         <Porcelain />
       </mesh>
-      {/* cranium */}
       <mesh position={[0, 0.4, 0]} scale={[0.96, 1.04, 0.94]}>
         <sphereGeometry args={[headR, 32, 32]} />
 <Porcelain />
       </mesh>
-      {/* jaw taper */}
       <mesh position={[0, 0.22, 0.02]} scale={[0.8, 0.6, 0.8]}>
         <sphereGeometry args={[headR, 24, 24]} />
         <Porcelain />
       </mesh>
-      {/* ears */}
       {[-1, 1].map((s) => (
         <mesh key={s} position={[s * (headR * 0.92), 0.38, 0.01]} scale={[0.24, 0.36, 0.16]}>
           <sphereGeometry args={[headR, 16, 16]} />
           <Porcelain />
         </mesh>
       ))}
-      {/* hair — short side-swept cap over the crown, slightly asymmetric */}
       <mesh position={[0, 0.42, -0.01]} rotation={[0, 0, -0.06]} scale={[1.03, 1, 1.01]}>
         <sphereGeometry args={[headR * 1.05, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.34]} />
 <Matte color={PALETTE.hair} roughness={0.42} />
       </mesh>
-      {/* eyebrows */}
       {[-1, 1].map((s) => (
-        <mesh key={"brow" + s} position={[s * 0.11, 0.47, headR * 0.9]} rotation={[0, 0, s * 0.05]}>
+        <mesh key={"brow" + s} position={[s * 0.11, 0.475, headR * 0.9]} rotation={[0, 0, s * 0.17]}>
           <boxGeometry args={[0.1, 0.016, 0.015]} />
           <Matte color={PALETTE.decal} roughness={0.5} />
         </mesh>
       ))}
-      {/* eyes — flat horizontal dashes */}
       {[-1, 1].map((s) => (
         <mesh key={"eye" + s} position={[s * 0.11, 0.4, headR * 0.94]}>
           <boxGeometry args={[0.08, 0.013, 0.012]} />
           <Matte color={PALETTE.decal} roughness={0.5} />
         </mesh>
       ))}
-      {/* nose — small flat dash, not a sculpted 3D nose */}
       <mesh position={[0, 0.34, headR * 0.97]}>
         <boxGeometry args={[0.014, 0.05, 0.012]} />
         <Matte color={PALETTE.decal} roughness={0.5} />
       </mesh>
-      {/* mouth */}
       <mesh position={[0, 0.29, headR * 0.95]}>
         <boxGeometry args={[0.075, 0.011, 0.01]} />
         <Matte color={PALETTE.decal} roughness={0.5} />
@@ -388,12 +341,10 @@ export function CharacterModel(props: { scale?: number }) {
   const scale = props.scale ?? 1;
 
   const hipY = 1.0;
-  // Torso box half-extents — cropped short, hem sits just above the
-  // waistband (a thin sliver of waistband is visible below the hem).
   const torsoHalfW = 0.55;
   const torsoHalfH = 0.34;
   const torsoHalfD = 0.21;
-  const torsoCenterY = 0.39; // local, relative to hipY
+  const torsoCenterY = 0.39;
   const shoulderY = hipY + torsoCenterY + torsoHalfH - 0.05;
 
   const armShoulder = (side: 1 | -1): [number, number, number] => [
@@ -408,14 +359,11 @@ export function CharacterModel(props: { scale?: number }) {
     <group scale={scale} name={SCULPT_MODULE_ID}>
       <DeskChair />
 
-      {/* legs — thighs run forward from the hip, shins drop to the floor.
-          Very wide, minimal taper to read as baggy sweatpants. */}
       <Limb start={[0.22, hipY, -0.02]} end={[0.24, hipY - 0.06, 0.66]} radius={0.18} color={PALETTE.fabricLight} />
       <Limb start={[-0.22, hipY, -0.02]} end={[-0.24, hipY - 0.06, 0.66]} radius={0.18} color={PALETTE.fabricLight} />
       <Limb start={[0.24, hipY - 0.06, 0.66]} end={[0.25, 0.12, 0.5]} radius={0.155} color={PALETTE.fabricLight} />
       <Limb start={[-0.24, hipY - 0.06, 0.66]} end={[-0.25, 0.12, 0.5]} radius={0.155} color={PALETTE.fabricLight} />
 
-      {/* ankle cuffs */}
       {[0.25, -0.25].map((x) => (
         <mesh key={x} position={[x, 0.14, 0.5]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.14, 0.03, 10, 20]} />
@@ -423,7 +371,6 @@ export function CharacterModel(props: { scale?: number }) {
         </mesh>
       ))}
 
-      {/* sneakers */}
       {[0.25, -0.25].map((x) => (
         <RoundedBox
           key={x}
@@ -437,7 +384,6 @@ export function CharacterModel(props: { scale?: number }) {
         </RoundedBox>
       ))}
 
-      {/* pants waistband — visible below the cropped hoodie hem */}
       <RoundedBox args={[0.86, 0.09, 0.5]} radius={0.04} smoothness={3} position={[0, hipY + 0.02, 0.12]}>
         <Matte color={PALETTE.fabricLight} roughness={0.55} />
       </RoundedBox>
@@ -452,7 +398,6 @@ export function CharacterModel(props: { scale?: number }) {
         </mesh>
       ))}
 
-      {/* torso — boxy, cropped, oversized hoodie body */}
       <group position={[0, hipY, 0]}>
         <RoundedBox
           args={[torsoHalfW * 2, torsoHalfH * 2, torsoHalfD * 2]}
@@ -463,19 +408,15 @@ export function CharacterModel(props: { scale?: number }) {
   <HoodieShell />
         </RoundedBox>
 
-        {/* circuit board glowing through the chest — flat geometric
-            traces sitting just proud of the torso's front face */}
         <group position={[0, torsoCenterY + 0.05, torsoHalfD + 0.008]}>
           <CircuitBoard scale={1.5} />
         </group>
 
-        {/* zipper */}
         <mesh position={[0, torsoCenterY, torsoHalfD + 0.01]}>
           <boxGeometry args={[0.02, torsoHalfH * 2 - 0.04, 0.015]} />
           <meshPhysicalMaterial color={PALETTE.zipper} roughness={0.3} metalness={0.4} />
         </mesh>
 
-        {/* kangaroo pocket — flat, slightly proud panel on the lower front */}
         <RoundedBox
           args={[torsoHalfW * 0.82, torsoHalfH * 0.62, 0.05]}
           radius={0.035}
@@ -485,14 +426,11 @@ export function CharacterModel(props: { scale?: number }) {
           <HoodieShell dense />
         </RoundedBox>
 
-        {/* hood collar ring — tilted so the front dips toward the chest and
-            the back rises up high behind the neck */}
         <mesh position={[0, torsoHalfH * 2 + torsoCenterY - 0.16, -0.02]} rotation={[0.55, 0, 0]}>
           <torusGeometry args={[0.26, 0.075, 12, 28]} />
           <meshPhysicalMaterial color="#3aa8d6" roughness={0.26} clearcoat={0.7} clearcoatRoughness={0.12} envMapIntensity={1.2} side={THREE.DoubleSide} />
         </mesh>
 
-        {/* hood volume — big rounded dome sitting behind the neck/shoulders */}
         <mesh
           position={[0, torsoHalfH * 2 + torsoCenterY + 0.02, -0.22]}
           scale={[1, 0.85, 0.8]}
@@ -500,7 +438,6 @@ export function CharacterModel(props: { scale?: number }) {
           <sphereGeometry args={[0.34, 28, 28, 0, Math.PI * 2, 0, Math.PI * 0.66]} />
           <meshPhysicalMaterial color="#3aa8d6" roughness={0.26} clearcoat={0.7} clearcoatRoughness={0.12} envMapIntensity={1.2} side={THREE.DoubleSide} />
         </mesh>
-        {/* center back seam on the hood */}
         <mesh
           position={[0, torsoHalfH * 2 + torsoCenterY + 0.14, -0.4]}
           rotation={[0.3, 0, 0]}
@@ -513,19 +450,13 @@ export function CharacterModel(props: { scale?: number }) {
         <DrawstringCord side={-1} />
       </group>
 
-      {/* arms — puffy balloon sleeves bent forward at the elbow toward the
-          laptop keyboard, cinched to a ribbed cuff at the wrist */}
       <Limb start={armShoulder(1)} end={armElbow(1)} radius={0.16} color={PALETTE.hoodieShell} roughness={0.28} />
       <Limb start={armShoulder(-1)} end={armElbow(-1)} radius={0.16} color={PALETTE.hoodieShell} roughness={0.28} />
       <Limb start={armElbow(1)} end={armWrist(1)} radius={0.1} color={PALETTE.hoodieShell} roughness={0.28} />
       <Limb start={armElbow(-1)} end={armWrist(-1)} radius={0.1} color={PALETTE.hoodieShell} roughness={0.28} />
 
-      {/* circuit bleed-over patches on the outer upper sleeves */}
       {[1, -1].map((side) => {
         const { mid, quat } = segmentTransform(armShoulder(side as 1 | -1), armElbow(side as 1 | -1));
-        // Two nested groups: outer aligns to the limb's own orientation
-        // (quaternion), inner applies an additional twist so the little
-        // board faces outward from the arm rather than straight up.
         return (
           <group key={side} position={mid} quaternion={quat}>
             <group rotation={[0, side * 1.1, 0]} position={[0, 0, 0.16]}>
@@ -535,7 +466,6 @@ export function CharacterModel(props: { scale?: number }) {
         );
       })}
 
-      {/* ribbed cuff rings at the wrist */}
       {[armWrist(1), armWrist(-1)].map((p, i) => (
         <mesh key={i} position={p} rotation={[0.35, 0, 0]}>
           <torusGeometry args={[0.1, 0.024, 10, 18]} />
@@ -543,7 +473,6 @@ export function CharacterModel(props: { scale?: number }) {
         </mesh>
       ))}
 
-      {/* hands resting on the keyboard */}
       {[armWrist(1), armWrist(-1)].map((p, i) => (
         <mesh key={i} position={[p[0] * 0.9, p[1] - 0.02, p[2] + 0.06]} scale={[1, 0.6, 1.3]}>
           <sphereGeometry args={[0.085, 16, 16]} />
