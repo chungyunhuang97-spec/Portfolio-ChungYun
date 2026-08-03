@@ -9,6 +9,11 @@
 // pencil cup + cap-shaped desk lamp, coffee glass, potted plant, and the
 // round patterned rug underneath. The beanbag reuses the existing
 // BeanbagChairModel with an orange color override rather than a new mesh.
+//
+// Rev 2 — fixed a build-breaking type error: cylinderGeometry doesn't
+// accept a `rotation` prop (rotation belongs on the parent mesh), which
+// blocked the Vercel deploy. Moved the rotation up to the <mesh> in
+// DeskCamera's lens.
 export const SCULPT_MODULE_ID = "desk-group";
 
 import { useMemo } from "react";
@@ -63,7 +68,7 @@ function Glossy({ color, roughness = 0.2 }: { color: string; roughness?: number 
   );
 }
 
-/* ---------------------------------- Desk --------------------------------- */
+/* --------------------------------- Desk --------------------------------- */
 
 function DeskTable({ topY = 1.08 }: { topY?: number }) {
   const radiusX = 1.55;
@@ -95,7 +100,7 @@ function DeskTable({ topY = 1.08 }: { topY?: number }) {
   );
 }
 
-/* ------------------------------- Screen ---------------------------------- */
+/* ------------------------------ Screen ---------------------------------- */
 
 function ScreenMonitor() {
   return (
@@ -143,8 +148,8 @@ function DeskCamera() {
       <RoundedBox args={[0.42, 0.26, 0.2]} radius={0.05} smoothness={4}>
         <Matte color={PALETTE.cameraBody} roughness={0.35} />
       </RoundedBox>
-      <mesh position={[0, 0.06, 0.12]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.16, 20]} rotation={[Math.PI / 2, 0, 0]} />
+      <mesh position={[0, 0.06, 0.12]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.16, 20]} />
         <meshPhysicalMaterial color={PALETTE.cameraLens} roughness={0.25} clearcoat={0.7} />
       </mesh>
       <mesh position={[0, 0.06, 0.2]} rotation={[Math.PI / 2, 0, 0]}>
@@ -160,7 +165,7 @@ function DeskCamera() {
   );
 }
 
-/* --------------------------------- Radio ----------------------------------- */
+/* --------------------------------- Radio ------------------------------------ */
 
 function DeskRadio() {
   return (
@@ -279,7 +284,7 @@ function PotPlant() {
   );
 }
 
-/* ---------------------------------- Rug -------------------------------------- */
+/* ---------------------------------- Rug ------------------------------------- */
 
 function RugRing({ radius, color, y }: { radius: number; color: string; y: number }) {
   return (
@@ -308,7 +313,7 @@ function RugModel() {
   );
 }
 
-/* ------------------------------ Composed group ------------------------------- */
+/* ------------------------------ Composed group ------------------------------ */
 
 export function DeskGroupModel(props: { scale?: number }) {
   const scale = props.scale ?? 1;
