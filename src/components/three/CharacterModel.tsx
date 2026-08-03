@@ -6,13 +6,19 @@
 // placeholder panel chair).
 //
 // Changes from rev3:
-//  - Eyebrows: stronger inward/downward angle for a more deliberate,
-//    focused expression (was a near-flat 0.05 rad tilt).
-//  - DeskChair: replaced the flat-panel placeholder with a real swivel
-//    office chair — 5-arm star wheelbase with casters, gas-lift column,
-//    swivel disc, and plump rounded seat + backrest cushions, traced from
-//    the approved reference (deep glossy blue, distinct from the
-//    character's cyan hoodie).
+// - Eyebrows: stronger inward/downward angle for a more deliberate,
+//   focused expression (was a near-flat 0.05 rad tilt).
+// - DeskChair: replaced the flat-panel placeholder with a real swivel
+//   office chair — 5-arm star wheelbase with casters, gas-lift column,
+//   swivel disc, and plump rounded seat + backrest cushions, traced from
+//   the approved reference (deep glossy blue, distinct from the
+//   character's cyan hoodie).
+//
+// Rev 5 — removed the placeholder Laptop()/Mug() desk props. They were
+// stand-ins that don't match the newly approved desk-group reference
+// (screen, camera, radio, plant, beanbag, rug). Real replacements for
+// each are being built separately via the img2threejs pipeline and will
+// be composed back in once ready — see room-shell / pilot dev pages.
 export const SCULPT_MODULE_ID = "character-seated-desk";
 
 import { useMemo } from "react";
@@ -32,10 +38,6 @@ const PALETTE = {
   chairBlue: "#2f6fd1",
   chairBlueDark: "#254f9e",
   pedestal: "#9a948a",
-  laptopBody: "#d8d8d6",
-  laptopScreen: "#14171c",
-  mugBody: "#efece4",
-  coffee: "#3b2418",
   decal: "#2b2925",
 };
 
@@ -244,49 +246,6 @@ function DeskChair() {
   );
 }
 
-function Laptop() {
-  return (
-    <group position={[0, 1.02, 0.56]}>
-      <RoundedBox args={[0.72, 0.04, 0.5]} radius={0.03} smoothness={3}>
-        <meshPhysicalMaterial color={PALETTE.laptopBody} roughness={0.3} metalness={0.55} />
-      </RoundedBox>
-      <group position={[0, 0.02, -0.24]} rotation={[-1.15, 0, 0]}>
-        <RoundedBox args={[0.72, 0.46, 0.03]} radius={0.03} smoothness={3} position={[0, 0.22, 0]}>
-          <meshPhysicalMaterial color={PALETTE.laptopBody} roughness={0.3} metalness={0.55} />
-        </RoundedBox>
-        <RoundedBox args={[0.64, 0.38, 0.01]} radius={0.02} smoothness={3} position={[0, 0.22, 0.02]}>
-          <meshPhysicalMaterial
-            color={PALETTE.laptopScreen}
-            roughness={0.15}
-            metalness={0.1}
-            emissive={"#284256"}
-            emissiveIntensity={0.5}
-          />
-        </RoundedBox>
-      </group>
-    </group>
-  );
-}
-
-function Mug() {
-  return (
-    <group position={[-0.72, 0.82, 0.3]}>
-      <mesh>
-        <cylinderGeometry args={[0.09, 0.08, 0.14, 20]} />
-        <Matte color={PALETTE.mugBody} roughness={0.4} />
-      </mesh>
-      <mesh position={[0, 0.065, 0]}>
-        <cylinderGeometry args={[0.075, 0.075, 0.008, 20]} />
-        <meshPhysicalMaterial color={PALETTE.coffee} roughness={0.25} clearcoat={0.6} />
-      </mesh>
-      <mesh position={[0.11, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.045, 0.014, 10, 20, Math.PI * 1.3]} />
-        <Matte color={PALETTE.mugBody} roughness={0.4} />
-      </mesh>
-    </group>
-  );
-}
-
 function Head({ y }: { y: number }) {
   const headR = 0.32;
   return (
@@ -297,7 +256,7 @@ function Head({ y }: { y: number }) {
       </mesh>
       <mesh position={[0, 0.4, 0]} scale={[0.96, 1.04, 0.94]}>
         <sphereGeometry args={[headR, 32, 32]} />
-<Porcelain />
+        <Porcelain />
       </mesh>
       <mesh position={[0, 0.22, 0.02]} scale={[0.8, 0.6, 0.8]}>
         <sphereGeometry args={[headR, 24, 24]} />
@@ -311,7 +270,7 @@ function Head({ y }: { y: number }) {
       ))}
       <mesh position={[0, 0.42, -0.01]} rotation={[0, 0, -0.06]} scale={[1.03, 1, 1.01]}>
         <sphereGeometry args={[headR * 1.05, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.34]} />
-<Matte color={PALETTE.hair} roughness={0.42} />
+        <Matte color={PALETTE.hair} roughness={0.42} />
       </mesh>
       {[-1, 1].map((s) => (
         <mesh key={"brow" + s} position={[s * 0.11, 0.475, headR * 0.9]} rotation={[0, 0, s * 0.17]}>
@@ -405,7 +364,7 @@ export function CharacterModel(props: { scale?: number }) {
           smoothness={4}
           position={[0, torsoCenterY, 0]}
         >
-  <HoodieShell />
+          <HoodieShell />
         </RoundedBox>
 
         <group position={[0, torsoCenterY + 0.05, torsoHalfD + 0.008]}>
@@ -480,8 +439,6 @@ export function CharacterModel(props: { scale?: number }) {
         </mesh>
       ))}
 
-      <Laptop />
-      <Mug />
       <Head y={shoulderY + 0.08} />
     </group>
   );
