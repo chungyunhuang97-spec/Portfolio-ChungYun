@@ -3,14 +3,18 @@
 import { Canvas } from "@react-three/fiber";
 import { Environment, OrbitControls } from "@react-three/drei";
 import { RoomShellModel } from "@/components/three/RoomShellModel";
-import { CameraToyModel } from "@/components/three/CameraToyModel";
 import { CharacterModel } from "@/components/three/CharacterModel";
 
 // Pilot preview for the room "shell" (architecture only: walls, floor, trim,
-// doorway, alcove, wall plaques). The camera-toy module is dropped into the
-// alcove and the seated character is dropped near room-center just to
+// doorway, alcove). The seated character is dropped near room-center just to
 // sanity-check that furnishings will read correctly at scale once composed
-// into this coordinate frame — neither placement is final.
+// into this coordinate frame — placement is not final.
+//
+// Rev 2 — removed the placeholder CameraToyModel and wall-decor plaques.
+// The old procedural camera was a rough stand-in; the real desk-group props
+// (screen, camera, radio, plant, beanbag, rug) are being rebuilt from
+// scratch via the img2threejs pipeline and will be composed back in here
+// once ready.
 export default function PilotRoomShellPage() {
   return (
     <div className="h-dvh w-full bg-[#cfcabf]">
@@ -31,10 +35,6 @@ export default function PilotRoomShellPage() {
         <Environment preset="apartment" environmentIntensity={0.65} />
 
         <RoomShellModel />
-
-        <group position={[2.6, 4.3, -1.1]} rotation={[0, -Math.PI / 8, 0]}>
-          <CameraToyModel scale={0.6} />
-        </group>
 
         {/* No rotation here — CharacterModel is built with its front
             (face, chest circuit panel, knees, toes) facing local +Z, which
