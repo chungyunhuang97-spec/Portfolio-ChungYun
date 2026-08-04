@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight } from "@phosphor-icons/react/dist/
 import { getAdjacentProjects, getProjectWithSections } from "@/lib/data";
 import { getPageLayout, buildDefaultLayout } from "@/lib/layout-data";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { EDIT_MODE_COOKIE } from "@/lib/edit-mode-actions";
+import { EDIT_MODE_COOKIE } from "@/lib/edit-mode-constants";
 import { FadeIn } from "@/components/FadeIn";
 import { SectionBlock } from "@/components/SectionBlock";
 import { CanvasPageRenderer } from "@/components/CanvasPageRenderer";

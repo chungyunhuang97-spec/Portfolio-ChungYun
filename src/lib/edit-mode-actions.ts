@@ -2,8 +2,7 @@
 
 import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-export const EDIT_MODE_COOKIE = "editor-mode";
+import { EDIT_MODE_COOKIE } from "@/lib/edit-mode-constants";
 
 /**
  * Turns the site-wide "editor mode" cookie on/off. Gated by a real admin
