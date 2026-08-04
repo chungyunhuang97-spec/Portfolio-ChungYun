@@ -3,8 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { getAdjacentProjects, getProjectWithSections } from "@/lib/data";
+import { getPageLayout } from "@/lib/layout-data";
 import { FadeIn } from "@/components/FadeIn";
 import { SectionBlock } from "@/components/SectionBlock";
+import { CanvasPageRenderer } from "@/components/CanvasPageRenderer";
 
 export const revalidate = 60;
 
@@ -35,6 +37,16 @@ export default async function ProjectPage({ params }: PageProps) {
   }
 
   const { project, sections } = result;
+
+  // Pages with a saved canvas layout (built via the visual editor) render
+  // through the absolute-positioned CanvasPageRenderer instead of the
+  // default document-flow layout below. Pages without one keep working
+  // exactly as before -- this is additive, not a replacement of every page.
+  const canvasLayout = await getPageLayout(slug);
+  const hasCanvasLayout =
+    canvasLayout &&
+    (canvasLayout.desktop.length > 0 || canvasLayout.tablet.length > 0 || canvasLayout.mobile.length > 0);
+
   const heroSection = sections.find((s) => s.section_type === "hero");
   const bodySections = sections.filter((s) => s.section_type !== "hero");
 
@@ -48,6 +60,26 @@ export default async function ProjectPage({ params }: PageProps) {
   );
 
   const { prev, next } = await getAdjacentProjects(slug);
+
+  if (hasCanvasLayout && canvasLayout) {
+    return (
+      <main className="flex-1">
+        <div className="mx-auto max-w-[1400px] px-6 pt-10 md:px-10">
+          <Link
+            href="/#work"
+            className="inline-flex items-center gap-2 text-xs tracking-[0.15em] text-ink-faint transition-colors hover:text-ink"
+          >
+            <ArrowLeft size={14} weight="light" />
+            ALL WORK
+          </Link>
+        </div>
+        <div className="px-6 py-10 md:px-10">
+          <CanvasPageRenderer project={project} sections={sections} layout={canvasLayout} />
+        </div>
+        <ProjectFooterNav prev={prev} next={next} />
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1">
@@ -120,6 +152,20 @@ export default async function ProjectPage({ params }: PageProps) {
         </div>
       </section>
 
+      <ProjectFooterNav prev={prev} next={next} />
+    </main>
+  );
+}
+
+function ProjectFooterNav({
+  prev,
+  next,
+}: {
+  prev: { slug: string; title: string } | null;
+  next: { slug: string; title: string } | null;
+}) {
+  return (
+    <>
       {(prev || next) && (
         <section className="border-t border-line">
           <div className="mx-auto grid max-w-[1400px] grid-cols-1 divide-y divide-line md:grid-cols-2 md:divide-x md:divide-y-0 md:px-10">
@@ -175,6 +221,6 @@ export default async function ProjectPage({ params }: PageProps) {
           </a>
         </div>
       </footer>
-    </main>
+    </>
   );
 }
