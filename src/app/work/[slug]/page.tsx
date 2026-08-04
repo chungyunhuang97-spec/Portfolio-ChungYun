@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { getAdjacentProjects, getProjectWithSections } from "@/lib/data";
-import { getPageLayout } from "@/lib/layout-data";
+import { getPageLayout, buildDefaultLayout } from "@/lib/layout-data";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { EDIT_MODE_COOKIE } from "@/lib/edit-mode-actions";
 import { FadeIn } from "@/components/FadeIn";
 import { SectionBlock } from "@/components/SectionBlock";
 import { CanvasPageRenderer } from "@/components/CanvasPageRenderer";
+import { CanvasEditor } from "@/components/admin/CanvasEditor";
+import { EditModeToggle } from "@/components/admin/EditModeToggle";
+import type { Project, ProjectSection } from "@/lib/types";
 
 export const revalidate = 60;
 
@@ -30,14 +36,83 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ProjectPage({ params }: PageProps) {
   const { slug } = await params;
+
+  // Admin check happens on every visit to a project page (not just /admin/*)
+  // so the edit toggle can live directly on the real page instead of behind
+  // a separate dashboard. Anonymous visitors never trigger the true branch
+  // below, so they never see any edit UI or draft content.
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isAdmin = Boolean(user);
+  const cookieStore = await cookies();
+  const editModeOn = isAdmin && cookieStore.get(EDIT_MODE_COOKIE)?.value === "1";
+
+  if (isAdmin) {
+    // Admins can see/edit drafts too, so this bypasses the public
+    // published-only query.
+    const { data: adminProject } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("slug", slug)
+      .maybeSingle<Project>();
+
+    if (!adminProject) {
+      notFound();
+    }
+
+    const { data: sectionsData } = await supabase
+      .from("project_sections")
+      .select("*")
+      .eq("project_id", adminProject.id)
+      .order("display_order", { ascending: true });
+    const sections = (sectionsData ?? []) as ProjectSection[];
+
+    if (editModeOn) {
+      const savedLayout = await getPageLayout(slug);
+      const layout =
+        savedLayout &&
+        (savedLayout.desktop.length > 0 || savedLayout.tablet.length > 0 || savedLayout.mobile.length > 0)
+          ? savedLayout
+          : buildDefaultLayout(Boolean(adminProject.tagline), Boolean(adminProject.subtitle), sections);
+
+      return (
+        <>
+          <CanvasEditor project={adminProject} sections={sections} initialLayout={layout} />
+          <EditModeToggle editModeOn />
+        </>
+      );
+    }
+
+    // Admin, but edit mode is off: fall through to the normal view below,
+    // using admin-visible (possibly-draft) data, with the toggle overlaid.
+    return (
+      <>
+        <ProjectPageView project={adminProject} sections={sections} slug={slug} />
+        <EditModeToggle editModeOn={false} />
+      </>
+    );
+  }
+
   const result = await getProjectWithSections(slug);
 
   if (!result) {
     notFound();
   }
 
-  const { project, sections } = result;
+  return <ProjectPageView project={result.project} sections={result.sections} slug={slug} />;
+}
 
+async function ProjectPageView({
+  project,
+  sections,
+  slug,
+}: {
+  project: Project;
+  sections: ProjectSection[];
+  slug: string;
+}) {
   // Pages with a saved canvas layout (built via the visual editor) render
   // through the absolute-positioned CanvasPageRenderer instead of the
   // default document-flow layout below. Pages without one keep working
