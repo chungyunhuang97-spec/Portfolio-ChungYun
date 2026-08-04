@@ -50,7 +50,7 @@ export function buildDefaultLayout(
   return result;
 }
 
-function buildDefaultBlocksForBreakpoint(
+export function buildDefaultBlocksForBreakpoint(
   bp: Breakpoint,
   heroHasTagline: boolean,
   heroHasSubtitle: boolean,

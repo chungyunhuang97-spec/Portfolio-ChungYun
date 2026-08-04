@@ -18,6 +18,7 @@ import {
   updateHeroText,
   updateSectionText,
 } from "@/lib/layout-actions";
+import { buildDefaultBlocksForBreakpoint } from "@/lib/layout-data";
 
 interface CanvasEditorProps {
   project: Project;
@@ -41,9 +42,10 @@ export function CanvasEditor({ project, sections, initialLayout }: CanvasEditorP
   const [altHeld, setAltHeld] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [canvasEl, setCanvasEl] = useState<HTMLDivElement | null>(null);
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
   const [selectedTargets, setSelectedTargets] = useState<HTMLDivElement[]>([]);
+  const [guidelineTargets, setGuidelineTargets] = useState<HTMLDivElement[]>([]);
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const elementRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const selectoRef = useRef<Selecto>(null);
 
@@ -82,14 +84,21 @@ export function CanvasEditor({ project, sections, initialLayout }: CanvasEditorP
     setSelectedIds((prev) => prev.filter((id) => blocks.some((b) => b.id === id)));
   }, [blocks]);
 
-  // Re-resolve the actual DOM elements for the current selection whenever
+  // Re-resolve the actual DOM elements for the current selection (and for
+  // every unselected sibling, used as Figma-style snap guidelines) whenever
   // the selection or the mounted canvas changes (ref reads live here, in an
   // effect, not during render).
   useEffect(() => {
-    const els = selectedIds
+    const selected = selectedIds
       .map((id) => elementRefs.current.get(id))
       .filter((el): el is HTMLDivElement => Boolean(el));
-    setSelectedTargets(els);
+    setSelectedTargets(selected);
+
+    const guidelines = blocks
+      .filter((b) => !selectedIds.includes(b.id))
+      .map((b) => elementRefs.current.get(b.id))
+      .filter((el): el is HTMLDivElement => Boolean(el));
+    setGuidelineTargets(guidelines);
   }, [selectedIds, blocks, mounted]);
 
   useEffect(() => {
@@ -150,6 +159,29 @@ export function CanvasEditor({ project, sections, initialLayout }: CanvasEditorP
     }));
   }
 
+  // Escape hatch: if manual dragging/resizing has left this breakpoint's
+  // layout in a broken/overlapping state, throw it away and regenerate the
+  // same clean vertical stack that a brand-new page starts from. Only
+  // touches the current breakpoint -- the others are untouched, matching
+  // the "each breakpoint is independent" model.
+  function resetToDefault() {
+    if (
+      !confirm(
+        `確定要將「${BREAKPOINT_LABELS[breakpoint]}」版面重設為預設排版嗎？此斷點目前的手動調整會被清除（不影響其他斷點，重設後需要按「儲存」才會生效）。`
+      )
+    ) {
+      return;
+    }
+    const fresh = buildDefaultBlocksForBreakpoint(
+      breakpoint,
+      Boolean(project.tagline),
+      Boolean(project.subtitle),
+      sections
+    );
+    setLayout((prev) => ({ ...prev, [breakpoint]: fresh }));
+    setSelectedIds([]);
+  }
+
   function handleSave() {
     startSaving(async () => {
       const result = await savePageLayoutBreakpoint(project.slug, breakpoint, layout[breakpoint]);
@@ -184,9 +216,10 @@ export function CanvasEditor({ project, sections, initialLayout }: CanvasEditorP
         isSaving={isSaving}
         saveMessage={saveMessage}
         slug={project.slug}
+        onResetToDefault={resetToDefault}
       />
 
-      <div ref={containerRef} className="relative flex-1 overflow-auto bg-[#cfcabf] p-16">
+      <div ref={setContainerEl} className="relative flex-1 overflow-auto bg-[#cfcabf] p-16">
         <div
           ref={setCanvasEl}
           className="relative mx-auto bg-white shadow-lg"
@@ -257,7 +290,29 @@ export function CanvasEditor({ project, sections, initialLayout }: CanvasEditorP
               draggable
               resizable
               keepRatio={false}
+              // Scroll-awareness: the canvas lives inside the overflow-auto
+              // panel below (containerRef), and without telling Moveable
+              // about that scroll container, its drag/resize math is
+              // computed once from a stale bounding rect -- any scroll
+              // (including auto-scroll near the edges while dragging) makes
+              // the box visibly drift away from the cursor. This is what
+              // caused resize to "跑掉".
+              scrollable
+              scrollContainer={containerEl ?? undefined}
+              scrollThreshold={40}
+              onScroll={({ scrollContainer, direction }) => {
+                scrollContainer.scrollBy(direction[0] * 12, direction[1] * 12);
+              }}
+              // Figma/Framer-style smart guides: snap to the canvas bounds
+              // AND to every other block's edges/centers, with visible
+              // snap lines, instead of freehand pixel-guessing.
               snappable
+              snapGap
+              snapDirections={{ top: true, right: true, bottom: true, left: true, center: true, middle: true }}
+              elementSnapDirections={{ top: true, right: true, bottom: true, left: true, center: true, middle: true }}
+              snapThreshold={5}
+              isDisplaySnapDigit
+              elementGuidelines={guidelineTargets}
               bounds={{ left: 0, top: 0, right: canvasWidth, bottom: canvasHeight, position: "css" }}
               onDrag={({ target, left, top }) => {
                 (target as HTMLElement).style.left = `${left}px`;
@@ -304,6 +359,32 @@ export function CanvasEditor({ project, sections, initialLayout }: CanvasEditorP
                   height: parseFloat(el.style.height),
                 });
               }}
+              // Multi-select resize was previously unhandled entirely --
+              // dragging a handle with 2+ blocks selected did nothing at
+              // all (no live feedback, no persisted change), since Moveable
+              // only auto-applies transforms for target arrays with 2+
+              // elements when onResizeGroup/onResizeGroupEnd exist.
+              onResizeGroup={({ events }) => {
+                events.forEach(({ target, width, height, drag }) => {
+                  (target as HTMLElement).style.width = `${width}px`;
+                  (target as HTMLElement).style.height = `${height}px`;
+                  (target as HTMLElement).style.left = `${drag.left}px`;
+                  (target as HTMLElement).style.top = `${drag.top}px`;
+                });
+              }}
+              onResizeGroupEnd={({ events }) => {
+                events.forEach(({ target }) => {
+                  const el = target as HTMLElement;
+                  const id = el.dataset.blockId;
+                  if (!id) return;
+                  updateBlock(id, {
+                    x: parseFloat(el.style.left),
+                    y: parseFloat(el.style.top),
+                    width: parseFloat(el.style.width),
+                    height: parseFloat(el.style.height),
+                  });
+                });
+              }}
             />
           )}
         </div>
@@ -323,6 +404,7 @@ function Toolbar({
   isSaving,
   saveMessage,
   slug,
+  onResetToDefault,
 }: {
   breakpoint: Breakpoint;
   onBreakpointChange: (bp: Breakpoint) => void;
@@ -334,6 +416,7 @@ function Toolbar({
   isSaving: boolean;
   saveMessage: string | null;
   slug: string;
+  onResetToDefault: () => void;
 }) {
   return (
     <div className="flex items-center justify-between border-b border-black/10 bg-white px-6 py-3">
@@ -392,6 +475,14 @@ function Toolbar({
             </button>
           ))}
         </div>
+
+        <button
+          onClick={onResetToDefault}
+          className="rounded px-2 py-1 text-xs text-ink-faint hover:bg-black/5 hover:text-ink"
+          title="重設此斷點為預設排版"
+        >
+          重設版面
+        </button>
 
         {saveMessage && <span className="text-xs text-ink-faint">{saveMessage}</span>}
         <button
