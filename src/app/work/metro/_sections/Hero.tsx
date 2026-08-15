@@ -1,14 +1,22 @@
 import { DisplayHero, BodyLarge, LabelSmall } from "@/components/design-system/Typography";
 import { Tag } from "@/components/design-system/Tag";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
+import type { Project } from "@/lib/types";
 
-const KICKER = "UI/UX DESIGN PROJECT";
-const TITLE = "2025 捷運盃黑客松";
-const BODY =
-  "重新定義大眾運輸體驗，從介面設計與服務創新出發，為百萬通勤乘客打造最溫柔的數位解答。";
+function isVideoUrl(url: string) {
+  return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
+}
 
 /**
  * Section 1 — Hero. White background.
+ *
+ * Content is CMS-driven: `kicker` reuses `project.category`, `body` reuses
+ * `project.subtitle` (both already edited via the DETAILS form in admin,
+ * no need to duplicate them inside the hero section content), `title` and
+ * `tags` come from the `hero` section's JSONB (`title`, `tagline` as a
+ * string array), and the phone mockup renders `hero.mockup_media_url`
+ * (image or video, admin-uploaded) when present, otherwise falls back to
+ * the placeholder pattern built into <PhoneFrame />.
  *
  * Desktop: wide text column (max 749px) + fixed-width phone mockup (259px)
  * anchored right, vertically centered as one row.
@@ -19,37 +27,70 @@ const BODY =
  * `hidden md:flex`) rather than fought into one shared flex order, since
  * the grouping — not just the order — differs between breakpoints.
  */
-export function Hero() {
+export function Hero({
+  project,
+  hero,
+}: {
+  project: Project;
+  hero: Record<string, unknown>;
+}) {
+  const kicker = project.category ?? "UI/UX DESIGN PROJECT";
+  const title = (hero.title as string) ?? project.title;
+  const body = project.subtitle ?? "";
+  const tags = Array.isArray(hero.tagline) ? (hero.tagline as string[]) : [];
+  const mediaUrl = (hero.mockup_media_url as string) || undefined;
+
+  const screen = mediaUrl ? (
+    isVideoUrl(mediaUrl) ? (
+      <video
+        src={mediaUrl}
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="h-full w-full object-cover"
+      />
+    ) : (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={mediaUrl} alt={title} className="h-full w-full object-cover" />
+    )
+  ) : undefined;
+
   return (
     <section className="relative overflow-hidden bg-proj-white px-6 pt-[104px] pb-16 md:flex md:min-h-screen md:items-center md:px-[176px] md:py-0">
       {/* Mobile layout */}
       <div className="flex flex-col md:hidden">
-        <LabelSmall className="text-primary-orange">{KICKER}</LabelSmall>
-        <DisplayHero className="mt-4 text-primary-black">{TITLE}</DisplayHero>
+        <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
+        <DisplayHero className="mt-4 text-primary-black">{title}</DisplayHero>
 
         <div className="mx-auto mt-8 w-[62%] max-w-[240px]">
-          <PhoneFrame />
+          <PhoneFrame screen={screen} />
         </div>
 
-        <BodyLarge className="mt-8 text-grey-700">{BODY}</BodyLarge>
+        <BodyLarge className="mt-8 text-grey-700">{body}</BodyLarge>
       </div>
 
       {/* Desktop layout */}
       <div className="hidden w-full items-center justify-between gap-x-20 md:flex">
         <div className="w-[749px] shrink-0">
-          <LabelSmall className="text-primary-orange">{KICKER}</LabelSmall>
+          <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
           <DisplayHero className="mt-5 whitespace-nowrap text-primary-black">
-            {TITLE}
+            {title}
           </DisplayHero>
-          <BodyLarge className="mt-5 max-w-[610px] text-grey-700">{BODY}</BodyLarge>
-          <div className="mt-5 flex gap-4">
-            <Tag variant="orange">智慧引導</Tag>
-            <Tag variant="orange">安心陪伴</Tag>
-          </div>
+          <BodyLarge className="mt-5 max-w-[610px] text-grey-700">{body}</BodyLarge>
+          {tags.length > 0 && (
+            <div className="mt-5 flex gap-4">
+              {tags.map((tag) => (
+                <Tag key={tag} variant="orange">
+                  {tag}
+                </Tag>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="w-[259px] shrink-0">
-          <PhoneFrame />
+          <PhoneFrame screen={screen} />
         </div>
       </div>
     </section>

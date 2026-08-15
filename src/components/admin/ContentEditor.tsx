@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Plus, Trash, CaretDown, CaretUp } from "@phosphor-icons/react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-type FieldType = "text" | "string-list" | "title-desc-list" | "raw";
+type FieldType = "text" | "string-list" | "title-desc-list" | "media" | "raw";
 
 interface Field {
   key: string;
@@ -11,7 +12,16 @@ interface Field {
   value: unknown;
 }
 
-function detectType(value: unknown): FieldType {
+// Field keys ending in one of these suffixes are treated as media (image/
+// video) fields even though the underlying JSONB value is just a plain
+// string URL -- Postgres JSONB has no concept of a "media" type, so the
+// key name is the only stable signal we have across reloads.
+const MEDIA_KEY_PATTERN = /(_media_url|_image_url|_video_url)$/i;
+
+function detectType(value: unknown, key?: string): FieldType {
+  if (key && MEDIA_KEY_PATTERN.test(key) && (typeof value === "string" || value == null)) {
+    return "media";
+  }
   if (typeof value === "string") return "text";
   if (Array.isArray(value)) {
     if (value.length === 0) return "string-list";
@@ -29,7 +39,7 @@ function detectType(value: unknown): FieldType {
 function contentToFields(content: Record<string, unknown>): Field[] {
   return Object.entries(content).map(([key, value]) => ({
     key,
-    type: detectType(value),
+    type: detectType(value, key),
     value,
   }));
 }
@@ -47,15 +57,117 @@ function inputClass() {
   return "w-full border border-line bg-bg px-3 py-2 text-sm outline-none transition-colors focus:border-accent";
 }
 
+function isVideoUrl(url: string) {
+  return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
+}
+
+function MediaFieldEditor({
+  value,
+  onChange,
+  mediaPathPrefix,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  mediaPathPrefix?: string;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const url = value ?? "";
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const ext = file.name.split(".").pop() ?? "bin";
+      const safePrefix = (mediaPathPrefix ?? "misc").replace(/[^a-zA-Z0-9/_-]/g, "-");
+      const path = `${safePrefix}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("project-media")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("project-media").getPublicUrl(path);
+      onChange(data.publicUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {url ? (
+        <div className="w-40 overflow-hidden rounded-lg border border-line bg-bg">
+          {isVideoUrl(url) ? (
+            <video src={url} className="w-full" muted controls />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={url} alt="" className="w-full" />
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-ink-faint">尚未上傳</p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*,video/*"
+          onChange={handleFile}
+          disabled={uploading}
+          className="text-xs text-ink-faint file:mr-3 file:border file:border-line file:bg-bg file:px-3 file:py-1.5 file:text-xs file:text-ink-muted"
+        />
+        {uploading && <span className="text-xs text-ink-faint">上傳中…</span>}
+        {url && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="text-xs text-red-700 hover:underline"
+          >
+            移除
+          </button>
+        )}
+      </div>
+
+      {error && <p className="text-xs text-red-700">{error}</p>}
+
+      <input
+        value={url}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="或直接貼上圖片／影片網址"
+        className={`${inputClass()} font-mono text-xs`}
+      />
+    </div>
+  );
+}
+
 function FieldEditor({
   field,
   onChange,
+  mediaPathPrefix,
 }: {
   field: Field;
   onChange: (value: unknown) => void;
+  mediaPathPrefix?: string;
 }) {
   const [rawText, setRawText] = useState(() => JSON.stringify(field.value, null, 2));
   const [rawJsonError, setRawJsonError] = useState<string | null>(null);
+
+  if (field.type === "media") {
+    return (
+      <MediaFieldEditor
+        value={(field.value as string) ?? ""}
+        onChange={onChange}
+        mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${field.key}` : field.key}
+      />
+    );
+  }
 
   if (field.type === "text") {
     return (
@@ -183,10 +295,13 @@ export function ContentEditor({
   initialContent,
   onSave,
   saveLabel = "Save",
+  mediaPathPrefix,
 }: {
   initialContent: Record<string, unknown>;
   onSave: (content: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   saveLabel?: string;
+  // Used to namespace uploaded files in Storage, e.g. "metro/hero".
+  mediaPathPrefix?: string;
 }) {
   const [fields, setFields] = useState<Field[]>(() => contentToFields(initialContent));
   const [rawMode, setRawMode] = useState(false);
@@ -210,11 +325,13 @@ export function ContentEditor({
     const defaultValue: unknown =
       newFieldType === "text"
         ? ""
-        : newFieldType === "string-list"
-          ? []
-          : newFieldType === "title-desc-list"
+        : newFieldType === "media"
+          ? ""
+          : newFieldType === "string-list"
             ? []
-            : {};
+            : newFieldType === "title-desc-list"
+              ? []
+              : {};
     setFields((prev) => [...prev, { key: newFieldKey.trim(), type: newFieldType, value: defaultValue }]);
     setNewFieldKey("");
   }
@@ -301,7 +418,11 @@ export function ContentEditor({
                   <Trash size={14} weight="light" />
                 </button>
               </div>
-              <FieldEditor field={field} onChange={(value) => updateField(i, value)} />
+              <FieldEditor
+                field={field}
+                onChange={(value) => updateField(i, value)}
+                mediaPathPrefix={mediaPathPrefix}
+              />
             </div>
           ))}
 
@@ -325,6 +446,7 @@ export function ContentEditor({
                 <option value="text">Text</option>
                 <option value="string-list">List of text</option>
                 <option value="title-desc-list">List of title + description</option>
+                <option value="media">Media (image/video)</option>
               </select>
             </div>
             <button

@@ -91,7 +91,11 @@ export default async function ProjectEditPage({ params }: PageProps) {
                   </h3>
                   <DeleteSectionButton sectionId={section.id} onDelete={removeSection} />
                 </div>
-                <ContentEditor initialContent={section.content} onSave={save} />
+                <ContentEditor
+                  initialContent={section.content}
+                  onSave={save}
+                  mediaPathPrefix={`${project.slug}/${section.section_type}`}
+                />
               </div>
             );
           })}
