@@ -1,7 +1,7 @@
 import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import type { ProjectSection, SectionType } from "@/lib/types";
 
-const SECTION_LABELS: Record<SectionType, string> = {
+export const SECTION_LABELS: Record<SectionType, string> = {
   hero: "",
   overview: "OVERVIEW",
   challenge: "THE CHALLENGE",
@@ -83,7 +83,7 @@ export function SectionBlock({ section }: { section: ProjectSection }) {
   );
 }
 
-function renderBody(sectionType: SectionType, content: Record<string, unknown>) {
+export function renderBody(sectionType: SectionType, content: Record<string, unknown>) {
   // role: fixed set of labeled fields
   if (sectionType === "role") {
     const entries = Object.entries(content).filter(([, v]) => typeof v === "string");

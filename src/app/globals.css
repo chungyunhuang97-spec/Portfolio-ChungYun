@@ -9,6 +9,24 @@
   --color-accent: #2f4f78;
   --color-accent-soft: #eef2f6;
   --color-line: #e7e5e4;
+
+  /* ---------------------------------------------------------------
+     Shared "project page" design system (introduced with the Metro
+     case-study redesign). Namespaced separately from the tokens above
+     so the admin dashboard / other legacy screens are unaffected.
+     Reuse these on every future case-study page and the homepage.
+     --------------------------------------------------------------- */
+  --color-primary-orange: #ff520d;
+  --color-primary-black: #000000;
+  --color-secondary-blue: #0d21ff;
+  --color-accent-pink: #ff5bc0;
+  --color-grey-900: #1a1a1a;
+  --color-grey-700: #444444;
+  --color-grey-500: #808080;
+  --color-grey-300: #b3b3b3;
+  --color-grey-100: #f0f0f0;
+  --color-grey-50: #fafaf8;
+  --color-proj-white: #ffffff;
 }
 
 @theme inline {
@@ -23,6 +41,20 @@
   --font-sans: var(--font-geist-sans);
   --font-display: var(--font-outfit);
   --font-mono: var(--font-geist-mono);
+
+  /* Project design system */
+  --color-primary-orange: var(--color-primary-orange);
+  --color-primary-black: var(--color-primary-black);
+  --color-secondary-blue: var(--color-secondary-blue);
+  --color-accent-pink: var(--color-accent-pink);
+  --color-grey-900: var(--color-grey-900);
+  --color-grey-700: var(--color-grey-700);
+  --color-grey-500: var(--color-grey-500);
+  --color-grey-300: var(--color-grey-300);
+  --color-grey-100: var(--color-grey-100);
+  --color-grey-50: var(--color-grey-50);
+  --color-proj-white: var(--color-proj-white);
+  --font-nunito: var(--font-nunito);
 }
 
 html,

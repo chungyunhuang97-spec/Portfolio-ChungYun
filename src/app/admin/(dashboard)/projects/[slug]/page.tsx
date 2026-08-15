@@ -55,8 +55,18 @@ export default async function ProjectEditPage({ params }: PageProps) {
         <ArrowLeft size={14} weight="light" />
         BACK
       </Link>
-      <h1 className="mt-4 text-2xl">{project.title}</h1>
-      <p className="mt-1 font-mono text-xs text-ink-faint">/work/{project.slug}</p>
+      <div className="mt-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl">{project.title}</h1>
+          <p className="mt-1 font-mono text-xs text-ink-faint">/work/{project.slug}</p>
+        </div>
+        <Link
+          href={`/admin/projects/${project.slug}/edit`}
+          className="rounded-md bg-ink px-4 py-2 text-xs tracking-[0.1em] text-white transition-opacity hover:opacity-90"
+        >
+          視覺編輯
+        </Link>
+      </div>
 
       <div className="mt-10 max-w-3xl">
         <h2 className="text-xs tracking-[0.2em] text-ink-faint">DETAILS</h2>

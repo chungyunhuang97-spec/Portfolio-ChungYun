@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { getAdjacentProjects, getProjectWithSections } from "@/lib/data";
+import { getPageLayout, buildDefaultLayout } from "@/lib/layout-data";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { EDIT_MODE_COOKIE } from "@/lib/edit-mode-constants";
 import { FadeIn } from "@/components/FadeIn";
 import { SectionBlock } from "@/components/SectionBlock";
+import { CanvasPageRenderer } from "@/components/CanvasPageRenderer";
+import { CanvasEditor } from "@/components/admin/CanvasEditor";
+import { EditModeToggle } from "@/components/admin/EditModeToggle";
+import type { Project, ProjectSection } from "@/lib/types";
 
 export const revalidate = 60;
 
@@ -28,13 +36,92 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ProjectPage({ params }: PageProps) {
   const { slug } = await params;
+
+  // Admin check happens on every visit to a project page (not just /admin/*)
+  // so the edit toggle can live directly on the real page instead of behind
+  // a separate dashboard. Anonymous visitors never trigger the true branch
+  // below, so they never see any edit UI or draft content.
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isAdmin = Boolean(user);
+  const cookieStore = await cookies();
+  const editModeOn = isAdmin && cookieStore.get(EDIT_MODE_COOKIE)?.value === "1";
+
+  if (isAdmin) {
+    // Admins can see/edit drafts too, so this bypasses the public
+    // published-only query.
+    const { data: adminProject } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("slug", slug)
+      .maybeSingle<Project>();
+
+    if (!adminProject) {
+      notFound();
+    }
+
+    const { data: sectionsData } = await supabase
+      .from("project_sections")
+      .select("*")
+      .eq("project_id", adminProject.id)
+      .order("display_order", { ascending: true });
+    const sections = (sectionsData ?? []) as ProjectSection[];
+
+    if (editModeOn) {
+      const savedLayout = await getPageLayout(slug);
+      const layout =
+        savedLayout &&
+        (savedLayout.desktop.length > 0 || savedLayout.tablet.length > 0 || savedLayout.mobile.length > 0)
+          ? savedLayout
+          : buildDefaultLayout(Boolean(adminProject.tagline), Boolean(adminProject.subtitle), sections);
+
+      return (
+        <>
+          <CanvasEditor project={adminProject} sections={sections} initialLayout={layout} />
+          <EditModeToggle editModeOn />
+        </>
+      );
+    }
+
+    // Admin, but edit mode is off: fall through to the normal view below,
+    // using admin-visible (possibly-draft) data, with the toggle overlaid.
+    return (
+      <>
+        <ProjectPageView project={adminProject} sections={sections} slug={slug} />
+        <EditModeToggle editModeOn={false} />
+      </>
+    );
+  }
+
   const result = await getProjectWithSections(slug);
 
   if (!result) {
     notFound();
   }
 
-  const { project, sections } = result;
+  return <ProjectPageView project={result.project} sections={result.sections} slug={slug} />;
+}
+
+async function ProjectPageView({
+  project,
+  sections,
+  slug,
+}: {
+  project: Project;
+  sections: ProjectSection[];
+  slug: string;
+}) {
+  // Pages with a saved canvas layout (built via the visual editor) render
+  // through the absolute-positioned CanvasPageRenderer instead of the
+  // default document-flow layout below. Pages without one keep working
+  // exactly as before -- this is additive, not a replacement of every page.
+  const canvasLayout = await getPageLayout(slug);
+  const hasCanvasLayout =
+    canvasLayout &&
+    (canvasLayout.desktop.length > 0 || canvasLayout.tablet.length > 0 || canvasLayout.mobile.length > 0);
+
   const heroSection = sections.find((s) => s.section_type === "hero");
   const bodySections = sections.filter((s) => s.section_type !== "hero");
 
@@ -48,6 +135,26 @@ export default async function ProjectPage({ params }: PageProps) {
   );
 
   const { prev, next } = await getAdjacentProjects(slug);
+
+  if (hasCanvasLayout && canvasLayout) {
+    return (
+      <main className="flex-1">
+        <div className="mx-auto max-w-[1400px] px-6 pt-10 md:px-10">
+          <Link
+            href="/#work"
+            className="inline-flex items-center gap-2 text-xs tracking-[0.15em] text-ink-faint transition-colors hover:text-ink"
+          >
+            <ArrowLeft size={14} weight="light" />
+            ALL WORK
+          </Link>
+        </div>
+        <div className="px-6 py-10 md:px-10">
+          <CanvasPageRenderer project={project} sections={sections} layout={canvasLayout} />
+        </div>
+        <ProjectFooterNav prev={prev} next={next} />
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1">
@@ -120,6 +227,20 @@ export default async function ProjectPage({ params }: PageProps) {
         </div>
       </section>
 
+      <ProjectFooterNav prev={prev} next={next} />
+    </main>
+  );
+}
+
+function ProjectFooterNav({
+  prev,
+  next,
+}: {
+  prev: { slug: string; title: string } | null;
+  next: { slug: string; title: string } | null;
+}) {
+  return (
+    <>
       {(prev || next) && (
         <section className="border-t border-line">
           <div className="mx-auto grid max-w-[1400px] grid-cols-1 divide-y divide-line md:grid-cols-2 md:divide-x md:divide-y-0 md:px-10">
@@ -175,6 +296,6 @@ export default async function ProjectPage({ params }: PageProps) {
           </a>
         </div>
       </footer>
-    </main>
+    </>
   );
 }
