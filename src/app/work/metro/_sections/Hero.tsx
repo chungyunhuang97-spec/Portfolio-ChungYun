@@ -1,6 +1,7 @@
 import { DisplayHero, BodyLarge, LabelSmall } from "@/components/design-system/Typography";
 import { Tag } from "@/components/design-system/Tag";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
+import { SlideIn } from "@/components/design-system/SlideIn";
 import type { Project } from "@/lib/types";
 
 function isVideoUrl(url: string) {
@@ -60,24 +61,26 @@ export function Hero({
     <section className="relative overflow-hidden bg-proj-white px-6 pt-[104px] pb-16 md:flex md:min-h-screen md:items-center md:px-[176px] md:py-0">
       {/* Mobile layout */}
       <div className="flex flex-col md:hidden">
-        <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
-        <DisplayHero className="mt-4 text-primary-black">{title}</DisplayHero>
+        <SlideIn delay={1.0}>
+          <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
+          <DisplayHero className="mt-2 text-primary-black">{title}</DisplayHero>
+        </SlideIn>
 
-        <div className="mx-auto mt-8 w-[62%] max-w-[240px]">
-          <PhoneFrame screen={screen} />
-        </div>
+        <SlideIn delay={1.15} className="mx-auto mt-8 w-[62%] max-w-[240px]">
+          <PhoneFrame screen={screen} float />
+        </SlideIn>
 
-        <BodyLarge className="mt-8 text-grey-700">{body}</BodyLarge>
+        <BodyLarge className="mt-8 text-center text-grey-600">{body}</BodyLarge>
       </div>
 
       {/* Desktop layout */}
       <div className="hidden w-full items-center justify-between gap-x-20 md:flex">
-        <div className="w-[749px] shrink-0">
+        <SlideIn delay={1.0} className="w-[749px] shrink-0">
           <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
           <DisplayHero className="mt-5 whitespace-nowrap text-primary-black">
             {title}
           </DisplayHero>
-          <BodyLarge className="mt-5 max-w-[610px] text-grey-700">{body}</BodyLarge>
+          <BodyLarge className="mt-5 max-w-[610px] text-grey-600">{body}</BodyLarge>
           {tags.length > 0 && (
             <div className="mt-5 flex gap-4">
               {tags.map((tag) => (
@@ -87,11 +90,11 @@ export function Hero({
               ))}
             </div>
           )}
-        </div>
+        </SlideIn>
 
-        <div className="w-[259px] shrink-0">
-          <PhoneFrame screen={screen} />
-        </div>
+        <SlideIn direction="right" delay={1.15} className="w-[259px] shrink-0">
+          <PhoneFrame screen={screen} float />
+        </SlideIn>
       </div>
     </section>
   );
