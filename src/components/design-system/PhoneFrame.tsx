@@ -25,7 +25,7 @@ export function PhoneFrame({
 }) {
   const frame = (
     <div
-      className={`relative aspect-[240/507] w-full overflow-hidden rounded-[2.5rem] border-[8px] border-primary-black bg-proj-white shadow-[0_20px_60px_rgba(0,0,0,0.12)] ${className}`}
+      className={`relative aspect-[375/812] w-full overflow-hidden rounded-[2.5rem] border-[8px] border-primary-black bg-proj-white shadow-[0_20px_60px_rgba(0,0,0,0.12)] ${className}`}
     >
       {/* status bar */}
       <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 pt-2 text-primary-black">
@@ -39,14 +39,18 @@ export function PhoneFrame({
       {/* notch */}
       <div className="absolute left-1/2 top-0 z-10 h-[22px] w-[90px] -translate-x-1/2 rounded-b-2xl bg-primary-black" />
 
-      {/* screen content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-grey-50 px-6 pt-9 text-center">
-        {screen ?? (
+      {/* screen content — real screenshots/video go edge-to-edge (no padding,
+          object-cover already applied by the caller); only the placeholder
+          text gets the centered padding treatment */}
+      {screen ? (
+        <div className="absolute inset-0">{screen}</div>
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-grey-50 px-6 pt-9 text-center">
           <p className="font-nunito text-[11px] font-bold leading-relaxed text-grey-500">
             {label}
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 
