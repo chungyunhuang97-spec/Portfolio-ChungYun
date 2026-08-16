@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Outfit, Nunito } from "next/font/google";
+import { Geist, Geist_Mono, Outfit, Nunito, Fredoka } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
@@ -29,6 +29,16 @@ const nunito = Nunito({
   weight: ["400", "600", "700", "800"],
 });
 
+// Used for the mobile-only wordmark in <Navbar /> (Figma spec: "Fredoka One").
+// The classic single-weight "Fredoka One" family was folded into the newer
+// variable-weight "Fredoka" family in next/font/google, so weight 400 is
+// requested explicitly to match the old "Fredoka One" look.
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
+  subsets: ["latin"],
+  weight: ["400"],
+});
+
 export const metadata: Metadata = {
   title: "Chung Yun Huang — Product Designer",
   description:
@@ -43,7 +53,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${nunito.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${nunito.variable} ${fredoka.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-bg text-ink">
         {children}
