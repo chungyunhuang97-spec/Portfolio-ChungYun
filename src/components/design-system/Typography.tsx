@@ -30,10 +30,10 @@ function makeText(defaultTag: ElementType, classes: string) {
   };
 }
 
-// display-hero — PC 80px / Mobile 36px
+// display-hero — PC 80px/112px / Mobile 35px/48px
 export const DisplayHero = makeText(
   "h1",
-  "text-[36px] leading-[1.05] font-extrabold tracking-tight md:text-[80px]"
+  "text-[35px] leading-[48px] font-medium tracking-tight md:text-[80px] md:leading-[112px]"
 );
 
 // heading-h1 — PC 48px / Mobile 28px
@@ -66,10 +66,10 @@ export const HeadingH5 = makeText(
   "text-[14px] leading-[1.35] font-bold md:text-[18px]"
 );
 
-// body-large — PC 18px / Mobile 14px
+// body-large — PC 18px/25px / Mobile 15px/22px
 export const BodyLarge = makeText(
   "p",
-  "text-[14px] leading-[1.6] font-normal md:text-[18px]"
+  "text-[15px] leading-[22px] font-normal md:text-[18px] md:leading-[25px]"
 );
 
 // body-medium — PC 15px / Mobile 13px
@@ -90,10 +90,10 @@ export const LabelMedium = makeText(
   "text-[12px] leading-[1.3] font-bold tracking-wide md:text-[14px]"
 );
 
-// label-small — PC 13px / Mobile 10px (used for the Section Kicker etc.)
+// label-small — PC 14px / Mobile 14px (used for the Section Kicker etc.)
 export const LabelSmall = makeText(
   "span",
-  "text-[10px] leading-[1.3] font-bold tracking-[0.15em] uppercase md:text-[13px]"
+  "text-[14px] leading-[1.3] font-extrabold"
 );
 
 // decorative-number — PC 100px / Mobile 48px
