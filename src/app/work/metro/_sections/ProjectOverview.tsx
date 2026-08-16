@@ -183,14 +183,19 @@ export function ProjectOverview({
           </div>
 
           <div className="flex flex-col gap-4">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="flex flex-wrap gap-4">
               {infoCards.map((card, i) => (
                 <SlideIn
                   key={card.label}
                   direction={i % 2 === 0 ? "left" : "right"}
                   delay={i * 0.08}
+                  className={i === 0 ? "shrink-0" : "min-w-[220px] flex-1"}
                 >
-                  <div className="flex h-full flex-col gap-4 rounded-2xl border border-[#ededed] bg-proj-white p-8 shadow-[0_4px_8px_rgba(0,0,0,0.05)]">
+                  <div
+                    className={`flex h-full flex-col gap-4 rounded-2xl border border-[#ededed] bg-proj-white p-8 shadow-[0_4px_8px_rgba(0,0,0,0.05)] ${
+                      i === 0 ? "whitespace-nowrap" : ""
+                    }`}
+                  >
                     <p className="font-nunito text-[13px] leading-[18px] font-bold text-secondary-blue">
                       {card.label}
                     </p>
