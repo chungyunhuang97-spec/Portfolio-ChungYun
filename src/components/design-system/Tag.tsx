@@ -23,7 +23,7 @@ export function Tag({
 }) {
   return (
     <span
-      className={`font-nunito inline-flex items-center rounded-full px-3 py-1 text-[12px] font-bold md:text-[14px] ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`font-nunito inline-flex items-center rounded-full px-4 py-1.5 text-[12px] font-bold md:text-[13px] ${VARIANT_CLASSES[variant]} ${className}`}
     >
       {children}
     </span>
