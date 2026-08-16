@@ -25,7 +25,7 @@ export function Navbar() {
     <header className="fixed inset-x-0 top-0 z-50">
       {/* Mobile: wordmark + hamburger */}
       <div className="flex items-center justify-between px-6 py-8 md:hidden">
-        <span className="font-nunito text-[18px] font-extrabold text-primary-black">
+        <span className="font-fredoka text-[20px] text-grey-700">
           Chung Yun
         </span>
         <button
@@ -45,7 +45,7 @@ export function Navbar() {
               key={link.label}
               href={link.href}
               onClick={() => setOpen(false)}
-              className="font-nunito border-b border-grey-100 px-6 py-4 text-[15px] font-bold text-grey-900 last:border-b-0"
+              className="font-nunito border-b border-grey-100 px-6 py-4 text-[15px] font-bold text-grey-800 last:border-b-0"
             >
               {link.label}
             </Link>
@@ -60,7 +60,7 @@ export function Navbar() {
             <Link
               key={link.label}
               href={link.href}
-              className="font-nunito text-[18px] font-bold text-grey-900 transition-colors hover:text-primary-orange"
+              className="font-nunito text-[18px] font-bold text-grey-800 transition-colors hover:text-primary-orange"
             >
               {link.label}
             </Link>
