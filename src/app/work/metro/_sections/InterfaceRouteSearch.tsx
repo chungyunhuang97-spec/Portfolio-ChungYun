@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { PenNib, Lightbulb, ExclamationMark } from "@phosphor-icons/react/dist/ssr";
+import { PenNib, ExclamationMark } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 
@@ -61,8 +62,8 @@ function PhoneGlow({ children }: { children: ReactNode }) {
 function PainPointCallout({ text }: { text: string }) {
   return (
     <div className="flex w-full items-center gap-3 rounded-2xl bg-grey-50 p-4">
-      <span className="flex size-[50px] shrink-0 items-center justify-center rounded-2xl bg-proj-white">
-        <Lightbulb size={26} weight="duotone" className="text-primary-orange" />
+      <span className="relative size-[50px] shrink-0 overflow-hidden rounded-2xl">
+        <Image src="/work/metro/Property_1painpoints.png" alt="" fill sizes="50px" className="object-contain" />
       </span>
       <div className="flex flex-col gap-0.5">
         <p className="font-nunito text-[14px] font-bold text-primary-orange">痛點解決</p>
@@ -168,23 +169,30 @@ function FolderTabs({
     <div className="flex h-11 w-full items-end gap-0">
       {blocks.map((b, i) => {
         const isActive = i === active;
+        // Only the OUTER edges of the tab strip round -- the seam between
+        // adjacent tabs stays square so the two pieces read as one
+        // continuous folder body (no curved notch exposing the page
+        // background between them) rather than two separate pills.
+        const isFirst = i === 0;
+        const isLast = i === blocks.length - 1;
+        const edgeRounding = `${isFirst ? "rounded-tl-2xl" : ""} ${isLast ? "rounded-tr-2xl" : ""}`.trim();
         return (
           <button
             key={b.tabLabel}
             type="button"
             onClick={() => onChange(i)}
-            className={`relative flex flex-1 items-center justify-center overflow-visible rounded-t-2xl transition-[height] duration-300 ${
+            className={`relative flex flex-1 items-center justify-center overflow-visible transition-[height] duration-300 ${
               isActive ? "h-11" : "h-[34px]"
             }`}
           >
             {isActive ? (
               <motion.span
                 layoutId="folderTabBg"
-                className="absolute inset-0 rounded-t-2xl border border-b-0 border-[#e5e0db] bg-proj-white"
+                className={`absolute inset-0 border border-b-0 border-[#e5e0db] bg-proj-white ${edgeRounding}`}
                 transition={{ type: "spring", stiffness: 320, damping: 32 }}
               />
             ) : (
-              <span className="absolute inset-0 rounded-t-xl bg-grey-100" aria-hidden />
+              <span className={`absolute inset-0 bg-grey-100 ${edgeRounding}`} aria-hidden />
             )}
             <span
               className={`font-nunito relative z-10 text-[15px] font-bold ${
