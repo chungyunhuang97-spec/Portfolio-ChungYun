@@ -4,6 +4,7 @@ import { Navbar } from "@/components/design-system/Navbar";
 import { DoorReveal } from "@/components/design-system/DoorReveal";
 import { Hero } from "./_sections/Hero";
 import { ProjectOverview } from "./_sections/ProjectOverview";
+import { StrategyBeforeApp } from "./_sections/StrategyBeforeApp";
 import { getProjectWithSections } from "@/lib/data";
 
 // Hand-crafted, bespoke page for this one case study -- deliberately NOT
@@ -14,19 +15,25 @@ import { getProjectWithSections } from "@/lib/data";
 // other project still goes through the normal data-driven flow.
 //
 // However, the actual COPY (text) and media for the sections that exist
-// below (hero / overview / challenge) IS read live from Supabase here --
-// editing them in /admin/projects/metro updates this page immediately
-// (admin actions call revalidatePath(`/work/metro`)). Only the bespoke
-// layout/markup itself is hand-coded; the content inside it is real CMS
-// data. This was previously hardcoded as constants, which meant admin
+// below (hero / overview / challenge / process) IS read live from Supabase
+// here -- editing them in /admin/projects/metro updates this page
+// immediately (admin actions call revalidatePath(`/work/metro`)). Only the
+// bespoke layout/markup itself is hand-coded; the content inside it is real
+// CMS data. This was previously hardcoded as constants, which meant admin
 // edits had no effect on this page -- fixed so admin truly is the single
 // source of truth for content, per the design system: primary orange
 // #FF520D / secondary blue #0D21FF / accent pink #FF5BC0, Nunito type
 // scale. Sections are added incrementally in `./_sections/*` -- as of this
-// commit only Section 1 (Hero) and Section 2 (Project Overview & Core
-// Challenges) are implemented; the remaining ~14 sections from the spec
-// follow the same pattern (see PORTFOLIO-SPEC discussion) and slot in here
-// in order, each wired the same way (fetch content below, pass as props).
+// commit Section 1 (Hero), Section 2 (Project Overview & Core Challenges)
+// and Section 3 (雙軸優化策略 + 改版前的台北捷運 GO App, Figma 127:127 /
+// 139:42 / mobile 151:395) are implemented. Section 3 reuses the `process`
+// row's content (same row that also carries the long-form process
+// narrative in `items`, left untouched) -- StrategyBeforeApp only reads
+// the fields it needs (`strategies`, `visionText`, `mobileVisionText`,
+// `beforeAppSubtext`) off that same content object. The remaining ~13
+// sections from the spec follow the same pattern (see PORTFOLIO-SPEC
+// discussion) and slot in here in order, each wired the same way (fetch
+// content below, pass as props).
 
 export const revalidate = 60;
 
@@ -41,6 +48,7 @@ async function loadMetro() {
     hero: getSection("hero"),
     overview: getSection("overview"),
     challenge: getSection("challenge"),
+    process: getSection("process"),
   };
 }
 
@@ -63,6 +71,7 @@ export default async function MetroPage() {
       <main className="font-nunito bg-proj-white">
         <Hero project={data.project} hero={data.hero} />
         <ProjectOverview project={data.project} overview={data.overview} challenge={data.challenge} />
+        <StrategyBeforeApp process={data.process} />
       </main>
     </DoorReveal>
   );
