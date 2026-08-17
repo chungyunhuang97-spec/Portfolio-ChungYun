@@ -316,36 +316,42 @@ export function InterfaceRouteSearch({ process }: { process: Record<string, unkn
           </div>
         </SlideIn>
 
+        {/* FolderTabs + content panel are grouped into ONE flex child so the
+            parent's `gap-4` (meant to space the heading from this whole
+            folder unit) never lands BETWEEN the tabs and the panel -- the
+            tab strip sits flush against the panel below it, no seam. */}
         <SlideIn delay={0.15}>
-          <FolderTabs blocks={blocks} active={activeTab} onChange={setActiveTab} />
-        </SlideIn>
+          <div className="flex flex-col">
+            <FolderTabs blocks={blocks} active={activeTab} onChange={setActiveTab} />
 
-        <div className="w-full overflow-hidden rounded-b-2xl border border-t-0 border-[#e5e0db] bg-proj-white px-4 py-6">
-          <AnimatePresence mode="wait">
-            {activeBlock && (
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className="flex flex-col items-center gap-6"
-              >
-                <div className="relative w-[215px]">
-                  <PhoneGlow>
-                    <PhoneFrame screen={mediaScreen(mobileMedia[activeTab])} label="App 畫面（後臺可上傳影片）" />
-                  </PhoneGlow>
-                  <MobilePainPointButton text={activeBlock.painPoint} />
-                </div>
-                <div className="flex w-full flex-col gap-3">
-                  {activeBlock.features.map((f) => (
-                    <FeatureRow key={f.title} feature={f} mobile />
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+            <div className="w-full overflow-hidden rounded-b-2xl border border-t-0 border-[#e5e0db] bg-proj-white px-4 py-6">
+              <AnimatePresence mode="wait">
+                {activeBlock && (
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                    className="flex flex-col items-center gap-6"
+                  >
+                    <div className="relative w-[215px]">
+                      <PhoneGlow>
+                        <PhoneFrame screen={mediaScreen(mobileMedia[activeTab])} label="App 畫面（後臺可上傳影片）" />
+                      </PhoneGlow>
+                      <MobilePainPointButton text={activeBlock.painPoint} />
+                    </div>
+                    <div className="flex w-full flex-col gap-3">
+                      {activeBlock.features.map((f) => (
+                        <FeatureRow key={f.title} feature={f} mobile />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </SlideIn>
       </div>
 
       {/* Desktop layout */}
