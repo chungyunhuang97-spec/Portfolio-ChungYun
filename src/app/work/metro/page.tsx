@@ -5,6 +5,7 @@ import { DoorReveal } from "@/components/design-system/DoorReveal";
 import { Hero } from "./_sections/Hero";
 import { ProjectOverview } from "./_sections/ProjectOverview";
 import { StrategyBeforeApp } from "./_sections/StrategyBeforeApp";
+import { InterfaceRouteSearch } from "./_sections/InterfaceRouteSearch";
 import { getProjectWithSections } from "@/lib/data";
 
 // Hand-crafted, bespoke page for this one case study -- deliberately NOT
@@ -24,16 +25,22 @@ import { getProjectWithSections } from "@/lib/data";
 // source of truth for content, per the design system: primary orange
 // #FF520D / secondary blue #0D21FF / accent pink #FF5BC0, Nunito type
 // scale. Sections are added incrementally in `./_sections/*` -- as of this
-// commit Section 1 (Hero), Section 2 (Project Overview & Core Challenges)
-// and Section 3 (雙軸優化策略 + 改版前的台北捷運 GO App, Figma 127:127 /
-// 139:42 / mobile 151:395) are implemented. Section 3 reuses the `process`
-// row's content (same row that also carries the long-form process
-// narrative in `items`, left untouched) -- StrategyBeforeApp only reads
-// the fields it needs (`strategies`, `visionText`, `mobileVisionText`,
-// `beforeAppSubtext`) off that same content object. The remaining ~13
-// sections from the spec follow the same pattern (see PORTFOLIO-SPEC
-// discussion) and slot in here in order, each wired the same way (fetch
-// content below, pass as props).
+// commit Section 1 (Hero), Section 2 (Project Overview & Core Challenges),
+// Section 3 (雙軸優化策略 + 改版前的台北捷運 GO App, Figma 127:127 / 139:42 /
+// mobile 151:395) and Section 4's first sub-block (核心介面優化與服務創新設計
+// / 01 路線搜尋與規劃, Figma desktop 127:142 / mobile 147:140) are
+// implemented. Sections 3 and 4 both reuse the `process` row's content
+// (same row that also carries the long-form process narrative in `items`,
+// left untouched) -- each component only reads the fields it needs off
+// that same content object (StrategyBeforeApp: `strategies`, `visionText`,
+// `mobileVisionText`, `beforeAppSubtext`; InterfaceRouteSearch:
+// `interfaceEyebrow`, `interfaceHeading`, `interfaceSectionNumber`,
+// `interfaceSectionTitle`, `interfaceBlocks`, and the four
+// `interface*MediaUrl` fields). The remaining sections from the spec
+// (InterfaceDesign_02/_03 and beyond) follow the same pattern and slot in
+// here in order, each wired the same way (fetch content below, pass as
+// props) -- note the Interface & Interaction eyebrow/heading should only
+// render once, so a later "02/03" component must NOT repeat it.
 
 export const revalidate = 60;
 
@@ -72,6 +79,7 @@ export default async function MetroPage() {
         <Hero project={data.project} hero={data.hero} />
         <ProjectOverview project={data.project} overview={data.overview} challenge={data.challenge} />
         <StrategyBeforeApp process={data.process} />
+        <InterfaceRouteSearch process={data.process} />
       </main>
     </DoorReveal>
   );
