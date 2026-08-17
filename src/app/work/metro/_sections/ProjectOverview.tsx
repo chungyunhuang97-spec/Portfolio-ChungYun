@@ -42,6 +42,15 @@ export function ProjectOverview({
     ? (challenge.items as ChallengeItem[])
     : [];
 
+  // Mobile copy is intentionally trimmed/reworded vs. desktop per Figma
+  // (147:75) — falls back to the desktop value if no mobile override is set.
+  const mobileText = (overview.mobileText as string) || overviewText;
+  const mobileTimeframe = (overview.mobileTimeframe as string) || timeframe;
+  const mobileTeam = (overview.mobileTeam as string) || team;
+  const mobileRole = (overview.mobileRole as string) || role;
+  const mobileContribution =
+    (overview.mobileContribution as string) || contribution;
+
   const infoCards = [
     { label: "專案時間", value: timeframe },
     { label: "團隊成員", value: team },
@@ -79,7 +88,7 @@ export function ProjectOverview({
               “
             </span>
             <p className="font-nunito px-3 text-center text-[14px] leading-[21px] font-normal text-grey-800">
-              {overviewText}
+              {mobileText}
             </p>
             <span
               className="font-nunito absolute top-1 right-1.5 text-[26px] leading-none font-black text-primary-orange"
@@ -96,7 +105,7 @@ export function ProjectOverview({
               <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-[#e6e6e6] bg-proj-white px-2.5 py-1.5">
                 <Clock size={24} weight="bold" className="text-primary-orange" />
                 <p className="font-nunito text-[12px] font-bold text-grey-800">
-                  {timeframe}
+                  {mobileTimeframe}
                 </p>
               </div>
               <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-[#e6e6e6] bg-proj-white px-2.5 py-1.5">
@@ -106,20 +115,21 @@ export function ProjectOverview({
                   className="text-primary-orange"
                 />
                 <p className="font-nunito text-[12px] font-bold text-grey-800">
-                  {team}
+                  {mobileTeam}
                 </p>
               </div>
             </div>
 
-            {contribution && (
+            {mobileContribution && (
               <div className="flex flex-col items-center justify-center gap-1 rounded-lg bg-proj-white p-3">
                 <div className="rounded-lg border border-primary-orange bg-proj-white px-2.5 py-1.5">
                   <p className="font-nunito text-[12px] font-bold text-grey-800">
-                    擔任｜<span className="text-primary-orange">{role}</span>
+                    擔任｜
+                    <span className="text-primary-orange">{mobileRole}</span>
                   </p>
                 </div>
                 <p className="font-nunito min-w-full text-center text-[13px] leading-[18px] font-normal text-grey-600">
-                  {contribution}
+                  {mobileContribution}
                 </p>
               </div>
             )}
@@ -177,7 +187,7 @@ export function ProjectOverview({
             <h3 className="font-nunito text-[32px] leading-[48px] font-bold text-primary-black">
               專案簡介
             </h3>
-            <p className="font-nunito max-w-[70ch] text-[16px] leading-[24px] font-normal text-grey-800">
+            <p className="font-nunito w-full text-[16px] leading-[24px] font-normal text-grey-800">
               {overviewText}
             </p>
           </div>
