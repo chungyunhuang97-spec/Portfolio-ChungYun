@@ -1,6 +1,11 @@
-import { Clock, UsersThree } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import type { Project } from "@/lib/types";
+import {
+  OverviewClockIcon,
+  OverviewPeopleIcon,
+  QuoteMarkLeft,
+  QuoteMarkRight,
+} from "./overview-icons";
 
 interface ChallengeItem {
   title: string;
@@ -81,21 +86,11 @@ export function ProjectOverview({
 
         <SlideIn delay={0.15}>
           <div className="relative rounded-lg border border-[#e6e6e6] bg-proj-white px-5 py-3">
-            <span
-              className="font-nunito absolute top-1 left-1.5 text-[26px] leading-none font-black text-primary-orange"
-              aria-hidden
-            >
-              “
-            </span>
+            <QuoteMarkLeft className="absolute top-[11px] left-[5px]" />
             <p className="font-nunito px-3 text-center text-[14px] leading-[21px] font-normal text-grey-800">
               {mobileText}
             </p>
-            <span
-              className="font-nunito absolute top-1 right-1.5 text-[26px] leading-none font-black text-primary-orange"
-              aria-hidden
-            >
-              ”
-            </span>
+            <QuoteMarkRight className="absolute top-[11px] right-[13px]" />
           </div>
         </SlideIn>
 
@@ -103,17 +98,17 @@ export function ProjectOverview({
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-1.5">
               <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-[#e6e6e6] bg-proj-white px-2.5 py-1.5">
-                <Clock size={24} weight="bold" className="text-primary-orange" />
+                <span className="flex size-6 items-center justify-center">
+                  <OverviewClockIcon />
+                </span>
                 <p className="font-nunito text-[12px] font-bold text-grey-800">
                   {mobileTimeframe}
                 </p>
               </div>
               <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-[#e6e6e6] bg-proj-white px-2.5 py-1.5">
-                <UsersThree
-                  size={24}
-                  weight="bold"
-                  className="text-primary-orange"
-                />
+                <span className="flex size-6 items-center justify-center">
+                  <OverviewPeopleIcon />
+                </span>
                 <p className="font-nunito text-[12px] font-bold text-grey-800">
                   {mobileTeam}
                 </p>
