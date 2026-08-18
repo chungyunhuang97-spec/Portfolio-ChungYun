@@ -226,15 +226,15 @@ function MobileFeatureCarousel({ features }: { features: FeatureItem[] }) {
         </motion.div>
       </AnimatePresence>
       {features.length > 1 && (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {features.map((f, i) => (
             <button
               key={f.title}
               type="button"
               onClick={() => setIndex(i)}
               aria-label={`查看第 ${i + 1} 項說明：${f.title}`}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === index ? "w-5 bg-primary-orange" : "w-1.5 bg-grey-200"
+              className={`h-[10px] rounded-[5px] transition-all duration-300 ${
+                i === index ? "w-[28px] bg-primary-orange" : "w-[10px] bg-grey-300"
               }`}
             />
           ))}
@@ -254,7 +254,7 @@ function MobilePainPointButton({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="absolute right-2 bottom-2 z-20">
+    <div className="absolute -right-10 bottom-6 z-20">
       <AnimatePresence>
         {open && (
           <>
