@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ExclamationMark } from "@phosphor-icons/react/dist/ssr";
@@ -57,21 +57,67 @@ function mediaScreen(url?: string) {
 function TechBackground() {
   const reduceMotion = useReducedMotion();
   const filterId = useId();
-  const [seed, setSeed] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const turbulenceRef = useRef<SVGFETurbulenceElement>(null);
 
+  // 2026-08-18 perf fix: the grain used to cycle via a React state update
+  // (`setSeed`) every 220ms -- a re-render 4-5x/sec, running continuously
+  // the whole time this section is mounted, even while it's still below
+  // the fold and nobody can see it. That's a plausible reason Joe felt this
+  // sub-block laggier than the first one (see the technical note in the
+  // planning doc). Two changes: (1) mutate the SVG filter's `seed`
+  // attribute directly via ref, bypassing React's render cycle entirely;
+  // (2) gate the interval behind an IntersectionObserver so it only runs
+  // while the section is actually in/near the viewport.
   useEffect(() => {
     if (reduceMotion) return;
-    const interval = setInterval(() => {
-      setSeed((s) => (s % 8) + 1);
-    }, 220);
-    return () => clearInterval(interval);
+    const container = containerRef.current;
+    if (!container) return;
+
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+    let seed = 1;
+
+    const start = () => {
+      if (intervalId) return;
+      intervalId = setInterval(() => {
+        seed = (seed % 8) + 1;
+        turbulenceRef.current?.setAttribute("seed", String(seed));
+      }, 220);
+    };
+    const stop = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = undefined;
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) start();
+        else stop();
+      },
+      { threshold: 0.01 },
+    );
+    observer.observe(container);
+
+    return () => {
+      stop();
+      observer.disconnect();
+    };
   }, [reduceMotion]);
 
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div ref={containerRef} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <svg className="absolute inset-0 h-full w-full opacity-[0.06] mix-blend-overlay">
         <filter id={filterId}>
-          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} seed={seed} stitchTiles="stitch" />
+          <feTurbulence
+            ref={turbulenceRef}
+            type="fractalNoise"
+            baseFrequency="0.85"
+            numOctaves={2}
+            seed={1}
+            stitchTiles="stitch"
+          />
         </filter>
         <rect width="100%" height="100%" filter={`url(#${filterId})`} />
       </svg>
@@ -144,6 +190,61 @@ function FeatureRow({ feature, mobile = false }: { feature: FeatureItem; mobile?
 }
 
 /**
+ * Mobile-only auto-rotating "page control" for the feature list -- same fix
+ * as InterfaceRouteSearch's version (see that file's doc comment for the
+ * full rationale), duplicated here per this codebase's per-section-file
+ * convention. Dot colors stay orange-on-grey rather than switching to the
+ * section's white-on-orange scheme, because this carousel lives inside the
+ * white content panel below the tabs, not directly on the orange field.
+ */
+function MobileFeatureCarousel({ features }: { features: FeatureItem[] }) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (features.length <= 1) return;
+    const timer = setInterval(() => {
+      setIndex((i) => (i + 1) % features.length);
+    }, 3200);
+    return () => clearInterval(timer);
+  }, [features]);
+
+  const active = features[index];
+  if (!active) return null;
+
+  return (
+    <div className="flex w-full flex-col items-center gap-3">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={active.title}
+          initial={{ opacity: 0, x: 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -12 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="w-full"
+        >
+          <FeatureRow feature={active} mobile />
+        </motion.div>
+      </AnimatePresence>
+      {features.length > 1 && (
+        <div className="flex items-center gap-1.5">
+          {features.map((f, i) => (
+            <button
+              key={f.title}
+              type="button"
+              onClick={() => setIndex(i)}
+              aria-label={`查看第 ${i + 1} 項說明：${f.title}`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === index ? "w-5 bg-primary-orange" : "w-1.5 bg-grey-200"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Mobile-only "!" trigger overlapping the phone mockup's bottom-right
  * corner -- identical pattern to InterfaceRouteSearch's version, duplicated
  * here rather than shared per this codebase's self-contained-per-section
@@ -203,13 +304,15 @@ function MobilePainPointButton({ text }: { text: string }) {
 }
 
 /**
- * Folder-style tab switcher for mobile -- same outer-edge-only-rounding fix
- * as InterfaceRouteSearch (Figma's own literal per-tab export rounds BOTH
- * corners of every tab, which reproduces a visible notch at the seam; that
- * bug was found and fixed for section 1 and deliberately not repeated
- * here). Color scheme is new: the page background here is solid orange
- * (not grey/white), so inactive tabs use translucent white instead of
- * grey-100, and the active tab flips to orange text on a white fill.
+ * Folder-style tab switcher for mobile -- same 2026-08-18 redesign as
+ * InterfaceRouteSearch's version (see that file's doc comment for the full
+ * rationale): a fixed-height track holding all tabs at equal height, with
+ * the active state shown as an inset pill (rounded on every corner) that
+ * slides via `layoutId`, instead of the old per-button height differential
+ * that left the active tab's own corners square. Color scheme stays the
+ * same as before: the page background here is solid orange, so the track
+ * and inactive tabs use translucent white, and the active pill flips to
+ * orange text on a white fill.
  */
 function FolderTabs({
   blocks,
@@ -221,29 +324,22 @@ function FolderTabs({
   onChange: (i: number) => void;
 }) {
   return (
-    <div className="flex h-11 w-full items-end gap-0">
+    <div className="flex w-full gap-1 rounded-t-2xl border border-b-0 border-white/30 bg-white/10 p-1.5">
       {blocks.map((b, i) => {
         const isActive = i === active;
-        const isFirst = i === 0;
-        const isLast = i === blocks.length - 1;
-        const edgeRounding = `${isFirst ? "rounded-tl-2xl" : ""} ${isLast ? "rounded-tr-2xl" : ""}`.trim();
         return (
           <button
             key={b.tabLabel}
             type="button"
             onClick={() => onChange(i)}
-            className={`relative flex flex-1 items-center justify-center overflow-visible transition-[height] duration-300 ${
-              isActive ? "h-11" : "h-[34px]"
-            }`}
+            className="relative flex-1 rounded-xl px-2 py-2.5 text-center"
           >
-            {isActive ? (
+            {isActive && (
               <motion.span
                 layoutId="companionFolderTabBg"
-                className={`absolute inset-0 border border-b-0 border-white/30 bg-proj-white ${edgeRounding}`}
-                transition={{ type: "spring", stiffness: 320, damping: 32 }}
+                className="absolute inset-0 rounded-xl bg-proj-white shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                transition={{ type: "spring", stiffness: 380, damping: 34 }}
               />
-            ) : (
-              <span className={`absolute inset-0 bg-white/20 ${edgeRounding}`} aria-hidden />
             )}
             <span
               className={`font-nunito relative z-10 text-[15px] font-bold ${
@@ -348,12 +444,16 @@ export function InterfaceCompanionService({ process }: { process: Record<string,
   if (blocks.length === 0) return null;
 
   return (
-    <section className="relative overflow-hidden bg-primary-orange px-6 py-12 md:px-[120px] md:py-[100px]">
+    <section className="relative overflow-hidden bg-primary-orange px-6 py-8 md:px-[120px] md:py-[100px]">
       <TechBackground />
 
       <div className="relative z-10">
-        {/* Mobile layout */}
-        <div className="flex flex-col gap-4 md:hidden">
+        {/* Mobile layout -- 2026-08-18: same vertical-rhythm tightening +
+            mockup shrink + feature carousel as InterfaceRouteSearch (see
+            that file for the full rationale). This block had the worse
+            100vh overflow of the two per Joe's screenshots (extra heading
+            row + a 3rd tab), so the same fix applies here too. */}
+        <div className="flex flex-col gap-3 md:hidden">
           <SlideIn delay={0.1}>
             <div className="flex items-center gap-3">
               <span className="font-fredoka text-proj-white text-[32px] leading-[32px]">{sectionNumber}</span>
@@ -367,7 +467,7 @@ export function InterfaceCompanionService({ process }: { process: Record<string,
             <div className="flex flex-col">
               <FolderTabs blocks={blocks} active={activeTab} onChange={setActiveTab} />
 
-              <div className="w-full overflow-hidden rounded-b-2xl border border-t-0 border-white/30 bg-proj-white px-4 py-6">
+              <div className="w-full overflow-hidden rounded-b-2xl border border-t-0 border-white/30 bg-proj-white px-4 py-5">
                 <AnimatePresence mode="wait">
                   {activeBlock && (
                     <motion.div
@@ -376,19 +476,15 @@ export function InterfaceCompanionService({ process }: { process: Record<string,
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.25, ease: "easeOut" }}
-                      className="flex flex-col items-center gap-6"
+                      className="flex flex-col items-center gap-4"
                     >
-                      <div className="relative w-[215px]">
+                      <div className="relative w-[46vw] max-w-[190px] min-w-[150px]">
                         <PhoneGlow>
                           <PhoneFrame screen={mediaScreen(mobileMedia[activeTab])} label="App 畫面（後臺可上傳影片）" />
                         </PhoneGlow>
                         <MobilePainPointButton text={activeBlock.painPoint} />
                       </div>
-                      <div className="flex w-full flex-col gap-3">
-                        {activeBlock.features.map((f) => (
-                          <FeatureRow key={f.title} feature={f} mobile />
-                        ))}
-                      </div>
+                      <MobileFeatureCarousel features={activeBlock.features} />
                     </motion.div>
                   )}
                 </AnimatePresence>
