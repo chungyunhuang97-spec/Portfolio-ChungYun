@@ -99,7 +99,7 @@ function TrendCard({ trends }: { trends: MarketTrend[] }) {
   return (
     <SlideIn
       delay={0.15}
-      className="relative flex h-[400px] flex-1 flex-col items-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
+      className="relative flex flex-1 flex-col items-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
     >
       <ScanReveal delay={0.1} />
       <span className="h-1 w-full shrink-0 rounded-full bg-primary-orange" aria-hidden />
@@ -111,8 +111,14 @@ function TrendCard({ trends }: { trends: MarketTrend[] }) {
         that shrink was the root cause of Joe's "content doesn't fill the
         frame" + "padding looks wrong" + "text wraps to 2 lines" reports on
         2026-08-18 (the before/after pills, sized off the shrunk parent, were
-        too narrow for their text). justify-between (not justify-center)
-        matches Figma's even row-spread across the fixed 400px height.
+        too narrow for their text).
+
+        No fixed height on the card itself (round 3, per Joe): each card
+        should hug its own content, and the three-card row's `items-stretch`
+        (see the row wrapper below) equalizes all three to the tallest
+        card's natural height -- not a hardcoded 400px. justify-between
+        still spreads this card's 3 rows evenly across whatever stretched
+        height it ends up with.
       */}
       <div className="flex w-full flex-1 flex-col justify-between">
         {trends.map((t) => (
@@ -138,7 +144,7 @@ function PersonaCard({ personas }: { personas: MarketPersona[] }) {
   return (
     <SlideIn
       delay={0.22}
-      className="relative flex h-[400px] flex-1 flex-col items-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
+      className="relative flex flex-1 flex-col items-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
     >
       <ScanReveal delay={0.16} />
       <span className="h-1 w-full shrink-0 rounded-full bg-secondary-blue" aria-hidden />
@@ -176,7 +182,7 @@ function SystemInsightCard({ insight }: { insight: string }) {
   return (
     <SlideIn
       delay={0.29}
-      className="relative flex h-[400px] flex-1 flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
+      className="relative flex flex-1 flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
     >
       <ScanReveal delay={0.22} />
       <span className="h-1 w-full shrink-0 rounded-full bg-accent-pink" aria-hidden />
@@ -285,6 +291,19 @@ function MobileCard({ index, card }: { index: number; card: MarketMobileCard }) 
  * child that should span the card's width -- `items-center` silently
  * shrink-wraps width-less children, and it's easy to miss in a screenshot
  * comparison because the shrink can look plausible at a glance.
+ *
+ * 2026-08-18 fix pass, round 3 (Joe: card height should "hug" its own
+ * content instead of a hardcoded height, with the three cards ending up
+ * equal-height because the row stretches every card to match whichever one
+ * is naturally tallest -- not because each one independently targets a
+ * fixed 400px). Removed the literal `h-[400px]` from all three cards; they
+ * now render at their natural content height. The three-card row wrapper
+ * already uses `items-stretch` (see below), which is what actually
+ * equalizes them -- every card stretches to match the tallest card's
+ * natural height, so the total row height is driven by content, not a
+ * magic number. TrendCard's `justify-between` still spreads its 3 rows
+ * evenly across whatever stretched height it ends up with once the row is
+ * resolved.
  */
 export function MarketResearch({ process }: { process: Record<string, unknown> }) {
   const intro = typeof process.marketIntro === "string" ? process.marketIntro : "";
