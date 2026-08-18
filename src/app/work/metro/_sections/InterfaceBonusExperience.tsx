@@ -505,10 +505,12 @@ export function InterfaceBonusExperience({ process }: { process: Record<string, 
             <BonusPanel block={blocks[0]} isActive={activeTab === 0} onSelect={() => setActiveTab(0)} />
 
             <div className="flex w-[280px] shrink-0 flex-col items-center justify-center gap-5">
+              <div className="w-full">
               <PhoneGlow>
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}
+                    className="w-full"
                     initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.97 }}
@@ -518,6 +520,7 @@ export function InterfaceBonusExperience({ process }: { process: Record<string, 
                   </motion.div>
                 </AnimatePresence>
               </PhoneGlow>
+              </div>
               <SegmentedTabBar blocks={blocks} active={activeTab} onChange={setActiveTab} />
             </div>
 
