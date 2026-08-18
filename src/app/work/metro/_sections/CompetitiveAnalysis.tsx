@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChartBar } from "@phosphor-icons/react/dist/ssr";
+import { ChartBar, Sparkle } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 
 interface CompetitiveRow {
@@ -89,6 +89,60 @@ function PingDot({ highlight }: { highlight?: boolean }) {
   );
 }
 
+/**
+ * The takeaway banner, closing both the mobile list and the desktop table.
+ * Joe flagged (2026-08-18) that this conclusion didn't feel emphasized
+ * enough -- everything above it (rows, PingDot) already had motion, but the
+ * banner that actually delivers the "so what" just sat there static. Given
+ * it three of its own, LOOPING (not one-time) motion layers so it keeps
+ * reading as "the important part" for as long as it's on screen: a
+ * pulsing glow (animated box-shadow), a diagonal light sweep that
+ * periodically crosses the banner, and a pulsing Sparkle icon leading the
+ * text. Deliberately louder/more sustained than the one-time ScanReveal
+ * used elsewhere in this section -- this is the one element on the page
+ * meant to keep pulling the eye back.
+ */
+function ConclusionBanner({ text, size }: { text: string; size: "desktop" | "mobile" }) {
+  const isDesktop = size === "desktop";
+  return (
+    <motion.div
+      className={`relative flex w-full items-center gap-3 overflow-hidden rounded-xl bg-primary-orange ${
+        isDesktop ? "px-8 py-6" : "p-4"
+      }`}
+      animate={{
+        boxShadow: [
+          "0px 4px 8px rgba(255,82,13,0.2)",
+          "0px 10px 32px rgba(255,82,13,0.45)",
+          "0px 4px 8px rgba(255,82,13,0.2)",
+        ],
+      }}
+      transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+    >
+      <motion.span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 z-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+        initial={{ x: "-140%" }}
+        animate={{ x: "340%" }}
+        transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
+      />
+      <motion.span
+        className="relative z-10 flex shrink-0 items-center justify-center"
+        animate={{ scale: [1, 1.2, 1], rotate: [0, 8, 0] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <Sparkle size={isDesktop ? 24 : 16} weight="fill" className="text-proj-white" />
+      </motion.span>
+      <p
+        className={`font-nunito relative z-10 flex-1 font-bold text-proj-white ${
+          isDesktop ? "text-[20px] leading-[30px]" : "text-[13px] leading-[19px]"
+        }`}
+      >
+        {text}
+      </p>
+    </motion.div>
+  );
+}
+
 function SectionEyebrow({ size = "small" }: { size?: "small" | "large" }) {
   return (
     <div className="flex items-center gap-2">
@@ -138,6 +192,15 @@ function SectionEyebrow({ size = "small" }: { size?: "small" | "large" }) {
  * previews) -- this section's Figma spec is a flat data table with no
  * image to frame, so a glowing border would be motion for its own sake
  * rather than motion that fits the content.
+ *
+ * 2026-08-18 polish pass: Joe felt the conclusion banner (the "so what" of
+ * this whole section) didn't read as emphasized despite the rest of the
+ * table having motion. Replaced the previously-static banner markup on
+ * both breakpoints with the new `ConclusionBanner` (see its doc comment) --
+ * a pulsing glow + looping light sweep + pulsing Sparkle icon, all
+ * continuous rather than one-time. Also added a subtle hover tint to every
+ * comparison row on both breakpoints so the table itself feels more
+ * interactive, not just decorative.
  */
 export function CompetitiveAnalysis({ process }: { process: Record<string, unknown> }) {
   const intro = typeof process.competitiveIntro === "string" ? process.competitiveIntro : "";
@@ -169,9 +232,9 @@ export function CompetitiveAnalysis({ process }: { process: Record<string, unkno
             {rows.map((row, i) => (
               <div
                 key={row.app}
-                className={`flex items-center gap-3 p-4 ${i % 2 === 1 ? "bg-[#fafafa]" : "bg-proj-white"} ${
-                  i < rows.length - 1 ? "border-b border-[#e6e6e6]" : ""
-                }`}
+                className={`flex items-center gap-3 p-4 transition-colors duration-200 hover:bg-[#fff4ed] ${
+                  i % 2 === 1 ? "bg-[#fafafa]" : "bg-proj-white"
+                } ${i < rows.length - 1 ? "border-b border-[#e6e6e6]" : ""}`}
               >
                 <div className="flex w-[104px] shrink-0 items-center gap-2">
                   <PingDot highlight={row.highlight} />
@@ -201,9 +264,7 @@ export function CompetitiveAnalysis({ process }: { process: Record<string, unkno
           viewportMargin doc comment.
         */}
         <SlideIn delay={0.2} viewportMargin="0px">
-          <div className="rounded-xl bg-primary-orange p-4">
-            <p className="font-nunito text-[13px] leading-[19px] font-bold text-proj-white">{conclusionMobile}</p>
-          </div>
+          <ConclusionBanner text={conclusionMobile} size="mobile" />
         </SlideIn>
       </div>
 
@@ -243,9 +304,9 @@ export function CompetitiveAnalysis({ process }: { process: Record<string, unkno
             {rows.map((row, i) => (
               <div
                 key={row.app}
-                className={`flex w-full items-start p-4 ${i % 2 === 1 ? "bg-[#fafafa]" : "bg-proj-white"} ${
-                  i < rows.length - 1 ? "border-b border-[#eae7e4]" : ""
-                }`}
+                className={`flex w-full items-start p-4 transition-colors duration-200 hover:bg-[#fff4ed] ${
+                  i % 2 === 1 ? "bg-[#fafafa]" : "bg-proj-white"
+                } ${i < rows.length - 1 ? "border-b border-[#eae7e4]" : ""}`}
               >
                 <div className="flex w-[200px] shrink-0 items-center gap-2">
                   <PingDot highlight={row.highlight} />
@@ -273,11 +334,7 @@ export function CompetitiveAnalysis({ process }: { process: Record<string, unkno
 
         {/* Same page-bottom viewportMargin fix as the mobile conclusion banner above. */}
         <SlideIn delay={0.25} viewportMargin="0px">
-          <div className="flex w-full rounded-xl bg-primary-orange px-8 py-6 shadow-[0px_4px_8px_rgba(255,82,13,0.2)]">
-            <p className="font-nunito flex-1 text-[20px] leading-[30px] font-bold text-proj-white">
-              {conclusionDesktop}
-            </p>
-          </div>
+          <ConclusionBanner text={conclusionDesktop} size="desktop" />
         </SlideIn>
       </div>
     </section>
