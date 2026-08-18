@@ -9,6 +9,7 @@ import { InterfaceRouteSearch } from "./_sections/InterfaceRouteSearch";
 import { InterfaceCompanionService } from "./_sections/InterfaceCompanionService";
 import { InterfaceBonusExperience } from "./_sections/InterfaceBonusExperience";
 import { IaRestructuring } from "./_sections/IaRestructuring";
+import { CompetitiveAnalysis } from "./_sections/CompetitiveAnalysis";
 import { getProjectWithSections } from "@/lib/data";
 
 // Hand-crafted, bespoke page for this one case study -- deliberately NOT
@@ -36,8 +37,10 @@ import { getProjectWithSections } from "@/lib/data";
 // / mobile 147:200), and IaRestructuring (雙軸解決方案與資訊架構重構, Figma
 // desktop 127:345 / mobile 147:235 -- a standalone section slotted in after
 // Section 4's three sub-blocks, NOT itself part of that numbered "01/02/03"
-// family, so it renders its own eyebrow/heading) are implemented. Sections
-// 3, 4, and IaRestructuring all reuse the
+// family, so it renders its own eyebrow/heading), and CompetitiveAnalysis
+// (競品分析與定位, Figma desktop 127:555 / mobile 147:268 -- also a
+// standalone section with its own eyebrow/heading) are implemented. Sections
+// 3, 4, IaRestructuring, and CompetitiveAnalysis all reuse the
 // `process` row's content (same row that also carries the long-form process
 // narrative in `items`, left untouched) -- each component only reads the
 // fields it needs off that same content object (StrategyBeforeApp:
@@ -50,7 +53,10 @@ import { getProjectWithSections } from "@/lib/data";
 // `bonusSectionNumber`, `bonusSectionTitle`, `bonusBlocks`, and the four
 // `bonus*MediaUrl` fields; IaRestructuring: `iaPoints` only -- headings and
 // intro paragraphs are hardcoded, icons/diagrams are static /public
-// assets, not CMS fields). Any further sub-block beyond "03" follows the
+// assets, not CMS fields; CompetitiveAnalysis: `competitiveIntro`,
+// `competitiveRows`, `competitiveConclusionDesktop`,
+// `competitiveConclusionMobile` -- no media fields, no static assets, it's
+// a plain data table/list). Any further section beyond this follows the
 // same pattern and slots in here in order, each wired the same way (fetch
 // content below, pass as props) -- note the Interface & Interaction
 // eyebrow/heading should only render once (in InterfaceRouteSearch), so
@@ -97,6 +103,7 @@ export default async function MetroPage() {
         <InterfaceCompanionService process={data.process} />
         <InterfaceBonusExperience process={data.process} />
         <IaRestructuring process={data.process} />
+        <CompetitiveAnalysis process={data.process} />
       </main>
     </DoorReveal>
   );
