@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -92,6 +92,64 @@ function FeatureRow({ feature, mobile = false }: { feature: FeatureItem; mobile?
 }
 
 /**
+ * Mobile-only auto-rotating "page control" for the feature list -- 2026-08-18
+ * fix for Joe's "100vh 內看不到完整三項說明" report. Showing all 3
+ * FeatureRows stacked (previous behaviour) pushed the section well past one
+ * mobile viewport when combined with the phone mockup above it. Instead,
+ * show ONE row at a time, auto-advance every 3.2s, and offer dots so every
+ * item still surfaces without requiring a page scroll (per Joe's own
+ * proposed "Page Control" spec). Remounts fresh (index resets to 0) every
+ * time the parent's `key={activeTab}` changes tabs, since this lives inside
+ * that keyed subtree -- no extra reset effect needed.
+ */
+function MobileFeatureCarousel({ features }: { features: FeatureItem[] }) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (features.length <= 1) return;
+    const timer = setInterval(() => {
+      setIndex((i) => (i + 1) % features.length);
+    }, 3200);
+    return () => clearInterval(timer);
+  }, [features]);
+
+  const active = features[index];
+  if (!active) return null;
+
+  return (
+    <div className="flex w-full flex-col items-center gap-3">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={active.title}
+          initial={{ opacity: 0, x: 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -12 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="w-full"
+        >
+          <FeatureRow feature={active} mobile />
+        </motion.div>
+      </AnimatePresence>
+      {features.length > 1 && (
+        <div className="flex items-center gap-1.5">
+          {features.map((f, i) => (
+            <button
+              key={f.title}
+              type="button"
+              onClick={() => setIndex(i)}
+              aria-label={`查看第 ${i + 1} 項說明：${f.title}`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === index ? "w-5 bg-primary-orange" : "w-1.5 bg-grey-200"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Mobile-only "!" trigger overlapping the phone mockup's bottom-right
  * corner -- the mobile equivalent of desktop's always-visible 痛點解決
  * callout. Tapping it pops a small anchored card (not a full modal, so it
@@ -151,10 +209,27 @@ function MobilePainPointButton({ text }: { text: string }) {
 }
 
 /**
- * Folder-style tab switcher for mobile -- the active tab uses a shared
- * layoutId so its white background "morphs" smoothly between positions
- * when Joe taps 搜尋路線 / 站點資訊, reading like a folder tab flipping
- * forward rather than a hard cut.
+ * Folder-style tab switcher for mobile -- 2026-08-18 redesign after Joe
+ * flagged the active tab's right edge and bottom (the seam against the
+ * content panel) as looking like a sharp, unfinished right angle. The
+ * previous version varied each button's HEIGHT to make the active tab
+ * "pop up" (44px vs 34px), which only left room to round the outer two
+ * corners of the whole strip -- every other corner, including the active
+ * tab's own corners, stayed square.
+ *
+ * This version keeps the same "no gap/notch between tabs" principle (still
+ * reads as one continuous folder body, not separate pills) but switches the
+ * mechanism: a single fixed-height track (rounded-t-2xl, bordered) holds
+ * all tabs at equal height, and the active state is a small inset pill
+ * (rounded-xl on every corner) that slides between positions via
+ * `layoutId`. Because there's no height differential anymore, there's
+ * nothing to leave square -- the track's top corners round into the panel
+ * below (which keeps its own rounded-b-2xl), so the whole tab+panel unit
+ * reads as one seamless rounded card. This also drops the per-button
+ * `transition-[height]` that used to fight the layoutId spring animation on
+ * every tap -- one less animated layout property should help the tap-lag
+ * Joe reported (see MobileFeatureCarousel / TechBackground for the other
+ * two perf fixes from this same pass).
  */
 function FolderTabs({
   blocks,
@@ -166,33 +241,22 @@ function FolderTabs({
   onChange: (i: number) => void;
 }) {
   return (
-    <div className="flex h-11 w-full items-end gap-0">
+    <div className="flex w-full gap-1 rounded-t-2xl border border-b-0 border-[#e5e0db] bg-grey-100 p-1.5">
       {blocks.map((b, i) => {
         const isActive = i === active;
-        // Only the OUTER edges of the tab strip round -- the seam between
-        // adjacent tabs stays square so the two pieces read as one
-        // continuous folder body (no curved notch exposing the page
-        // background between them) rather than two separate pills.
-        const isFirst = i === 0;
-        const isLast = i === blocks.length - 1;
-        const edgeRounding = `${isFirst ? "rounded-tl-2xl" : ""} ${isLast ? "rounded-tr-2xl" : ""}`.trim();
         return (
           <button
             key={b.tabLabel}
             type="button"
             onClick={() => onChange(i)}
-            className={`relative flex flex-1 items-center justify-center overflow-visible transition-[height] duration-300 ${
-              isActive ? "h-11" : "h-[34px]"
-            }`}
+            className="relative flex-1 rounded-xl px-2 py-2.5 text-center"
           >
-            {isActive ? (
+            {isActive && (
               <motion.span
                 layoutId="folderTabBg"
-                className={`absolute inset-0 border border-b-0 border-[#e5e0db] bg-proj-white ${edgeRounding}`}
-                transition={{ type: "spring", stiffness: 320, damping: 32 }}
+                className="absolute inset-0 rounded-xl bg-proj-white shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+                transition={{ type: "spring", stiffness: 380, damping: 34 }}
               />
-            ) : (
-              <span className={`absolute inset-0 bg-grey-100 ${edgeRounding}`} aria-hidden />
             )}
             <span
               className={`font-nunito relative z-10 text-[15px] font-bold ${
@@ -304,9 +368,15 @@ export function InterfaceRouteSearch({ process }: { process: Record<string, unkn
   if (blocks.length === 0) return null;
 
   return (
-    <section className="bg-grey-50 px-6 py-12 md:px-[120px] md:py-[100px]">
-      {/* Mobile layout */}
-      <div className="flex flex-col gap-4 md:hidden">
+    <section className="bg-grey-50 px-6 py-8 md:px-[120px] md:py-[100px]">
+      {/* Mobile layout -- 2026-08-18: tightened vertical rhythm (gap-4→gap-3,
+          section py-12→py-8, panel py-6→py-5, phone→list gap-6→gap-4) and
+          shrunk the phone mockup to a viewport-relative width so it doesn't
+          dominate a short screen, per Joe's "100vh 高度適配" ask. Combined
+          with MobileFeatureCarousel below (showing one feature at a time
+          instead of all 3 stacked), heading + tabs + mockup + a feature row
+          should now fit one mobile viewport without scrolling. */}
+      <div className="flex flex-col gap-3 md:hidden">
         <SlideIn delay={0.1}>
           <div className="flex items-center gap-3">
             <span className="font-fredoka text-[32px] leading-[32px] text-primary-orange">{sectionNumber}</span>
@@ -317,14 +387,14 @@ export function InterfaceRouteSearch({ process }: { process: Record<string, unkn
         </SlideIn>
 
         {/* FolderTabs + content panel are grouped into ONE flex child so the
-            parent's `gap-4` (meant to space the heading from this whole
+            parent's `gap-3` (meant to space the heading from this whole
             folder unit) never lands BETWEEN the tabs and the panel -- the
             tab strip sits flush against the panel below it, no seam. */}
         <SlideIn delay={0.15}>
           <div className="flex flex-col">
             <FolderTabs blocks={blocks} active={activeTab} onChange={setActiveTab} />
 
-            <div className="w-full overflow-hidden rounded-b-2xl border border-t-0 border-[#e5e0db] bg-proj-white px-4 py-6">
+            <div className="w-full overflow-hidden rounded-b-2xl border border-t-0 border-[#e5e0db] bg-proj-white px-4 py-5">
               <AnimatePresence mode="wait">
                 {activeBlock && (
                   <motion.div
@@ -333,19 +403,15 @@ export function InterfaceRouteSearch({ process }: { process: Record<string, unkn
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.25, ease: "easeOut" }}
-                    className="flex flex-col items-center gap-6"
+                    className="flex flex-col items-center gap-4"
                   >
-                    <div className="relative w-[215px]">
+                    <div className="relative w-[46vw] max-w-[190px] min-w-[150px]">
                       <PhoneGlow>
                         <PhoneFrame screen={mediaScreen(mobileMedia[activeTab])} label="App 畫面（後臺可上傳影片）" />
                       </PhoneGlow>
                       <MobilePainPointButton text={activeBlock.painPoint} />
                     </div>
-                    <div className="flex w-full flex-col gap-3">
-                      {activeBlock.features.map((f) => (
-                        <FeatureRow key={f.title} feature={f} mobile />
-                      ))}
-                    </div>
+                    <MobileFeatureCarousel features={activeBlock.features} />
                   </motion.div>
                 )}
               </AnimatePresence>
