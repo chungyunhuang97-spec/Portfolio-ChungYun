@@ -99,24 +99,31 @@ function TrendCard({ trends }: { trends: MarketTrend[] }) {
   return (
     <SlideIn
       delay={0.15}
-      className="relative flex min-h-[400px] flex-1 flex-col items-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
+      className="relative flex h-[400px] flex-1 flex-col items-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
     >
       <ScanReveal delay={0.1} />
       <span className="h-1 w-full shrink-0 rounded-full bg-primary-orange" aria-hidden />
       <h3 className="font-nunito text-[24px] font-bold text-primary-orange">產業趨勢</h3>
-      <div className="flex flex-1 flex-col justify-center">
-        {trends.map((t, i) => (
-          <div
-            key={t.title}
-            className={`flex flex-col items-center gap-3 py-4 ${i < trends.length - 1 ? "border-b border-grey-50" : ""}`}
-          >
+      {/*
+        w-full is required here: this div sits inside a flex-col parent using
+        items-center (not items-stretch), so WITHOUT an explicit width it
+        shrinks to its own min-content width instead of filling the card --
+        that shrink was the root cause of Joe's "content doesn't fill the
+        frame" + "padding looks wrong" + "text wraps to 2 lines" reports on
+        2026-08-18 (the before/after pills, sized off the shrunk parent, were
+        too narrow for their text). justify-between (not justify-center)
+        matches Figma's even row-spread across the fixed 400px height.
+      */}
+      <div className="flex w-full flex-1 flex-col justify-between">
+        {trends.map((t) => (
+          <div key={t.title} className="flex flex-col items-center gap-3 border-b border-grey-50 pb-8">
             <p className="font-nunito text-center text-[15px] font-bold text-grey-700">{t.title}</p>
             <div className="flex w-full items-center gap-3">
-              <span className="flex-1 rounded-full bg-grey-50 px-3 py-1.5 text-center">
+              <span className="flex-1 rounded-full bg-grey-50 px-2.5 py-1.5 text-center">
                 <span className="font-nunito text-[13px] font-semibold text-grey-800">{t.before}</span>
               </span>
               <TrendArrow />
-              <span className="flex-1 rounded-full bg-primary-orange px-3 py-1.5 text-center">
+              <span className="flex-1 rounded-full bg-primary-orange px-2.5 py-1.5 text-center">
                 <span className="font-nunito text-[13px] font-semibold text-proj-white">{t.after}</span>
               </span>
             </div>
@@ -131,15 +138,16 @@ function PersonaCard({ personas }: { personas: MarketPersona[] }) {
   return (
     <SlideIn
       delay={0.22}
-      className="relative flex min-h-[400px] flex-1 flex-col items-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
+      className="relative flex h-[400px] flex-1 flex-col items-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
     >
       <ScanReveal delay={0.16} />
       <span className="h-1 w-full shrink-0 rounded-full bg-secondary-blue" aria-hidden />
-      <div className="flex flex-col items-center">
+      <div className="flex w-full flex-col items-center">
         <h3 className="font-nunito text-[24px] font-bold text-secondary-blue">使用者需求</h3>
         <p className="font-nunito text-[14px] font-normal text-grey-700">不同弱勢族群面臨的搭乘挑戰</p>
       </div>
-      <div className="flex flex-1 flex-col gap-3">
+      {/* w-full needed for the same shrink-to-fit reason as TrendCard above. */}
+      <div className="flex w-full flex-1 flex-col gap-3">
         {personas.map((p, i) => (
           <div key={p.name} className={`flex flex-1 items-start gap-3 rounded-lg p-3 ${PERSONA_BG[i % PERSONA_BG.length]}`}>
             {/*
@@ -168,11 +176,11 @@ function SystemInsightCard({ insight }: { insight: string }) {
   return (
     <SlideIn
       delay={0.29}
-      className="relative flex min-h-[400px] flex-1 flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
+      className="relative flex h-[400px] flex-1 flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl bg-proj-white p-4 shadow-[0_8px_12px_rgba(64,50,42,0.06),0_1px_1.5px_rgba(64,50,42,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_32px_rgba(64,50,42,0.14),0_2px_6px_rgba(64,50,42,0.06)]"
     >
       <ScanReveal delay={0.22} />
       <span className="h-1 w-full shrink-0 rounded-full bg-accent-pink" aria-hidden />
-      <div className="flex flex-col items-center">
+      <div className="flex w-full flex-col items-center">
         <h3 className="font-nunito text-[24px] font-bold text-accent-pink">系統支援洞察</h3>
         <p className="font-nunito text-center text-[14px] leading-[21px] font-normal text-grey-700">{insight}</p>
       </div>
@@ -238,20 +246,45 @@ function MobileCard({ index, card }: { index: number; card: MarketMobileCard }) 
  * @phosphor-icons equivalents rather than the raw Figma SVG export, per this
  * codebase's established icon-substitution convention.
  *
- * 2026-08-18 fix + polish pass (Joe flagged the desktop render didn't match
- * the Figma reference he re-pasted): (1) PersonaCard's persona images were
- * wrongly circle-cropped (`overflow-hidden rounded-full` + `object-cover`)
- * -- Figma's spec is a plain unrounded 45x45 box, and the crop was cutting
- * into the portrait-oriented illustrations. Removed the crop, switched to
- * `object-contain`. (2) The three desktop cards used a fixed `h-[400px]`
- * with `justify-between` rows -- when TrendCard's orange "after" pill text
- * wrapped to 2 lines the row stack overflowed the fixed height and clipped.
- * Switched all three cards to `min-h-[400px]` (content-driven, never
- * clips) with the parent row now `items-stretch` so they still match
- * height when content is short. Also added a hover lift + shadow-bloom on
- * all three desktop cards and the mobile cards, and a slow continuous
- * float on the iOS insight screenshot, per Joe's request for more "動態
- * 呈現" across this section.
+ * 2026-08-18 fix + polish pass, round 1 (Joe flagged the desktop render
+ * didn't match the Figma reference he re-pasted): (1) PersonaCard's persona
+ * images were wrongly circle-cropped (`overflow-hidden rounded-full` +
+ * `object-cover`) -- Figma's spec is a plain unrounded 45x45 box, and the
+ * crop was cutting into the portrait-oriented illustrations. Removed the
+ * crop, switched to `object-contain`. (2) The three desktop cards used a
+ * fixed `h-[400px]` with `justify-between` rows -- when TrendCard's orange
+ * "after" pill text wrapped to 2 lines the row stack overflowed the fixed
+ * height and clipped. Switched all three cards to `min-h-[400px]`
+ * (content-driven, never clips). Also added a hover lift + shadow-bloom on
+ * all three desktop cards and the mobile cards, and a slow continuous float
+ * on the iOS insight screenshot, per Joe's request for more "動態呈現"
+ * across this section.
+ *
+ * 2026-08-18 fix pass, round 2 (Joe re-flagged against a fresh Figma
+ * screenshot: card content wasn't filling the card frame, padding looked
+ * wrong, before/after pill text wrapped to 2 lines instead of 1, and the
+ * dashed divider under the heading was grey instead of orange). Root cause
+ * for the first three, confirmed via live DOM measurement
+ * (getBoundingClientRect/getComputedStyle) at true desktop width: TrendCard
+ * and PersonaCard's inner content wrapper `<div>`s had no explicit width,
+ * and because their parent SlideIn uses `items-center` (not
+ * `items-stretch`), a width-less flex child shrinks to its own min-content
+ * width instead of stretching to fill the card -- confirmed the wrapper was
+ * rendering at ~270px instead of the ~352-376px Figma spec, which in turn
+ * starved the before/after pills (flex-1 of a too-narrow row) until their
+ * text wrapped to 2 lines. Fix: added `w-full` to each card's content
+ * wrapper div(s). Reverted round 1's `min-h-[400px]` back to Figma's literal
+ * fixed `h-[400px]` on all three cards (confirmed via get_design_context on
+ * nodes 127:481/490) and TrendCard rows back to `justify-between` with
+ * uniform `border-b border-grey-50` on every row (including the last, per
+ * Figma's export) and `pb-8` instead of `py-4`; pill padding `px-3` →
+ * `px-2.5` to match spec. Both dashed divider lines (mobile node 147:257,
+ * desktop node 127:488) changed `border-grey-300` → `border-primary-orange`
+ * per Figma's Primary/Orange (#FF520D) stroke color. Lesson for future
+ * sections: any flex-col card using `items-center` needs `w-full` on every
+ * child that should span the card's width -- `items-center` silently
+ * shrink-wraps width-less children, and it's easy to miss in a screenshot
+ * comparison because the shrink can look plausible at a glance.
  */
 export function MarketResearch({ process }: { process: Record<string, unknown> }) {
   const intro = typeof process.marketIntro === "string" ? process.marketIntro : "";
@@ -270,7 +303,7 @@ export function MarketResearch({ process }: { process: Record<string, unknown> }
           <div className="flex flex-col gap-3">
             <SectionEyebrow />
             <h2 className="font-nunito text-[26px] leading-[34px] font-bold text-primary-black">市場研究與演進趨勢</h2>
-            <div className="h-0 w-full border-t border-dashed border-grey-300" />
+            <div className="h-0 w-full border-t border-dashed border-primary-orange" />
           </div>
         </SlideIn>
 
@@ -291,7 +324,7 @@ export function MarketResearch({ process }: { process: Record<string, unknown> }
           <div className="flex flex-col gap-3">
             <SectionEyebrow />
             <h2 className="font-nunito text-[48px] leading-[72px] font-bold text-primary-black">市場研究與演進趨勢</h2>
-            <div className="h-0 w-[80px] border-t-[3px] border-dashed border-grey-300" />
+            <div className="h-0 w-[80px] border-t-[3px] border-dashed border-primary-orange" />
           </div>
         </SlideIn>
 
