@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { TreeStructure, MagnifyingGlass, MagnifyingGlassPlus, X } from "@phosphor-icons/react/dist/ssr";
+import { TreeStructure, MagnifyingGlass, CursorClick, X } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 
 interface IaPoint {
@@ -350,15 +350,25 @@ export function IaRestructuring({ process }: { process: Record<string, unknown> 
           ))}
         </div>
 
-        <SlideIn delay={0.35}>
+        {/*
+          viewportMargin="0px": this button is the LAST element on the
+          ENTIRE page (IaRestructuring is the final section in page.tsx),
+          so SlideIn's default "-80px" trigger margin can never be
+          satisfied here -- there's no room to scroll further once the
+          user hits the bottom of the document, so the element would stay
+          permanently stuck at opacity:0 (present + clickable in the DOM,
+          but invisible -- exactly the bug Joe reported from a real
+          device). See SlideIn.tsx's viewportMargin doc comment.
+        */}
+        <SlideIn delay={0.35} viewportMargin="0px">
           <TechGlowBorder>
             <button
               type="button"
               onClick={() => openLightbox(0)}
-              className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-primary-orange px-4 py-3 shadow-[0_2px_4px_rgba(255,82,13,0.2)]"
+              className="flex w-full items-center justify-center gap-1 rounded-xl bg-primary-orange px-4 py-2 shadow-[0_2px_4px_rgba(255,82,13,0.2)]"
             >
-              <span className="font-nunito text-[13px] font-bold text-proj-white">點擊查看資訊架構圖</span>
-              <MagnifyingGlassPlus size={16} weight="bold" className="text-proj-white" />
+              <span className="font-nunito text-[13px] leading-[18px] font-bold text-proj-white">點擊查看資訊架構圖</span>
+              <CursorClick size={20} weight="bold" className="text-proj-white" />
             </button>
           </TechGlowBorder>
         </SlideIn>
