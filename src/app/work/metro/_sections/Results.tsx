@@ -303,19 +303,17 @@ function MobilePhase({ tag, desc, color }: { tag: "Short-term" | "Long-term"; de
 }
 
 /**
- * "APP ROADMAP" / "SERVICE ROADMAP" heading. Figma specs this as Fredoka
- * (weight 400, same "Fredoka One"-look variable font used everywhere else
- * in this project -- see layout.tsx). At this size, two-word all-caps text
- * set in Fredoka reads with visibly wider word/letter gaps than Figma's own
- * render (flagged directly by Joe against a reference screenshot) -- a
- * `tracking-tight` + slightly negative `word-spacing` combo pulls both the
- * inter-letter and inter-word gaps in to match, without swapping fonts
- * (next/font/google only exposes the newer variable "Fredoka" family, not
- * a separate legacy "Fredoka One" export, so a font swap isn't available).
+ * "APP ROADMAP" / "SERVICE ROADMAP" heading. Figma specs this in the real
+ * "Fredoka One" family (now loaded via <link> in layout.tsx -- see the
+ * comment there). The earlier `tracking-tight` + negative `word-spacing`
+ * hack was a workaround for the *previous*, wrong font (next/font/google's
+ * variable "Fredoka" at weight 400, which genuinely has wider letter/word
+ * gaps than "Fredoka One") -- it's removed now that the correct font family
+ * is loaded, since stacking it on top of the real font would over-tighten.
  */
 function RoadmapTitle({ children, className }: { children: string; className: string }) {
   return (
-    <p className={`font-fredoka tracking-tight text-primary-black ${className}`} style={{ wordSpacing: "-0.12em" }}>
+    <p className={`font-fredoka text-primary-black ${className}`}>
       {children}
     </p>
   );
@@ -500,7 +498,11 @@ export function Results({ process }: { process: Record<string, unknown> }) {
         </SlideIn>
 
         <SlideIn delay={0.2} viewportMargin="0px">
-          <div className="flex w-full items-stretch gap-6">
+          {/* mt-4 (on top of the wrapper's own gap-2) brings this gap to a
+              full 24px, matching Figma's roadmap-row spacing exactly --
+              Joe flagged this specific gap as visibly cramped against the
+              design reference. The other inter-block gaps stay untouched. */}
+          <div className="mt-4 flex w-full items-stretch gap-6">
             <DesktopRoadmapCard title="APP ROADMAP" roadmap={roadmapApp} />
             <DesktopRoadmapCard title="SERVICE ROADMAP" roadmap={roadmapService} />
           </div>
