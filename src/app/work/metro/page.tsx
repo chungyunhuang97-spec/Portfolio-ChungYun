@@ -12,6 +12,7 @@ import { IaRestructuring } from "./_sections/IaRestructuring";
 import { MarketResearch } from "./_sections/MarketResearch";
 import { CompetitiveAnalysis } from "./_sections/CompetitiveAnalysis";
 import { UserResearch } from "./_sections/UserResearch";
+import { DesignPrinciples } from "./_sections/DesignPrinciples";
 import { getProjectWithSections } from "@/lib/data";
 
 // Hand-crafted, bespoke page for this one case study -- deliberately NOT
@@ -72,7 +73,13 @@ import { getProjectWithSections } from "@/lib/data";
 // `userResearchMobileIntro`, `userResearchStats` (4 stat cards),
 // `userResearchInsights` (4 "核心洞察" cards) -- illustration images and
 // accent colors are fixed /public assets + hardcoded constants, not CMS
-// fields, see that file's doc comment). Any further section beyond this
+// fields, see that file's doc comment); DesignPrinciples (研究洞察收斂與設計
+// 原則, Figma desktop 127:740 / mobile 147:316 -- slotted in AFTER
+// UserResearch, continuing Figma's page order): `designPrinciplesIntro`,
+// optional `designPrinciplesMobileIntro`, `designPrinciplesItems` (4
+// principle cards) -- accent colors and the desktop-only accent bar are
+// fixed constants, not CMS fields, no media assets (plain data-driven card
+// grid), see that file's doc comment. Any further section beyond this
 // follows the same pattern and slots in here in order, each wired the same
 // way (fetch content below, pass as props) -- note the Interface &
 // Interaction eyebrow/heading should only render once (in
@@ -122,6 +129,7 @@ export default async function MetroPage() {
         <MarketResearch process={data.process} />
         <CompetitiveAnalysis process={data.process} />
         <UserResearch process={data.process} />
+        <DesignPrinciples process={data.process} />
       </main>
     </DoorReveal>
   );
