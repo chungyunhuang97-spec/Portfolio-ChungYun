@@ -250,9 +250,10 @@ function DiagramLightbox({
  * bg-primary-orange`), inactive dots are small grey circles (`size-[10px]
  * bg-grey-300`), both `rounded-[5px]` -- matches Figma's "carousel
  * pagination" instance exactly (confirmed via get_design_context). Same
- * auto-advance-plus-manual-dots behavior as the original too, not just the
- * same visual styling. Tapping the diagram itself opens the shared
- * full-screen lightbox (`onOpen`).
+ * Unlike the original, this carousel is manual-only (tap a dot to switch) --
+ * no auto-advance timer, since only two diagrams are being compared here
+ * rather than browsed as a feature list. Tapping the diagram itself opens
+ * the shared full-screen lightbox (`onOpen`).
  */
 function MobileDiagramCarousel({ onOpen }: { onOpen: (index: number) => void }) {
   const [index, setIndex] = useState(0);
