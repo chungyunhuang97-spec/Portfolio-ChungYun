@@ -13,6 +13,7 @@ import { MarketResearch } from "./_sections/MarketResearch";
 import { CompetitiveAnalysis } from "./_sections/CompetitiveAnalysis";
 import { UserResearch } from "./_sections/UserResearch";
 import { DesignPrinciples } from "./_sections/DesignPrinciples";
+import { Results } from "./_sections/Results";
 import { getProjectWithSections } from "@/lib/data";
 
 // Hand-crafted, bespoke page for this one case study -- deliberately NOT
@@ -79,7 +80,16 @@ import { getProjectWithSections } from "@/lib/data";
 // optional `designPrinciplesMobileIntro`, `designPrinciplesItems` (4
 // principle cards) -- accent colors and the desktop-only accent bar are
 // fixed constants, not CMS fields, no media assets (plain data-driven card
-// grid), see that file's doc comment. Any further section beyond this
+// grid), see that file's doc comment); Results (成果驗證與未來展望, Figma
+// desktop 127:390 "提案B - 深色反轉區塊" / mobile 147:333 "Results" -- despite
+// the desktop frame's stale name, current content on both nodes is a light
+// off-white theme, not dark; slotted in AFTER DesignPrinciples, continuing
+// Figma's page order): `resultsMetricOne`, `resultsMetricTwo`,
+// `resultsServiceMetric` (3 validation cards, every mobile field genuinely
+// different copy from desktop, not trims), `resultsRoadmapApp`,
+// `resultsRoadmapService` (2 roadmap cards, same rule) -- section
+// eyebrow/title hardcoded, no media assets, see that file's doc comment.
+// Any further section beyond this
 // follows the same pattern and slots in here in order, each wired the same
 // way (fetch content below, pass as props) -- note the Interface &
 // Interaction eyebrow/heading should only render once (in
@@ -130,6 +140,7 @@ export default async function MetroPage() {
         <CompetitiveAnalysis process={data.process} />
         <UserResearch process={data.process} />
         <DesignPrinciples process={data.process} />
+        <Results process={data.process} />
       </main>
     </DoorReveal>
   );
