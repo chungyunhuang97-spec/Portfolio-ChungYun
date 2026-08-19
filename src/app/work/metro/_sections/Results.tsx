@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, animate, useInView } from "framer-motion";
-import { ShieldCheck, Info } from "@phosphor-icons/react/dist/ssr";
+import { motion, animate, AnimatePresence, useInView } from "framer-motion";
+import { ShieldCheck } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 
 interface ResultsMetric {
@@ -15,9 +15,9 @@ interface ResultsMetric {
   value: string;
   /** e.g. "+0.66" -- absent for the service metric (no delta badge in Figma for that card). */
   delta?: string;
-  /** Desktop-only description paragraph -- mobile MetricCards have no body copy at all, just number + delta. */
+  /** Desktop-only description paragraph -- mobile MetricCards have no body copy inline, it's revealed via the info-button tooltip instead (see MobileMetricCard). */
   descDesktop?: string;
-  /** Desktop-only bullet insights -- only the service metric card has these (2 bullets), not present on mobile. */
+  /** Desktop-only bullet insights -- only the service metric card has these (2 bullets), surfaced via the mobile info-button tooltip on that card. */
   insightsDesktop?: string[];
 }
 
@@ -90,15 +90,49 @@ function RadarPing({ colorClass }: { colorClass: string }) {
   );
 }
 
-/** Decorative, non-interactive stand-in for Figma's "btn/ icon btn" info glyph on mobile MetricCards -- no linked action in the design, so rendered aria-hidden. */
-function InfoBadge() {
+/**
+ * Minimal literal "i" glyph (dot + stem) built as an inline SVG, standing in
+ * for Figma's own custom "icon/ deco" vector inside the "btn/ icon btn"
+ * component (147:333 instances 180:645/652/656) -- that vector is just a
+ * thin stroke, not a self-contained circled icon, so it's redrawn by hand
+ * rather than reused from Phosphor. This matters concretely: Phosphor's
+ * `Info` icon draws its OWN circle outline, and nesting that inside this
+ * component's separately-drawn circular button chrome would render as two
+ * concentric rings -- a real visual bug, not just an inexact substitute.
+ * Colored via `currentColor` so the wrapping button controls it.
+ */
+function InfoGlyph({ className }: { className?: string }) {
   return (
-    <span
-      aria-hidden
-      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-[#e6e6e6] bg-proj-white"
+    <svg width="4" height="12" viewBox="0 0 4 12" fill="none" className={className} aria-hidden>
+      <circle cx="2" cy="1.4" r="1.4" fill="currentColor" />
+      <rect x="0.8" y="4.6" width="2.4" height="7.4" rx="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
+ * Mobile-only info button (Figma "btn/ icon btn", 147:333). Figma has no
+ * interactive layer to read an on-tap behavior from, so this button's tap
+ * behavior is a deliberate addition per Joe's explicit follow-up ("圖一的
+ * info button 點選之後，是會以提示訊息的方式顯示電腦版評分下面的文字描述"): tapping
+ * toggles a small callout showing the same body copy the desktop card
+ * shows inline (the `descDesktop` paragraph, or the two `insightsDesktop`
+ * bullets for the service-metric card, which has no paragraph). The glyph
+ * itself is orange (`text-primary-orange`) per Joe's screenshot annotation
+ * of the Figma reference -- the surrounding button chrome (white fill,
+ * light grey border) stays as specced.
+ */
+function MobileInfoButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-label="顯示說明"
+      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-[#e6e6e6] bg-proj-white text-primary-orange"
     >
-      <Info size={14} weight="bold" className="text-grey-500" />
-    </span>
+      <InfoGlyph />
+    </button>
   );
 }
 
@@ -125,15 +159,18 @@ function DeltaBadge({ delta, size = "desktop" }: { delta: string; size?: "deskto
 
 function MobileMetricCard({ metric }: { metric: ResultsMetric }) {
   const isPink = metric.value.includes("%");
+  const [open, setOpen] = useState(false);
+  const hasTooltip = Boolean(metric.descDesktop || metric.insightsDesktop);
+
   return (
     <motion.div
       whileHover={{ y: -2 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="flex w-full flex-col gap-1 rounded-xl border border-[#e6e6e6] bg-[#fafaf7] px-4 py-3.5 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
+      className="flex w-full flex-col gap-1 rounded-xl border border-[#e6e6e6] bg-[#fafaf7] px-4 py-3 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
     >
       <div className="flex w-full items-center justify-between">
         <p className="font-nunito text-[13px] font-bold leading-[18px] text-grey-600">{metric.titleMobile}</p>
-        <InfoBadge />
+        {hasTooltip && <MobileInfoButton open={open} onToggle={() => setOpen((v) => !v)} />}
       </div>
       {metric.subtitleMobile && (
         <p className="font-nunito text-[12px] leading-[17px] font-normal text-grey-600">{metric.subtitleMobile}</p>
@@ -141,10 +178,42 @@ function MobileMetricCard({ metric }: { metric: ResultsMetric }) {
       <div className="flex w-full items-end gap-3">
         <CountUpValue
           value={metric.value}
-          className={`font-fredoka text-[36px] leading-none ${isPink ? "text-accent-pink" : "text-primary-orange"}`}
+          className={`font-fredoka text-[34px] leading-[40px] ${isPink ? "text-accent-pink" : "text-primary-orange"}`}
         />
         {metric.delta && <DeltaBadge delta={metric.delta} size="mobile" />}
       </div>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="mt-1 w-full rounded-lg border border-[#e5e0db] bg-proj-white px-3 py-2.5">
+              {metric.descDesktop && (
+                <p className="font-nunito text-[12.5px] leading-[19px] font-normal text-grey-700">
+                  {metric.descDesktop}
+                </p>
+              )}
+              {metric.insightsDesktop && (
+                <div className="flex w-full flex-col gap-2">
+                  {metric.insightsDesktop.map((insight) => (
+                    <div key={insight} className="flex w-full gap-2">
+                      <span className="font-nunito text-[12.5px] text-grey-600">•</span>
+                      <p className="flex-1 font-nunito text-[12.5px] leading-[19px] font-normal text-grey-700">
+                        {insight}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -155,7 +224,7 @@ function DesktopMetricCard({ metric }: { metric: ResultsMetric }) {
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="flex flex-1 flex-col gap-5 self-stretch rounded-2xl bg-[#f7f5f3] p-4 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
+      className="flex flex-1 flex-col gap-4 self-stretch rounded-2xl bg-[#f7f5f3] p-4 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
     >
       <p className="font-nunito text-[14px] font-extrabold leading-[21px] text-grey-800">{metric.titleDesktop}</p>
       <div className="flex w-full flex-col gap-1">
@@ -163,21 +232,21 @@ function DesktopMetricCard({ metric }: { metric: ResultsMetric }) {
         <div className="flex items-end gap-4">
           <CountUpValue
             value={metric.value}
-            className={`font-fredoka text-[80px] leading-[96px] ${isPink ? "text-accent-pink" : "text-primary-orange"}`}
+            className={`font-fredoka text-[68px] leading-[80px] ${isPink ? "text-accent-pink" : "text-primary-orange"}`}
           />
           {metric.delta && <DeltaBadge delta={metric.delta} />}
         </div>
       </div>
-      <div className="flex w-full flex-1 items-start rounded-xl border border-[#e5e0db] bg-proj-white px-4 py-3.5">
+      <div className="flex w-full flex-1 items-start rounded-xl border border-[#e5e0db] bg-proj-white px-4 py-3">
         {metric.descDesktop && (
-          <p className="font-nunito text-[15px] leading-[23px] font-normal text-grey-700">{metric.descDesktop}</p>
+          <p className="font-nunito text-[14.5px] leading-[21px] font-normal text-grey-700">{metric.descDesktop}</p>
         )}
         {metric.insightsDesktop && (
-          <div className="flex w-full flex-col gap-4">
+          <div className="flex w-full flex-col gap-3">
             {metric.insightsDesktop.map((insight) => (
               <div key={insight} className="flex w-full gap-2.5">
-                <span className="font-nunito text-[15px] text-grey-600">•</span>
-                <p className="flex-1 font-nunito text-[15px] leading-[23px] font-normal text-grey-700">{insight}</p>
+                <span className="font-nunito text-[14.5px] text-grey-600">•</span>
+                <p className="flex-1 font-nunito text-[14.5px] leading-[21px] font-normal text-grey-700">{insight}</p>
               </div>
             ))}
           </div>
@@ -196,7 +265,7 @@ function DesktopMetricCard({ metric }: { metric: ResultsMetric }) {
 function DesktopPhase({ tag, desc, color }: { tag: "Short-term" | "Long-term"; desc: string; color: "orange" | "blue" }) {
   const bg = color === "orange" ? "bg-primary-orange" : "bg-secondary-blue";
   return (
-    <div className="flex w-full items-start gap-4 rounded-xl border border-[#e5e0db] bg-proj-white px-4 py-3.5">
+    <div className="flex w-full items-start gap-4 rounded-xl border border-[#e5e0db] bg-proj-white px-4 py-3">
       <div className="pt-[6px]">
         <RadarPing colorClass={bg} />
       </div>
@@ -204,7 +273,7 @@ function DesktopPhase({ tag, desc, color }: { tag: "Short-term" | "Long-term"; d
         <span className={`inline-flex w-fit items-center rounded-full px-[10px] py-1 font-nunito text-[12px] font-bold text-proj-white ${bg}`}>
           {tag}
         </span>
-        <p className="w-full font-nunito text-[15px] font-normal leading-[1.7] text-grey-700">{desc}</p>
+        <p className="w-full font-nunito text-[14px] font-normal leading-[1.6] text-grey-700">{desc}</p>
       </div>
     </div>
   );
@@ -223,16 +292,35 @@ function MobilePhase({ tag, desc, color }: { tag: "Short-term" | "Long-term"; de
   );
 }
 
+/**
+ * "APP ROADMAP" / "SERVICE ROADMAP" heading. Figma specs this as Fredoka
+ * (weight 400, same "Fredoka One"-look variable font used everywhere else
+ * in this project -- see layout.tsx). At this size, two-word all-caps text
+ * set in Fredoka reads with visibly wider word/letter gaps than Figma's own
+ * render (flagged directly by Joe against a reference screenshot) -- a
+ * `tracking-tight` + slightly negative `word-spacing` combo pulls both the
+ * inter-letter and inter-word gaps in to match, without swapping fonts
+ * (next/font/google only exposes the newer variable "Fredoka" family, not
+ * a separate legacy "Fredoka One" export, so a font swap isn't available).
+ */
+function RoadmapTitle({ children, className }: { children: string; className: string }) {
+  return (
+    <p className={`font-fredoka tracking-tight text-primary-black ${className}`} style={{ wordSpacing: "-0.12em" }}>
+      {children}
+    </p>
+  );
+}
+
 function DesktopRoadmapCard({ title, roadmap }: { title: string; roadmap: ResultsRoadmap }) {
   return (
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="flex flex-1 flex-col gap-3 self-stretch rounded-2xl bg-[#f7f5f3] p-6 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
+      className="flex flex-1 flex-col gap-2.5 self-stretch rounded-2xl bg-[#f7f5f3] p-5 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
     >
-      <p className="font-fredoka text-[28px] leading-[39px] text-primary-black">{title}</p>
+      <RoadmapTitle className="text-[24px] leading-[32px]">{title}</RoadmapTitle>
       <div className="h-px w-full bg-[#e5e0db]" />
-      <div className="flex w-full flex-col gap-3">
+      <div className="flex w-full flex-col gap-2.5">
         <DesktopPhase tag="Short-term" desc={roadmap.shortDesktop} color="orange" />
         <div className="h-px w-full bg-[#e5e0db]" />
         <DesktopPhase tag="Long-term" desc={roadmap.longDesktop} color="blue" />
@@ -243,8 +331,8 @@ function DesktopRoadmapCard({ title, roadmap }: { title: string; roadmap: Result
 
 function MobileRoadmapCard({ title, roadmap }: { title: string; roadmap: ResultsRoadmap }) {
   return (
-    <div className="flex w-full flex-col gap-2 rounded-xl border border-[#e6e6e6] bg-[#fafaf7] px-4 py-4 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]">
-      <p className="w-full font-fredoka text-[20px] leading-none text-primary-black">{title}</p>
+    <div className="flex w-full flex-col gap-2 rounded-xl border border-[#e6e6e6] bg-[#fafaf7] px-4 py-3 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]">
+      <RoadmapTitle className="w-full text-[18px] leading-none">{title}</RoadmapTitle>
       <div className="h-px w-full bg-[#e5e0db]" />
       <div className="flex w-full gap-2">
         <MobilePhase tag="Short-term" desc={roadmap.shortMobile} color="orange" />
@@ -258,7 +346,7 @@ function MobileRoadmapCard({ title, roadmap }: { title: string; roadmap: Results
 function DotGrid() {
   const dots = Array.from({ length: 6 });
   return (
-    <div className="pointer-events-none absolute right-[28px] top-[519px] grid grid-cols-3 gap-2" aria-hidden>
+    <div className="pointer-events-none absolute right-[28px] top-[380px] grid grid-cols-3 gap-2" aria-hidden>
       {dots.map((_, i) => (
         <motion.span
           key={i}
@@ -276,7 +364,7 @@ function PlusMark() {
   return (
     <span
       aria-hidden
-      className="pointer-events-none absolute left-[60px] top-[172px] block size-[18px]"
+      className="pointer-events-none absolute left-[60px] top-[120px] block size-[18px]"
     >
       <span className="absolute left-0 top-[7.5px] h-[3px] w-[18px] rounded-[1px] bg-accent-pink/10" />
       <span className="absolute left-[7.5px] top-0 h-[18px] w-[3px] rounded-[1px] bg-accent-pink/10" />
@@ -291,46 +379,48 @@ function PlusMark() {
  * name is a leftover from an earlier design iteration -- both nodes' actual
  * current content, confirmed via `get_design_context` screenshots, is a
  * LIGHT off-white theme (bg-white / #fafaf7 cards), not dark. Implemented
- * exactly what's visually in Figma today rather than the stale frame name,
- * per the design-to-code rule of reproducing the current design, not a
- * label.
+ * exactly what's visually in Figma today rather than the stale frame name.
  *
- * Content model: reuses the `process` row (checked against every existing
- * top-level key first -- `results*` prefix is clean, no collisions).
- * Section eyebrow/title are hardcoded (brand-style heading text, same
- * pattern as every prior section). Fields: `resultsMetricOne` /
- * `resultsMetricTwo` (route-search and station-info validation cards --
- * `titleDesktop`/`titleMobile`/`subtitleDesktop`/`subtitleMobile`/`value`/
- * `delta`/`descDesktop`), `resultsServiceMetric` (the third "捷伴服務" card --
- * structurally different from the other two: a percentage instead of a
- * decimal, no delta badge, bullet `insightsDesktop` instead of a paragraph,
- * no mobile subtitle line at all), `resultsRoadmapApp` / `resultsRoadmapService`
- * (`shortDesktop`/`shortMobile`/`longDesktop`/`longMobile`). Every single
- * one of these mobile fields is genuinely DIFFERENT copy from its desktop
- * counterpart in Figma -- not trims of the same sentence, several have
- * different numbers or dropped clauses entirely (e.g. the SERVICE roadmap
- * short-term item drops "並推出動畫新手引導" on mobile) -- confirmed by
- * reading both nodes' raw text directly, so every field is stored twice
- * with no fallback assumption of sameness, continuing the precedent from
- * DesignPrinciples. Desktop-only structure (per-phase marker dot + RadarPing,
- * per-card description/insights box) and mobile-only structure (no
- * description/insights at all, phases laid out side-by-side with no marker)
- * are both fixed presentational differences, not CMS fields.
+ * Content model: reuses the `process` row. Section eyebrow/title are
+ * hardcoded. Fields: `resultsMetricOne` / `resultsMetricTwo` (route-search
+ * and station-info validation cards), `resultsServiceMetric` (the third
+ * "捷伴服務" card -- percentage instead of decimal, no delta badge, bullet
+ * `insightsDesktop` instead of a paragraph, no mobile subtitle line),
+ * `resultsRoadmapApp` / `resultsRoadmapService`. Every mobile field is
+ * genuinely different copy from its desktop counterpart in Figma.
  *
- * Layout: both breakpoints `min-h-screen` + vertical centering, continuing
- * the 100vh-per-slide pattern from UserResearch/DesignPrinciples.
+ * Layout: both breakpoints `min-h-screen` + vertical centering. Padding,
+ * inter-block gaps, card padding and the headline stat numbers' line-height
+ * are all noticeably tighter than Figma's own authored spec (Figma's
+ * desktop canvas for this node is 1024px tall, taller than most real
+ * browser viewports once toolbar/chrome is subtracted) -- Joe explicitly
+ * asked twice for this section to fit inside one real screen with no
+ * internal scrolling, which a literal 1:1 port of Figma's spacing cannot
+ * guarantee. Font sizes and body copy are kept at spec; only the
+ * WHITESPACE budget (section padding, inter-block gaps, card padding,
+ * number line-height) was compressed, so the content still reads at
+ * essentially the same visual weight, just without Figma's generous
+ * canvas-only margins. Verified against a live 1512px / 390px viewport
+ * after deploy, not just against the Figma canvas number.
  *
- * Tech-feel motion (Joe's recurring request, this round explicitly asking
- * for the numeric data to count up): `CountUpValue` drives every number in
- * the section -- the three headline stats AND the delta badges -- parsing
- * the ">" / "+" / "%" characters this section's specific values use.
- * `RadarPing` (desktop only) is this section's own signature beyond the
- * count-up: a looping expanding ring behind each roadmap phase's marker
- * dot, reading as a live status ping fitting a section literally about
- * verified results and an ongoing roadmap. `DotGrid` gives Figma's
- * decorative dot flourish a quiet sequential twinkle; `PlusMark` is kept
- * static, matching Figma exactly. Cards get a light hover lift, consistent
- * with every prior section.
+ * Tech-feel motion: `CountUpValue` drives every number including delta
+ * badges. `RadarPing` (desktop only) loops on each roadmap phase's marker
+ * dot. `DotGrid` gives Figma's decorative dot flourish a quiet sequential
+ * twinkle; `PlusMark` is kept static, matching Figma exactly. Cards get a
+ * light hover lift.
+ *
+ * Mobile info-button tooltip: Figma's "btn/ icon btn" instance has no
+ * interaction layer to read from -- Joe explicitly asked (after seeing the
+ * first pass live) for tapping it to reveal the same body copy the desktop
+ * card shows inline. `MobileMetricCard` owns local open state and toggles
+ * a bordered callout with `metric.descDesktop` or `metric.insightsDesktop`.
+ * The glyph itself is redrawn as a plain "i" stroke rather than reused from
+ * Phosphor's `Info` icon, because Phosphor's icon draws its own circle and
+ * would double up with this component's separately-drawn circular button
+ * chrome; it's colored orange per Joe's annotation on the Figma reference
+ * screenshot (the raw Figma asset color isn't inspectable through this
+ * pipeline, only the composited screenshot is, so Joe's direct callout is
+ * the source of truth here).
  */
 export function Results({ process }: { process: Record<string, unknown> }) {
   const metricOne = process.resultsMetricOne as ResultsMetric | undefined;
@@ -344,11 +434,11 @@ export function Results({ process }: { process: Record<string, unknown> }) {
   return (
     <section className="relative overflow-hidden bg-proj-white">
       {/* Mobile layout */}
-      <div className="flex min-h-screen w-full flex-col justify-center gap-4 bg-[#fbfbfa] px-6 py-10 md:hidden">
+      <div className="flex min-h-screen w-full flex-col justify-center gap-3 bg-[#fbfbfa] px-6 py-6 md:hidden">
         <SlideIn delay={0.1}>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <SectionEyebrow />
-            <h2 className="font-nunito text-[26px] leading-[34px] font-bold text-primary-black">
+            <h2 className="font-nunito text-[24px] leading-[30px] font-bold text-primary-black">
               成果驗證與未來展望
             </h2>
             <div className="h-px w-full bg-[#e6e6e6]" />
@@ -373,14 +463,14 @@ export function Results({ process }: { process: Record<string, unknown> }) {
       </div>
 
       {/* Desktop layout */}
-      <div className="relative hidden min-h-screen w-full flex-col justify-center gap-6 border-y border-[#ededed] px-[120px] py-[80px] md:flex">
+      <div className="relative hidden min-h-screen w-full flex-col justify-center gap-4 border-y border-[#ededed] px-[120px] py-[44px] md:flex">
         <PlusMark />
         <DotGrid />
 
         <SlideIn delay={0.1}>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <SectionEyebrow />
-            <h2 className="font-nunito text-[48px] leading-[72px] font-bold text-primary-black">
+            <h2 className="font-nunito text-[42px] leading-[54px] font-bold text-primary-black">
               成果驗證與未來展望
             </h2>
             <div className="h-px w-full bg-[#e5e0db]" />
