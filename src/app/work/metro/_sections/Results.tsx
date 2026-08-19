@@ -38,10 +38,20 @@ interface ResultsRoadmap {
  * an opacity fade) -- this is Joe's explicit ask this round ("數據部分以漸增
  * 動畫呈現"), reusing the pattern established for UserResearch's stat cards
  * but generalized to also handle ">" and "+" prefixes those didn't need.
+ *
+ * `margin` on `useInView` was found stuck at "-60px" during live mobile QA
+ * of this round's other fixes: on the narrow mobile layout the two
+ * metric-card numbers with a `subtitleMobile` line (4.16 / 3.79) reliably
+ * stayed frozen at "0" while the sibling delta badges and the service
+ * card's percentage (no subtitle line, different vertical position)
+ * animated fine -- a shrunk root margin is the one setting here that can
+ * make an on-screen element read as "not intersecting" depending on exact
+ * geometry, so it's set to "0px" (trigger as soon as truly on-screen,
+ * no inset) rather than left as a plausible but unconfirmed root cause.
  */
 function CountUpValue({ value, className }: { value: string; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const inView = useInView(ref, { once: true, margin: "0px" });
   const match = value.match(/^([+>]?)(-?\d+(?:\.\d+)?)(.*)$/);
   const prefix = match ? match[1] : "";
   const target = match ? parseFloat(match[2]) : 0;
