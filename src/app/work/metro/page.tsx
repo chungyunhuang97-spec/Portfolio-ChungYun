@@ -14,6 +14,7 @@ import { CompetitiveAnalysis } from "./_sections/CompetitiveAnalysis";
 import { UserResearch } from "./_sections/UserResearch";
 import { DesignPrinciples } from "./_sections/DesignPrinciples";
 import { Results } from "./_sections/Results";
+import { SystemArchitecture } from "./_sections/SystemArchitecture";
 import { getProjectWithSections } from "@/lib/data";
 
 // Hand-crafted, bespoke page for this one case study -- deliberately NOT
@@ -141,6 +142,7 @@ export default async function MetroPage() {
         <UserResearch process={data.process} />
         <DesignPrinciples process={data.process} />
         <Results process={data.process} />
+        <SystemArchitecture process={data.process} />
       </main>
     </DoorReveal>
   );
