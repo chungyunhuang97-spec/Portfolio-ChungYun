@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Outfit, Nunito, Fredoka } from "next/font/google";
+import { Geist, Geist_Mono, Outfit, Nunito } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
@@ -29,16 +29,6 @@ const nunito = Nunito({
   weight: ["400", "600", "700", "800"],
 });
 
-// Used for the mobile-only wordmark in <Navbar /> (Figma spec: "Fredoka One").
-// The classic single-weight "Fredoka One" family was folded into the newer
-// variable-weight "Fredoka" family in next/font/google, so weight 400 is
-// requested explicitly to match the old "Fredoka One" look.
-const fredoka = Fredoka({
-  variable: "--font-fredoka",
-  subsets: ["latin"],
-  weight: ["400"],
-});
-
 export const metadata: Metadata = {
   title: "Chung Yun Huang — Product Designer",
   description:
@@ -53,8 +43,31 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${nunito.variable} ${fredoka.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${nunito.variable} h-full antialiased`}
     >
+      <head>
+        {/*
+         * Figma specs "Fredoka One" (the classic single-weight display
+         * family, Figma's Typography panel shows it literally as its own
+         * font name, weight "Regular") for every numeral/heading on the
+         * metro case study -- NOT the newer variable-weight "Fredoka"
+         * family. These are two genuinely different Google Fonts entries
+         * with different letterforms/proportions; next/font/google only
+         * ships the variable "Fredoka" (confirmed via its font-data.json --
+         * "Fredoka One" isn't in that list), so it can't be loaded the
+         * normal self-hosted way. It's still live on Google's own CDN
+         * (fonts.googleapis.com/css2?family=Fredoka+One resolves and serves
+         * a real @font-face), just not exposed as a next/font/google
+         * import -- so it's loaded here as a plain external stylesheet
+         * instead. This replaces the earlier (incorrect) assumption that
+         * "Fredoka One" had been folded into the variable family and that
+         * weight 400 of "Fredoka" was an acceptable stand-in -- Joe flagged
+         * the visual mismatch directly against the Figma reference.
+         */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet" />
+      </head>
       <body className="min-h-full flex flex-col bg-bg text-ink">
         {children}
         <Analytics />
