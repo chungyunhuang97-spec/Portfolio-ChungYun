@@ -29,6 +29,11 @@
   --color-grey-100: #f0f0f0;
   --color-grey-50: #f5f5f5;
   --color-proj-white: #ffffff;
+
+  /* Real "Fredoka One" (loaded via <link> in layout.tsx -- see comment
+     there for why next/font/google can't be used for this specific
+     family). Single weight only, so no font-weight variants exist. */
+  --font-fredoka: "Fredoka One", cursive, sans-serif;
 }
 
 @theme inline {
