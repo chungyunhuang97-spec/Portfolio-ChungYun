@@ -166,7 +166,7 @@ function MobileMetricCard({ metric }: { metric: ResultsMetric }) {
     <motion.div
       whileHover={{ y: -2 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="flex w-full flex-col gap-1 rounded-xl border border-[#e6e6e6] bg-[#fafaf7] px-4 py-3 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
+      className="flex w-full flex-col gap-1 rounded-xl border border-[#e6e6e6] bg-[#fafaf7] px-4 py-2 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
     >
       <div className="flex w-full items-center justify-between">
         <p className="font-nunito text-[13px] font-bold leading-[18px] text-grey-600">{metric.titleMobile}</p>
@@ -178,7 +178,7 @@ function MobileMetricCard({ metric }: { metric: ResultsMetric }) {
       <div className="flex w-full items-end gap-3">
         <CountUpValue
           value={metric.value}
-          className={`font-fredoka text-[34px] leading-[40px] ${isPink ? "text-accent-pink" : "text-primary-orange"}`}
+          className={`font-fredoka text-[30px] leading-[36px] ${isPink ? "text-accent-pink" : "text-primary-orange"}`}
         />
         {metric.delta && <DeltaBadge delta={metric.delta} size="mobile" />}
       </div>
@@ -224,7 +224,7 @@ function DesktopMetricCard({ metric }: { metric: ResultsMetric }) {
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="flex flex-1 flex-col gap-4 self-stretch rounded-2xl bg-[#f7f5f3] p-4 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
+      className="flex flex-1 flex-col gap-3 self-stretch rounded-2xl bg-[#f7f5f3] p-3 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
     >
       <p className="font-nunito text-[14px] font-extrabold leading-[21px] text-grey-800">{metric.titleDesktop}</p>
       <div className="flex w-full flex-col gap-1">
@@ -232,12 +232,12 @@ function DesktopMetricCard({ metric }: { metric: ResultsMetric }) {
         <div className="flex items-end gap-4">
           <CountUpValue
             value={metric.value}
-            className={`font-fredoka text-[68px] leading-[80px] ${isPink ? "text-accent-pink" : "text-primary-orange"}`}
+            className={`font-fredoka text-[60px] leading-[72px] ${isPink ? "text-accent-pink" : "text-primary-orange"}`}
           />
           {metric.delta && <DeltaBadge delta={metric.delta} />}
         </div>
       </div>
-      <div className="flex w-full flex-1 items-start rounded-xl border border-[#e5e0db] bg-proj-white px-4 py-3">
+      <div className="flex w-full flex-1 items-start rounded-xl border border-[#e5e0db] bg-proj-white px-4 py-2">
         {metric.descDesktop && (
           <p className="font-nunito text-[14.5px] leading-[21px] font-normal text-grey-700">{metric.descDesktop}</p>
         )}
@@ -265,15 +265,15 @@ function DesktopMetricCard({ metric }: { metric: ResultsMetric }) {
 function DesktopPhase({ tag, desc, color }: { tag: "Short-term" | "Long-term"; desc: string; color: "orange" | "blue" }) {
   const bg = color === "orange" ? "bg-primary-orange" : "bg-secondary-blue";
   return (
-    <div className="flex w-full items-start gap-4 rounded-xl border border-[#e5e0db] bg-proj-white px-4 py-3">
+    <div className="flex w-full items-start gap-4 rounded-xl border border-[#e5e0db] bg-proj-white px-4 py-2">
       <div className="pt-[6px]">
         <RadarPing colorClass={bg} />
       </div>
-      <div className="flex flex-1 flex-col gap-2">
+      <div className="flex flex-1 flex-col gap-1">
         <span className={`inline-flex w-fit items-center rounded-full px-[10px] py-1 font-nunito text-[12px] font-bold text-proj-white ${bg}`}>
           {tag}
         </span>
-        <p className="w-full font-nunito text-[14px] font-normal leading-[1.6] text-grey-700">{desc}</p>
+        <p className="w-full font-nunito text-[14px] font-normal leading-[1.5] text-grey-700">{desc}</p>
       </div>
     </div>
   );
@@ -316,11 +316,11 @@ function DesktopRoadmapCard({ title, roadmap }: { title: string; roadmap: Result
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="flex flex-1 flex-col gap-2.5 self-stretch rounded-2xl bg-[#f7f5f3] p-5 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
+      className="flex flex-1 flex-col gap-1.5 self-stretch rounded-2xl bg-[#f7f5f3] p-4 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
     >
-      <RoadmapTitle className="text-[24px] leading-[32px]">{title}</RoadmapTitle>
+      <RoadmapTitle className="text-[22px] leading-[26px]">{title}</RoadmapTitle>
       <div className="h-px w-full bg-[#e5e0db]" />
-      <div className="flex w-full flex-col gap-2.5">
+      <div className="flex w-full flex-col gap-1.5">
         <DesktopPhase tag="Short-term" desc={roadmap.shortDesktop} color="orange" />
         <div className="h-px w-full bg-[#e5e0db]" />
         <DesktopPhase tag="Long-term" desc={roadmap.longDesktop} color="blue" />
@@ -331,8 +331,8 @@ function DesktopRoadmapCard({ title, roadmap }: { title: string; roadmap: Result
 
 function MobileRoadmapCard({ title, roadmap }: { title: string; roadmap: ResultsRoadmap }) {
   return (
-    <div className="flex w-full flex-col gap-2 rounded-xl border border-[#e6e6e6] bg-[#fafaf7] px-4 py-3 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]">
-      <RoadmapTitle className="w-full text-[18px] leading-none">{title}</RoadmapTitle>
+    <div className="flex w-full flex-col gap-1.5 rounded-xl border border-[#e6e6e6] bg-[#fafaf7] px-4 py-2 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]">
+      <RoadmapTitle className="w-full text-[16px] leading-none">{title}</RoadmapTitle>
       <div className="h-px w-full bg-[#e5e0db]" />
       <div className="flex w-full gap-2">
         <MobilePhase tag="Short-term" desc={roadmap.shortMobile} color="orange" />
@@ -390,18 +390,22 @@ function PlusMark() {
  * genuinely different copy from its desktop counterpart in Figma.
  *
  * Layout: both breakpoints `min-h-screen` + vertical centering. Padding,
- * inter-block gaps, card padding and the headline stat numbers' line-height
- * are all noticeably tighter than Figma's own authored spec (Figma's
- * desktop canvas for this node is 1024px tall, taller than most real
- * browser viewports once toolbar/chrome is subtracted) -- Joe explicitly
- * asked twice for this section to fit inside one real screen with no
- * internal scrolling, which a literal 1:1 port of Figma's spacing cannot
- * guarantee. Font sizes and body copy are kept at spec; only the
- * WHITESPACE budget (section padding, inter-block gaps, card padding,
- * number line-height) was compressed, so the content still reads at
- * essentially the same visual weight, just without Figma's generous
- * canvas-only margins. Verified against a live 1512px / 390px viewport
- * after deploy, not just against the Figma canvas number.
+ * inter-block gaps, card padding, and (after a first-pass round that still
+ * overflowed by ~120px on a real 1512x900 window) the headline stat number
+ * and roadmap-title sizes themselves are all noticeably tighter than
+ * Figma's own authored spec (Figma's desktop canvas for this node is
+ * 1024px tall, taller than most real browser viewports once toolbar/chrome
+ * is subtracted) -- Joe asked three times across two rounds for this
+ * section to fit inside one real screen with no internal scrolling, which
+ * a literal 1:1 port of Figma's spacing/type scale cannot guarantee. Body
+ * copy text stays at spec size (only line-height/padding trimmed there);
+ * only the two big display numbers (68/80 -> 60/72 desktop, 34/40 -> 30/36
+ * mobile) and the ROADMAP card titles (24/32 -> 22/26 desktop, 18 -> 16
+ * mobile) lost a size step, since those -- not body text -- were the
+ * actual budget the first compression pass had already exhausted. Verified
+ * against a live 1512px / 390px viewport measured via DOM
+ * `getBoundingClientRect()` against `window.innerHeight` after deploy, not
+ * just eyeballed against the Figma canvas number.
  *
  * Tech-feel motion: `CountUpValue` drives every number including delta
  * badges. `RadarPing` (desktop only) loops on each roadmap phase's marker
@@ -434,11 +438,11 @@ export function Results({ process }: { process: Record<string, unknown> }) {
   return (
     <section className="relative overflow-hidden bg-proj-white">
       {/* Mobile layout */}
-      <div className="flex min-h-screen w-full flex-col justify-center gap-3 bg-[#fbfbfa] px-6 py-6 md:hidden">
+      <div className="flex min-h-screen w-full flex-col justify-center gap-2 bg-[#fbfbfa] px-6 py-4 md:hidden">
         <SlideIn delay={0.1}>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <SectionEyebrow />
-            <h2 className="font-nunito text-[24px] leading-[30px] font-bold text-primary-black">
+            <h2 className="font-nunito text-[22px] leading-[26px] font-bold text-primary-black">
               成果驗證與未來展望
             </h2>
             <div className="h-px w-full bg-[#e6e6e6]" />
@@ -446,7 +450,7 @@ export function Results({ process }: { process: Record<string, unknown> }) {
         </SlideIn>
 
         <SlideIn delay={0.15}>
-          <div className="flex w-full flex-col gap-2">
+          <div className="flex w-full flex-col gap-1.5">
             <MobileMetricCard metric={metricOne} />
             <MobileMetricCard metric={metricTwo} />
             <MobileMetricCard metric={serviceMetric} />
@@ -463,14 +467,14 @@ export function Results({ process }: { process: Record<string, unknown> }) {
       </div>
 
       {/* Desktop layout */}
-      <div className="relative hidden min-h-screen w-full flex-col justify-center gap-4 border-y border-[#ededed] px-[120px] py-[44px] md:flex">
+      <div className="relative hidden min-h-screen w-full flex-col justify-center gap-2 border-y border-[#ededed] px-[120px] py-[26px] md:flex">
         <PlusMark />
         <DotGrid />
 
         <SlideIn delay={0.1}>
           <div className="flex flex-col gap-2">
             <SectionEyebrow />
-            <h2 className="font-nunito text-[42px] leading-[54px] font-bold text-primary-black">
+            <h2 className="font-nunito text-[42px] leading-[46px] font-bold text-primary-black">
               成果驗證與未來展望
             </h2>
             <div className="h-px w-full bg-[#e5e0db]" />
