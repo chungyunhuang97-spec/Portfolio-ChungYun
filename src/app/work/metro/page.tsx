@@ -11,6 +11,7 @@ import { InterfaceBonusExperience } from "./_sections/InterfaceBonusExperience";
 import { IaRestructuring } from "./_sections/IaRestructuring";
 import { MarketResearch } from "./_sections/MarketResearch";
 import { CompetitiveAnalysis } from "./_sections/CompetitiveAnalysis";
+import { UserResearch } from "./_sections/UserResearch";
 import { getProjectWithSections } from "@/lib/data";
 
 // Hand-crafted, bespoke page for this one case study -- deliberately NOT
@@ -65,11 +66,17 @@ import { getProjectWithSections } from "@/lib/data";
 // CompetitiveAnalysis: `competitiveIntro`,
 // `competitiveRows`, `competitiveConclusionDesktop`,
 // `competitiveConclusionMobile` -- no media fields, no static assets, it's
-// a plain data table/list). Any further section beyond this follows the
-// same pattern and slots in here in order, each wired the same way (fetch
-// content below, pass as props) -- note the Interface & Interaction
-// eyebrow/heading should only render once (in InterfaceRouteSearch), so
-// later sub-block components must NOT repeat it.
+// a plain data table/list; UserResearch (使用者研究與易用性測試, Figma
+// desktop 127:597 / mobile 147:287 -- slotted in AFTER CompetitiveAnalysis,
+// continuing Figma's page order): `userResearchIntro`, optional
+// `userResearchMobileIntro`, `userResearchStats` (4 stat cards),
+// `userResearchInsights` (4 "核心洞察" cards) -- illustration images and
+// accent colors are fixed /public assets + hardcoded constants, not CMS
+// fields, see that file's doc comment). Any further section beyond this
+// follows the same pattern and slots in here in order, each wired the same
+// way (fetch content below, pass as props) -- note the Interface &
+// Interaction eyebrow/heading should only render once (in
+// InterfaceRouteSearch), so later sub-block components must NOT repeat it.
 
 export const revalidate = 60;
 
@@ -114,6 +121,7 @@ export default async function MetroPage() {
         <IaRestructuring process={data.process} />
         <MarketResearch process={data.process} />
         <CompetitiveAnalysis process={data.process} />
+        <UserResearch process={data.process} />
       </main>
     </DoorReveal>
   );
