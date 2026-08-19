@@ -365,7 +365,7 @@ export function UserResearch({ process }: { process: Record<string, unknown> }) 
                     <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${barColor}`} />
                     <span
                       aria-hidden
-                      className="pointer-events-none absolute -right-4 -top-6 -scale-x-100 select-none font-fredoka text-[120px] leading-none opacity-10"
+                      className="pointer-events-none absolute -right-4 -top-6 select-none font-fredoka text-[120px] leading-none opacity-10"
                       style={{ color: numberColor }}
                     >
                       {String(i + 1).padStart(2, "0")}
