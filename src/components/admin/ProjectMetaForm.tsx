@@ -23,6 +23,7 @@ type MetaFields = {
   status: ProjectStatus;
   display_order: number;
   tags: string[];
+  footer_copyright: string | null;
 };
 
 export function ProjectMetaForm({
@@ -48,6 +49,7 @@ export function ProjectMetaForm({
     status: project.status,
     display_order: project.display_order,
     tags: project.tags,
+    footer_copyright: project.footer_copyright,
   });
   const [tagsText, setTagsText] = useState(project.tags.join(", "));
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -147,6 +149,19 @@ export function ProjectMetaForm({
           onChange={(e) => set("external_url", e.target.value || null)}
           className={inputClass()}
         />
+      </div>
+
+      <div className="flex flex-col gap-1.5 md:col-span-2">
+        <label className={labelClass()}>FOOTER COPYRIGHT</label>
+        <input
+          value={fields.footer_copyright ?? ""}
+          onChange={(e) => set("footer_copyright", e.target.value || null)}
+          placeholder={`© ${new Date().getFullYear()} ${project.title}. All rights reserved.`}
+          className={inputClass()}
+        />
+        <p className="text-xs text-ink-faint">
+          顯示在頁尾左下角，留空則自動帶入「© 年份 專案標題. All rights reserved.」
+        </p>
       </div>
 
       <div className="flex flex-col gap-1.5 md:col-span-2">
