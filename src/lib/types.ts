@@ -19,6 +19,12 @@ export interface Project {
   cover_image_url: string | null;
   tags: string[];
   internal_note: string | null;
+  /** Left-hand copyright line rendered by the shared <Footer /> component
+   * (design-system/Footer.tsx). Per-project so every case-study page that
+   * reuses Footer can carry its own copyright text, edited from this same
+   * DETAILS form (see ProjectMetaForm.tsx). Nullable -- pages fall back to
+   * a generic "© {year} {title}. All rights reserved." when unset. */
+  footer_copyright: string | null;
 }
 
 export type SectionType =

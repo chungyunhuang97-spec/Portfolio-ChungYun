@@ -19,6 +19,7 @@ export async function updateProjectMeta(
     status: ProjectStatus;
     display_order: number;
     tags: string[];
+    footer_copyright: string | null;
   }
 ) {
   const supabase = await createSupabaseServerClient();
