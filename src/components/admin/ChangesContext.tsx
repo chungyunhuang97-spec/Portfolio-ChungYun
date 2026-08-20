@@ -6,12 +6,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
 
-interface ChangeEntry {
+interface StoreEntry {
   label: string;
   isDirty: boolean;
   save: () => Promise<void>;
@@ -27,9 +28,19 @@ interface DirtyEntry {
  * dirty/save status. Read via useSyncExternalStore -- the React-sanctioned
  * way to read mutable external state during render without touching a ref
  * in the render body.
+ *
+ * Registration identity (register/unregister) is kept deliberately separate
+ * from status updates (setDirty): a component's "save" closure is a new
+ * function on every render, and an earlier version of this store re-ran
+ * register/unregister on every one of those renders -- which notified
+ * subscribers, which re-rendered every consumer of the context, which
+ * produced a new closure again, forever (React error #185, "Maximum update
+ * depth exceeded"). setDirty only touches the store -- and only notifies --
+ * when the boolean actually flips, so it can safely be driven by a
+ * primitive dependency instead of a function reference.
  */
 class ChangesStore {
-  private entries = new Map<string, ChangeEntry>();
+  private entries = new Map<string, StoreEntry>();
   private listeners = new Set<() => void>();
   private cachedSnapshot: DirtyEntry[] = [];
   private version = 0;
@@ -52,24 +63,33 @@ class ChangesStore {
     return this.cachedSnapshot;
   };
 
-  register = (id: string, entry: ChangeEntry) => {
+  private notify() {
+    this.version++;
+    this.listeners.forEach((l) => l());
+  }
+
+  /** Registers (or re-registers) an editor's identity. Does NOT notify --
+   *  a fresh registration preserves whatever isDirty was already on record
+   *  (or starts false), so it never changes the dirty snapshot by itself.
+   *  Safe to call every time `save`'s closure changes. */
+  register = (id: string, label: string, save: () => Promise<void>) => {
     const prev = this.entries.get(id);
-    this.entries.set(id, entry);
-    // Only bump the version (and notify) when the dirty flag actually
-    // flips, or this is a brand-new registration -- keeps every keystroke
-    // in a field from re-rendering the sticky bar while `save` (read
-    // straight off the map, not the snapshot) always stays fresh.
-    if (!prev || prev.isDirty !== entry.isDirty) {
-      this.version++;
-      this.listeners.forEach((l) => l());
-    }
+    this.entries.set(id, { label, save, isDirty: prev?.isDirty ?? false });
   };
 
   unregister = (id: string) => {
-    if (this.entries.delete(id)) {
-      this.version++;
-      this.listeners.forEach((l) => l());
-    }
+    const existed = this.entries.get(id);
+    this.entries.delete(id);
+    if (existed?.isDirty) this.notify();
+  };
+
+  /** The only place that notifies for a dirty-flag change -- driven by a
+   *  primitive boolean dependency, never by function identity. */
+  setDirty = (id: string, isDirty: boolean) => {
+    const entry = this.entries.get(id);
+    if (!entry || entry.isDirty === isDirty) return;
+    entry.isDirty = isDirty;
+    this.notify();
   };
 
   saveAll = async () => {
@@ -83,15 +103,31 @@ class ChangesStore {
   };
 }
 
-interface ChangesContextValue {
-  register: (id: string, entry: ChangeEntry) => void;
+interface ActionsContextValue {
+  register: (id: string, label: string, save: () => Promise<void>) => void;
   unregister: (id: string) => void;
-  dirtyEntries: DirtyEntry[];
+  setDirty: (id: string, isDirty: boolean) => void;
   saveAll: () => Promise<void>;
+}
+
+interface StatusContextValue {
+  dirtyEntries: DirtyEntry[];
   savingAll: boolean;
 }
 
-const ChangesContext = createContext<ChangesContextValue | null>(null);
+// Split into two contexts on purpose: ActionsContext's value is 100% stable
+// for the lifetime of the provider (register/unregister/setDirty are bound
+// store methods, saveAll is a useCallback with stable deps) -- it never
+// changes identity, no matter how often dirty status changes elsewhere on
+// the page. StatusContext is the one that changes when dirtyEntries does.
+// useTrackChanges only ever reads ActionsContext, so one editor's dirty
+// flag flipping can never cause every OTHER editor's registration effect
+// to re-fire. That churn was the actual cause of the infinite loop: with
+// everything in a single context, any dirty-status change produced a new
+// context value, which every consumer's effect depended on, which re-ran
+// register/unregister, which (for an already-dirty entry) notified again.
+const ActionsContext = createContext<ActionsContextValue | null>(null);
+const StatusContext = createContext<StatusContextValue | null>(null);
 
 /**
  * Wraps a page (or part of one) that contains multiple independent editors
@@ -117,12 +153,23 @@ export function ChangesProvider({ children }: { children: ReactNode }) {
     }
   }, [store]);
 
-  const value = useMemo(
-    () => ({ register: store.register, unregister: store.unregister, dirtyEntries, saveAll, savingAll }),
-    [store, dirtyEntries, saveAll, savingAll]
+  const actions = useMemo(
+    () => ({
+      register: store.register,
+      unregister: store.unregister,
+      setDirty: store.setDirty,
+      saveAll,
+    }),
+    [store, saveAll]
   );
 
-  return <ChangesContext.Provider value={value}>{children}</ChangesContext.Provider>;
+  const status = useMemo(() => ({ dirtyEntries, savingAll }), [dirtyEntries, savingAll]);
+
+  return (
+    <ActionsContext.Provider value={actions}>
+      <StatusContext.Provider value={status}>{children}</StatusContext.Provider>
+    </ActionsContext.Provider>
+  );
 }
 
 /**
@@ -130,16 +177,39 @@ export function ChangesProvider({ children }: { children: ReactNode }) {
  * bar. Safe to call even outside a ChangesProvider (e.g. the standalone
  * site-content editor) -- it just no-ops and the editor's own Save button
  * keeps working exactly as before.
+ *
+ * `save` deliberately does NOT appear in any effect's dependency array --
+ * it's a new closure every render, so depending on it would re-run
+ * registration every render. Instead it's kept in a ref that's refreshed
+ * after every render, and the registered entry calls through the ref.
  */
 export function useTrackChanges(id: string, label: string, isDirty: boolean, save: () => Promise<void>) {
-  const ctx = useContext(ChangesContext);
+  const ctx = useContext(ActionsContext);
+  const saveRef = useRef(save);
+
+  useEffect(() => {
+    saveRef.current = save;
+  });
+
   useEffect(() => {
     if (!ctx) return;
-    ctx.register(id, { label, isDirty, save });
+    ctx.register(id, label, () => saveRef.current());
     return () => ctx.unregister(id);
-  }, [ctx, id, label, isDirty, save]);
+  }, [ctx, id, label]);
+
+  useEffect(() => {
+    if (!ctx) return;
+    ctx.setDirty(id, isDirty);
+  }, [ctx, id, isDirty]);
 }
 
+/** For UI that needs to both read status (dirtyEntries/savingAll) and
+ *  trigger saveAll -- e.g. StickyChangesBar. Combining both contexts here
+ *  is fine because this hook's return value is only used for rendering,
+ *  never fed back into another hook's dependency array. */
 export function useChangesContext() {
-  return useContext(ChangesContext);
+  const actions = useContext(ActionsContext);
+  const status = useContext(StatusContext);
+  if (!actions || !status) return null;
+  return { ...actions, ...status };
 }
