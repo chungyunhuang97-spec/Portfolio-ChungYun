@@ -106,27 +106,36 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
   if (!quote || !body) return null;
 
   return (
-    <section className="relative overflow-hidden bg-secondary-blue">
+    <section id="closing" className="relative overflow-hidden bg-secondary-blue">
       <GeometricBackdrop />
 
       {/* Mobile layout */}
-      <div className="relative flex w-full flex-col items-center justify-center gap-6 px-6 py-20 md:hidden">
-        <span
-          aria-hidden
-          className="absolute left-5 top-5 font-nunito text-[40px] font-bold leading-[40px] text-proj-white"
-        >
-          「
-        </span>
-        <span
-          aria-hidden
-          className="absolute bottom-5 right-5 font-nunito text-[40px] font-bold leading-[40px] text-proj-white"
-        >
-          」
-        </span>
+      {/* Quote marks live INSIDE the same box as the text (not anchored to
+          the outer section) and that box reserves `pt-12`/`pb-12` — exactly
+          the marks' own line-height — so they can never overlap the copy
+          no matter how many lines the quote/body wrap to (Joe's 8/20
+          report: marks were overlapping content because they were pinned
+          to the section's corners independent of content height). Both
+          <p>s are `w-full` so the quote and body render as the SAME column
+          width instead of each shrink-wrapping to its own longest line
+          (Joe's report: title rendered wider than subtitle). */}
+      <div className="relative flex w-full flex-col items-center justify-center px-6 py-20 md:hidden">
         <SlideIn delay={0.1}>
-          <div className="flex w-full max-w-[326px] flex-col items-center gap-3 text-center text-proj-white">
-            <p className="font-nunito text-[16px] font-bold leading-[24px]">{quote}</p>
-            <p className="font-nunito text-[13px] font-normal leading-[20px] opacity-80">{body}</p>
+          <div className="relative flex w-full max-w-[326px] flex-col items-center gap-3 pt-12 pb-12 text-center text-proj-white">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-0 top-0 font-nunito text-[40px] font-bold leading-[40px] text-proj-white"
+            >
+              「
+            </span>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-0 right-0 font-nunito text-[40px] font-bold leading-[40px] text-proj-white"
+            >
+              」
+            </span>
+            <p className="w-full font-nunito text-[16px] font-bold leading-[24px]">{quote}</p>
+            <p className="w-full font-nunito text-[13px] font-normal leading-[20px] opacity-80">{body}</p>
           </div>
         </SlideIn>
       </div>
