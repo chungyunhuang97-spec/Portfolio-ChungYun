@@ -204,7 +204,7 @@ export function CanvasEditor({ project, sections, initialLayout }: CanvasEditorP
   }
 
   return (
-    <div className="flex h-[100dvh] flex-col bg-[#e9e2d6]">
+    <div className="flex h-[100dvh] flex-col bg-admin-bg">
       <Toolbar
         breakpoint={breakpoint}
         onBreakpointChange={setBreakpoint}
@@ -219,7 +219,7 @@ export function CanvasEditor({ project, sections, initialLayout }: CanvasEditorP
         onResetToDefault={resetToDefault}
       />
 
-      <div ref={setContainerEl} className="relative flex-1 overflow-auto bg-[#cfcabf] p-16">
+      <div ref={setContainerEl} className="relative flex-1 overflow-auto bg-admin-canvas p-16">
         <div
           ref={setCanvasEl}
           className="relative mx-auto bg-white shadow-lg"
@@ -234,8 +234,8 @@ export function CanvasEditor({ project, sections, initialLayout }: CanvasEditorP
                 else elementRefs.current.delete(block.id);
               }}
               data-block-id={block.id}
-              className={`canvas-item absolute outline-1 outline-dashed outline-transparent hover:outline-accent/50 ${
-                selectedIds.includes(block.id) ? "outline-accent outline-2" : ""
+              className={`canvas-item absolute outline-1 outline-dashed outline-transparent hover:outline-admin-accent/50 ${
+                selectedIds.includes(block.id) ? "outline-admin-accent outline-2" : ""
               }`}
               style={{
                 left: block.x,
@@ -419,18 +419,21 @@ function Toolbar({
   onResetToDefault: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-black/10 bg-white px-6 py-3">
+    <div className="admin-shell flex items-center justify-between border-b border-admin-border bg-admin-surface px-6 py-3">
       <div className="flex items-center gap-4">
-        <a href={`/admin/projects/${slug}`} className="text-xs tracking-[0.15em] text-ink-faint hover:text-ink">
+        <a
+          href={`/admin/projects/${slug}`}
+          className="text-xs font-medium tracking-[0.1em] text-admin-text-faint transition-colors hover:text-admin-text"
+        >
           ← BACK
         </a>
-        <div className="flex gap-1 rounded-md border border-black/10 p-1">
+        <div className="flex gap-1 rounded-md border border-admin-border p-1">
           {BREAKPOINTS.map((bp) => (
             <button
               key={bp}
               onClick={() => onBreakpointChange(bp)}
-              className={`rounded px-3 py-1 text-xs tracking-wide transition-colors ${
-                breakpoint === bp ? "bg-ink text-white" : "text-ink-faint hover:text-ink"
+              className={`rounded px-3 py-1 text-xs font-medium tracking-wide transition-colors ${
+                breakpoint === bp ? "bg-admin-text text-white" : "text-admin-text-faint hover:text-admin-text"
               }`}
             >
               {BREAKPOINT_LABELS[bp]}
@@ -446,7 +449,7 @@ function Toolbar({
               key={mode}
               disabled={!canAlignGroup}
               onClick={() => onAlign(mode)}
-              className="rounded px-2 py-1 text-xs text-ink-faint hover:bg-black/5 hover:text-ink disabled:opacity-30"
+              className="rounded px-2 py-1 text-xs text-admin-text-faint hover:bg-admin-surface-hover hover:text-admin-text disabled:opacity-30"
               title={`水平對齊：${mode}`}
             >
               {mode === "left" ? "⊢" : mode === "hcenter" ? "⊣⊢" : "⊣"}
@@ -457,18 +460,18 @@ function Toolbar({
               key={mode}
               disabled={!canAlignGroup}
               onClick={() => onAlign(mode)}
-              className="rounded px-2 py-1 text-xs text-ink-faint hover:bg-black/5 hover:text-ink disabled:opacity-30"
+              className="rounded px-2 py-1 text-xs text-admin-text-faint hover:bg-admin-surface-hover hover:text-admin-text disabled:opacity-30"
               title={`垂直對齊：${mode}`}
             >
               {mode === "top" ? "⊤" : mode === "vcenter" ? "⊤⊥" : "⊥"}
             </button>
           ))}
-          <span className="mx-1 w-px self-stretch bg-black/10" />
+          <span className="mx-1 w-px self-stretch bg-admin-border" />
           {(["left", "center", "right"] as TextAlign[]).map((align) => (
             <button
               key={align}
               onClick={() => onTextAlign(align)}
-              className="rounded px-2 py-1 text-xs text-ink-faint hover:bg-black/5 hover:text-ink"
+              className="rounded px-2 py-1 text-xs text-admin-text-faint hover:bg-admin-surface-hover hover:text-admin-text"
               title={`文字對齊：${align}`}
             >
               {align === "left" ? "≡←" : align === "center" ? "≡" : "≡→"}
@@ -478,17 +481,17 @@ function Toolbar({
 
         <button
           onClick={onResetToDefault}
-          className="rounded px-2 py-1 text-xs text-ink-faint hover:bg-black/5 hover:text-ink"
+          className="rounded px-2 py-1 text-xs text-admin-text-faint hover:bg-admin-surface-hover hover:text-admin-text"
           title="重設此斷點為預設排版"
         >
           重設版面
         </button>
 
-        {saveMessage && <span className="text-xs text-ink-faint">{saveMessage}</span>}
+        {saveMessage && <span className="text-xs text-admin-text-faint">{saveMessage}</span>}
         <button
           onClick={onSave}
           disabled={isSaving}
-          className="rounded-md bg-ink px-4 py-2 text-xs tracking-[0.1em] text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="rounded-md bg-admin-text px-4 py-2 text-xs font-medium tracking-[0.1em] text-white transition-colors hover:bg-admin-accent disabled:opacity-50"
         >
           {isSaving ? "儲存中…" : "儲存"}
         </button>
@@ -516,7 +519,7 @@ function MeasureOverlay({ from, to }: { from: LayoutBlock; to: LayoutBlock }) {
     <div className="pointer-events-none absolute inset-0 z-50">
       {gapX !== null && (
         <div
-          className="absolute flex items-center justify-center bg-accent/80 text-[10px] text-white"
+          className="absolute flex items-center justify-center bg-admin-accent/90 text-[10px] text-white"
           style={{
             left: Math.min(a.right, b.right),
             top: (Math.max(a.top, b.top) + Math.min(a.bottom, b.bottom)) / 2 - 8,
@@ -529,7 +532,7 @@ function MeasureOverlay({ from, to }: { from: LayoutBlock; to: LayoutBlock }) {
       )}
       {gapY !== null && (
         <div
-          className="absolute flex items-center justify-center bg-accent/80 text-[10px] text-white"
+          className="absolute flex items-center justify-center bg-admin-accent/90 text-[10px] text-white"
           style={{
             top: Math.min(a.bottom, b.bottom),
             left: (Math.max(a.left, b.left) + Math.min(a.right, b.right)) / 2 - 16,

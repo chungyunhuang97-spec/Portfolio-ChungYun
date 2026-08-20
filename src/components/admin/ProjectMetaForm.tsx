@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useTrackChanges } from "@/components/admin/ChangesContext";
+import { StatusBadge } from "@/components/admin/StatusBadge";
 import type { Project, ProjectStatus } from "@/lib/types";
 
 function inputClass() {
-  return "w-full border border-line bg-bg px-3 py-2 text-sm outline-none transition-colors focus:border-accent";
+  return "w-full rounded-md border border-admin-border bg-admin-surface px-3 py-2 text-sm text-admin-text outline-none transition-colors focus:border-admin-accent";
 }
 
 function labelClass() {
-  return "text-xs tracking-[0.15em] text-ink-faint";
+  return "text-[11px] font-medium tracking-[0.1em] text-admin-text-faint";
 }
 
 type MetaFields = {
@@ -37,7 +39,7 @@ export function ProjectMetaForm({
     fields: MetaFields
   ) => Promise<{ success: boolean; error?: string }>;
 }) {
-  const [fields, setFields] = useState<MetaFields>({
+  const initial: MetaFields = {
     title: project.title,
     subtitle: project.subtitle,
     category: project.category,
@@ -50,10 +52,13 @@ export function ProjectMetaForm({
     display_order: project.display_order,
     tags: project.tags,
     footer_copyright: project.footer_copyright,
-  });
+  };
+
+  const [fields, setFields] = useState<MetaFields>(initial);
   const [tagsText, setTagsText] = useState(project.tags.join(", "));
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [baseline, setBaseline] = useState<MetaFields>(initial);
 
   function set<K extends keyof MetaFields>(key: K, value: MetaFields[K]) {
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -66,8 +71,10 @@ export function ProjectMetaForm({
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean);
-    const result = await onSave(project.id, project.slug, { ...fields, tags });
+    const nextFields = { ...fields, tags };
+    const result = await onSave(project.id, project.slug, nextFields);
     if (result.success) {
+      setBaseline(nextFields);
       setStatus("saved");
       setTimeout(() => setStatus("idle"), 2000);
     } else {
@@ -75,6 +82,18 @@ export function ProjectMetaForm({
       setErrorMessage(result.error ?? "Unknown error");
     }
   }
+
+  const currentFields = useMemo(() => {
+    const tags = tagsText
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    return { ...fields, tags };
+  }, [fields, tagsText]);
+
+  const isDirty = JSON.stringify(currentFields) !== JSON.stringify(baseline);
+
+  useTrackChanges(`meta-${project.id}`, "DETAILS", isDirty, handleSave);
 
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -159,7 +178,7 @@ export function ProjectMetaForm({
           placeholder={`© ${new Date().getFullYear()} ${project.title}. All rights reserved.`}
           className={inputClass()}
         />
-        <p className="text-xs text-ink-faint">
+        <p className="text-xs text-admin-text-faint">
           顯示在頁尾左下角，留空則自動帶入「© 年份 專案標題. All rights reserved.」
         </p>
       </div>
@@ -184,6 +203,9 @@ export function ProjectMetaForm({
           <option value="published">published</option>
           <option value="archived">archived</option>
         </select>
+        <div className="mt-1">
+          <StatusBadge status={fields.status} />
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -201,12 +223,18 @@ export function ProjectMetaForm({
           type="button"
           onClick={handleSave}
           disabled={status === "saving"}
-          className="border border-ink bg-ink px-5 py-2.5 text-sm tracking-wide text-bg transition-colors hover:border-accent hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-admin-text px-5 py-2.5 text-sm font-medium tracking-wide text-white transition-colors hover:bg-admin-accent disabled:cursor-not-allowed disabled:opacity-50"
         >
           {status === "saving" ? "Saving…" : "Save details"}
         </button>
-        {status === "saved" && <span className="text-sm text-emerald-700">Saved</span>}
-        {status === "error" && <span className="text-sm text-red-700">{errorMessage}</span>}
+        {isDirty && status === "idle" && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-warning">
+            <span className="h-1.5 w-1.5 rounded-full bg-admin-warning" />
+            未儲存
+          </span>
+        )}
+        {status === "saved" && <span className="text-sm text-admin-success">Saved</span>}
+        {status === "error" && <span className="text-sm text-admin-danger">{errorMessage}</span>}
       </div>
     </div>
   );

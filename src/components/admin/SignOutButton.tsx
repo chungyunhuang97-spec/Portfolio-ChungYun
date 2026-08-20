@@ -21,7 +21,7 @@ export function SignOutButton() {
       type="button"
       onClick={handleSignOut}
       disabled={loading}
-      className="text-xs tracking-[0.15em] text-ink-faint transition-colors hover:text-ink disabled:opacity-50"
+      className="text-xs font-medium tracking-[0.1em] text-admin-text-faint transition-colors hover:text-admin-danger disabled:opacity-50"
     >
       SIGN OUT
     </button>

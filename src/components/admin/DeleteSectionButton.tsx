@@ -20,7 +20,7 @@ export function DeleteSectionButton({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="inline-flex items-center gap-1.5 text-xs tracking-wide text-ink-faint transition-colors hover:text-red-700"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-faint transition-colors hover:text-admin-danger"
       >
         <Trash size={14} weight="light" />
         REMOVE SECTION
@@ -29,8 +29,8 @@ export function DeleteSectionButton({
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-ink-faint">Remove this section?</span>
+    <div className="flex items-center gap-3 rounded-md border border-admin-danger/30 bg-admin-danger-soft px-3 py-2">
+      <span className="text-xs text-admin-text">Remove this section?</span>
       <button
         type="button"
         disabled={loading}
@@ -39,14 +39,14 @@ export function DeleteSectionButton({
           await onDelete(sectionId);
           router.refresh();
         }}
-        className="text-xs tracking-wide text-red-700 hover:underline"
+        className="text-xs font-medium text-admin-danger hover:underline disabled:opacity-50"
       >
         {loading ? "Removing…" : "Confirm"}
       </button>
       <button
         type="button"
         onClick={() => setConfirming(false)}
-        className="text-xs tracking-wide text-ink-faint hover:underline"
+        className="text-xs text-admin-text-muted hover:underline"
       >
         Cancel
       </button>

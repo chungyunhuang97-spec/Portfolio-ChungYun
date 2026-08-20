@@ -30,14 +30,14 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-[100dvh] items-center justify-center bg-bg px-6">
-      <div className="w-full max-w-sm">
-        <p className="text-xs tracking-[0.2em] text-ink-faint">ADMIN</p>
-        <h1 className="mt-3 text-2xl">Sign in</h1>
+    <main className="admin-shell flex min-h-[100dvh] items-center justify-center bg-admin-bg px-6">
+      <div className="w-full max-w-sm rounded-lg border border-admin-border bg-admin-surface p-8">
+        <p className="text-xs font-semibold tracking-[0.2em] text-admin-text-faint">ADMIN</p>
+        <h1 className="mt-3 text-2xl font-semibold text-admin-text">Sign in</h1>
 
         <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <label htmlFor="email" className="text-sm text-ink-muted">
+            <label htmlFor="email" className="text-sm text-admin-text-muted">
               Email
             </label>
             <input
@@ -47,12 +47,12 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="border border-line bg-bg px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent"
+              className="rounded-md border border-admin-border bg-admin-bg px-3 py-2.5 text-sm text-admin-text outline-none transition-colors focus:border-admin-accent"
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="password" className="text-sm text-ink-muted">
+            <label htmlFor="password" className="text-sm text-admin-text-muted">
               Password
             </label>
             <input
@@ -62,16 +62,16 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="border border-line bg-bg px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent"
+              className="rounded-md border border-admin-border bg-admin-bg px-3 py-2.5 text-sm text-admin-text outline-none transition-colors focus:border-admin-accent"
             />
           </div>
 
-          {error && <p className="text-sm text-red-700">{error}</p>}
+          {error && <p className="text-sm text-admin-danger">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 border border-ink bg-ink px-4 py-2.5 text-sm tracking-wide text-bg transition-colors hover:border-accent hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-2 rounded-md bg-admin-text px-4 py-2.5 text-sm font-medium tracking-wide text-white transition-colors hover:bg-admin-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>

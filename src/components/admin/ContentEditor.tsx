@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Trash, CaretDown, CaretUp } from "@phosphor-icons/react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { AdminMediaDropzone } from "@/components/admin/AdminMediaDropzone";
+import { useTrackChanges } from "@/components/admin/ChangesContext";
 
 type FieldType = "text" | "string-list" | "title-desc-list" | "media" | "raw";
 
@@ -17,6 +18,7 @@ interface Field {
 // string URL -- Postgres JSONB has no concept of a "media" type, so the
 // key name is the only stable signal we have across reloads.
 const MEDIA_KEY_PATTERN = /(_media_url|_image_url|_video_url)$/i;
+const DESKTOP_MOBILE_PATTERN = /desktop|mobile/i;
 
 function detectType(value: unknown, key?: string): FieldType {
   if (key && MEDIA_KEY_PATTERN.test(key) && (typeof value === "string" || value == null)) {
@@ -53,98 +55,72 @@ function fieldsToContent(fields: Field[]): Record<string, unknown> {
   return content;
 }
 
-function inputClass() {
-  return "w-full border border-line bg-bg px-3 py-2 text-sm outline-none transition-colors focus:border-accent";
+function humanizeKey(key: string) {
+  return key
+    .replace(/(_media_url|_image_url|_video_url|MediaUrl|ImageUrl|VideoUrl)$/i, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .toUpperCase();
 }
 
-function isVideoUrl(url: string) {
-  return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
-}
+type GroupedField =
+  | { kind: "single"; field: Field; index: number }
+  | {
+      kind: "pair";
+      base: string;
+      desktop: { field: Field; index: number };
+      mobile: { field: Field; index: number };
+    };
 
-function MediaFieldEditor({
-  value,
-  onChange,
-  mediaPathPrefix,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  mediaPathPrefix?: string;
-}) {
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const url = value ?? "";
+/**
+ * Media fields that follow the desktopMediaUrl / mobileMediaUrl naming
+ * convention render as one side-by-side pair instead of two identical,
+ * unrelated-looking dropzones -- this is the convention already used
+ * across the Metro page's fields (e.g. interfaceSearchDesktopMediaUrl /
+ * interfaceSearchMobileMediaUrl).
+ */
+function groupFields(fields: Field[]): GroupedField[] {
+  const used = new Set<number>();
+  const result: GroupedField[] = [];
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setError(null);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const ext = file.name.split(".").pop() ?? "bin";
-      const safePrefix = (mediaPathPrefix ?? "misc").replace(/[^a-zA-Z0-9/_-]/g, "-");
-      const path = `${safePrefix}/${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("project-media")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from("project-media").getPublicUrl(path);
-      onChange(data.publicUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
+  for (let i = 0; i < fields.length; i++) {
+    if (used.has(i)) continue;
+    const field = fields[i];
+
+    if (field.type === "media" && DESKTOP_MOBILE_PATTERN.test(field.key)) {
+      const isDesktop = /desktop/i.test(field.key);
+      const base = field.key.replace(/desktop/i, "").replace(/mobile/i, "");
+      const partnerIndex = fields.findIndex((f, j) => {
+        if (used.has(j) || j === i || f.type !== "media") return false;
+        const fBase = f.key.replace(/desktop/i, "").replace(/mobile/i, "");
+        if (fBase !== base) return false;
+        return /desktop/i.test(f.key) !== isDesktop;
+      });
+
+      if (partnerIndex !== -1) {
+        used.add(i);
+        used.add(partnerIndex);
+        const desktopEntry = isDesktop ? { field, index: i } : { field: fields[partnerIndex], index: partnerIndex };
+        const mobileEntry = isDesktop ? { field: fields[partnerIndex], index: partnerIndex } : { field, index: i };
+        result.push({ kind: "pair", base, desktop: desktopEntry, mobile: mobileEntry });
+        continue;
+      }
     }
+
+    used.add(i);
+    result.push({ kind: "single", field, index: i });
   }
 
-  return (
-    <div className="space-y-3">
-      {url ? (
-        <div className="w-40 overflow-hidden rounded-lg border border-line bg-bg">
-          {isVideoUrl(url) ? (
-            <video src={url} className="w-full" muted controls />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt="" className="w-full" />
-          )}
-        </div>
-      ) : (
-        <p className="text-xs text-ink-faint">尚未上傳</p>
-      )}
+  return result;
+}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*,video/*"
-          onChange={handleFile}
-          disabled={uploading}
-          className="text-xs text-ink-faint file:mr-3 file:border file:border-line file:bg-bg file:px-3 file:py-1.5 file:text-xs file:text-ink-muted"
-        />
-        {uploading && <span className="text-xs text-ink-faint">上傳中…</span>}
-        {url && (
-          <button
-            type="button"
-            onClick={() => onChange("")}
-            className="text-xs text-red-700 hover:underline"
-          >
-            移除
-          </button>
-        )}
-      </div>
+function inputClass() {
+  return "w-full rounded-md border border-admin-border bg-admin-surface px-3 py-2 text-sm text-admin-text outline-none transition-colors focus:border-admin-accent";
+}
 
-      {error && <p className="text-xs text-red-700">{error}</p>}
-
-      <input
-        value={url}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="或直接貼上圖片／影片網址"
-        className={`${inputClass()} font-mono text-xs`}
-      />
-    </div>
-  );
+function fieldLabelClass() {
+  return "text-[11px] font-medium tracking-[0.1em] text-admin-text-faint";
 }
 
 function FieldEditor({
@@ -161,7 +137,7 @@ function FieldEditor({
 
   if (field.type === "media") {
     return (
-      <MediaFieldEditor
+      <AdminMediaDropzone
         value={(field.value as string) ?? ""}
         onChange={onChange}
         mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${field.key}` : field.key}
@@ -198,7 +174,7 @@ function FieldEditor({
             <button
               type="button"
               onClick={() => onChange(items.filter((_, idx) => idx !== i))}
-              className="shrink-0 px-2 text-ink-faint transition-colors hover:text-red-700"
+              className="shrink-0 rounded-md px-2 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
               aria-label="Remove item"
             >
               <Trash size={16} weight="light" />
@@ -208,9 +184,9 @@ function FieldEditor({
         <button
           type="button"
           onClick={() => onChange([...items, ""])}
-          className="inline-flex items-center gap-1.5 text-xs tracking-wide text-ink-faint transition-colors hover:text-accent"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-muted transition-colors hover:text-admin-accent"
         >
-          <Plus size={14} weight="light" />
+          <Plus size={14} weight="bold" />
           ADD ITEM
         </button>
       </div>
@@ -220,9 +196,9 @@ function FieldEditor({
   if (field.type === "title-desc-list") {
     const items = (field.value as { title: string; desc: string }[]) ?? [];
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {items.map((item, i) => (
-          <div key={i} className="space-y-2 border border-line p-3">
+          <div key={i} className="space-y-2 rounded-md border border-admin-border bg-admin-surface p-3">
             <div className="flex items-center gap-2">
               <input
                 placeholder="Title"
@@ -237,7 +213,7 @@ function FieldEditor({
               <button
                 type="button"
                 onClick={() => onChange(items.filter((_, idx) => idx !== i))}
-                className="shrink-0 px-2 text-ink-faint transition-colors hover:text-red-700"
+                className="shrink-0 rounded-md px-2 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
                 aria-label="Remove item"
               >
                 <Trash size={16} weight="light" />
@@ -259,9 +235,9 @@ function FieldEditor({
         <button
           type="button"
           onClick={() => onChange([...items, { title: "", desc: "" }])}
-          className="inline-flex items-center gap-1.5 text-xs tracking-wide text-ink-faint transition-colors hover:text-accent"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-muted transition-colors hover:text-admin-accent"
         >
-          <Plus size={14} weight="light" />
+          <Plus size={14} weight="bold" />
           ADD ITEM
         </button>
       </div>
@@ -286,7 +262,7 @@ function FieldEditor({
         }}
         className={`${inputClass()} font-mono text-xs`}
       />
-      {rawJsonError && <p className="mt-1 text-xs text-red-700">{rawJsonError}</p>}
+      {rawJsonError && <p className="mt-1 text-xs text-admin-danger">{rawJsonError}</p>}
     </div>
   );
 }
@@ -296,12 +272,19 @@ export function ContentEditor({
   onSave,
   saveLabel = "Save",
   mediaPathPrefix,
+  trackingId,
+  trackingLabel,
 }: {
   initialContent: Record<string, unknown>;
   onSave: (content: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
   saveLabel?: string;
   // Used to namespace uploaded files in Storage, e.g. "metro/hero".
   mediaPathPrefix?: string;
+  // Identifies this editor to the surrounding ChangesProvider/sticky bar.
+  // Falls back to mediaPathPrefix, then a generic id -- safe to omit
+  // entirely when this editor isn't inside a ChangesProvider.
+  trackingId?: string;
+  trackingLabel?: string;
 }) {
   const [fields, setFields] = useState<Field[]>(() => contentToFields(initialContent));
   const [rawMode, setRawMode] = useState(false);
@@ -311,6 +294,7 @@ export function ContentEditor({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [newFieldKey, setNewFieldKey] = useState("");
   const [newFieldType, setNewFieldType] = useState<FieldType>("text");
+  const [baseline, setBaseline] = useState<Record<string, unknown>>(initialContent);
 
   function updateField(index: number, value: unknown) {
     setFields((prev) => prev.map((f, i) => (i === index ? { ...f, value } : f)));
@@ -355,6 +339,7 @@ export function ContentEditor({
 
     const result = await onSave(content);
     if (result.success) {
+      setBaseline(content);
       setStatus("saved");
       setTimeout(() => setStatus("idle"), 2000);
     } else {
@@ -379,20 +364,46 @@ export function ContentEditor({
     }
   }
 
+  const currentContent = useMemo(() => {
+    if (!rawMode) return fieldsToContent(fields);
+    try {
+      return JSON.parse(rawText);
+    } catch {
+      return null;
+    }
+  }, [rawMode, fields, rawText]);
+
+  const isDirty = currentContent !== null && JSON.stringify(currentContent) !== JSON.stringify(baseline);
+
+  const grouped = useMemo(() => groupFields(fields), [fields]);
+
+  useTrackChanges(
+    trackingId ?? mediaPathPrefix ?? "editor",
+    trackingLabel ?? saveLabel,
+    isDirty,
+    handleSave
+  );
+
   return (
     <div>
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={toggleRawMode}
-          className="inline-flex items-center gap-1.5 text-xs tracking-wide text-ink-faint transition-colors hover:text-ink"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-faint transition-colors hover:text-admin-text"
         >
-          {rawMode ? <CaretUp size={14} weight="light" /> : <CaretDown size={14} weight="light" />}
+          {rawMode ? <CaretUp size={14} weight="bold" /> : <CaretDown size={14} weight="bold" />}
           {rawMode ? "STRUCTURED VIEW" : "ADVANCED: EDIT RAW JSON"}
         </button>
+        {isDirty && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-warning">
+            <span className="h-1.5 w-1.5 rounded-full bg-admin-warning" />
+            未儲存
+          </span>
+        )}
       </div>
 
-      {rawError && <p className="mt-2 text-xs text-red-700">{rawError}</p>}
+      {rawError && <p className="mt-2 text-xs text-admin-danger">{rawError}</p>}
 
       {rawMode ? (
         <textarea
@@ -403,32 +414,61 @@ export function ContentEditor({
         />
       ) : (
         <div className="mt-4 space-y-6">
-          {fields.map((field, i) => (
-            <div key={field.key + i}>
-              <div className="mb-2 flex items-center justify-between">
-                <label className="text-xs tracking-[0.15em] text-ink-faint">
-                  {field.key.toUpperCase()}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => removeField(i)}
-                  className="text-ink-faint transition-colors hover:text-red-700"
-                  aria-label={`Remove field ${field.key}`}
-                >
-                  <Trash size={14} weight="light" />
-                </button>
-              </div>
-              <FieldEditor
-                field={field}
-                onChange={(value) => updateField(i, value)}
-                mediaPathPrefix={mediaPathPrefix}
-              />
-            </div>
-          ))}
+          {grouped.map((g) => {
+            if (g.kind === "pair") {
+              return (
+                <div key={g.base}>
+                  <label className={`${fieldLabelClass()} mb-2 block`}>{humanizeKey(g.base)}</label>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="mb-1.5 text-[10px] tracking-[0.1em] text-admin-text-faint">DESKTOP</p>
+                      <AdminMediaDropzone
+                        value={(g.desktop.field.value as string) ?? ""}
+                        onChange={(v) => updateField(g.desktop.index, v)}
+                        mediaPathPrefix={
+                          mediaPathPrefix ? `${mediaPathPrefix}/${g.desktop.field.key}` : g.desktop.field.key
+                        }
+                        compact
+                      />
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-[10px] tracking-[0.1em] text-admin-text-faint">MOBILE</p>
+                      <AdminMediaDropzone
+                        value={(g.mobile.field.value as string) ?? ""}
+                        onChange={(v) => updateField(g.mobile.index, v)}
+                        mediaPathPrefix={
+                          mediaPathPrefix ? `${mediaPathPrefix}/${g.mobile.field.key}` : g.mobile.field.key
+                        }
+                        compact
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            }
 
-          <div className="flex flex-wrap items-end gap-2 border-t border-line pt-4">
+            const { field, index } = g;
+            return (
+              <div key={field.key + index}>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className={fieldLabelClass()}>{field.key.toUpperCase()}</label>
+                  <button
+                    type="button"
+                    onClick={() => removeField(index)}
+                    className="rounded-md p-1 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
+                    aria-label={`Remove field ${field.key}`}
+                  >
+                    <Trash size={14} weight="light" />
+                  </button>
+                </div>
+                <FieldEditor field={field} onChange={(value) => updateField(index, value)} mediaPathPrefix={mediaPathPrefix} />
+              </div>
+            );
+          })}
+
+          <div className="flex flex-wrap items-end gap-2 border-t border-admin-border pt-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs tracking-[0.15em] text-ink-faint">NEW FIELD KEY</label>
+              <label className={fieldLabelClass()}>NEW FIELD KEY</label>
               <input
                 value={newFieldKey}
                 onChange={(e) => setNewFieldKey(e.target.value)}
@@ -437,7 +477,7 @@ export function ContentEditor({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs tracking-[0.15em] text-ink-faint">TYPE</label>
+              <label className={fieldLabelClass()}>TYPE</label>
               <select
                 value={newFieldType}
                 onChange={(e) => setNewFieldType(e.target.value as FieldType)}
@@ -452,9 +492,9 @@ export function ContentEditor({
             <button
               type="button"
               onClick={addField}
-              className="inline-flex items-center gap-1.5 border border-line px-3 py-2 text-xs tracking-wide text-ink-muted transition-colors hover:border-accent hover:text-accent"
+              className="inline-flex items-center gap-1.5 rounded-md border border-admin-border px-3 py-2 text-xs font-medium text-admin-text-muted transition-colors hover:border-admin-accent hover:text-admin-accent"
             >
-              <Plus size={14} weight="light" />
+              <Plus size={14} weight="bold" />
               ADD FIELD
             </button>
           </div>
@@ -466,12 +506,12 @@ export function ContentEditor({
           type="button"
           onClick={handleSave}
           disabled={status === "saving"}
-          className="border border-ink bg-ink px-5 py-2.5 text-sm tracking-wide text-bg transition-colors hover:border-accent hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-admin-text px-5 py-2.5 text-sm font-medium tracking-wide text-white transition-colors hover:bg-admin-accent disabled:cursor-not-allowed disabled:opacity-50"
         >
           {status === "saving" ? "Saving…" : saveLabel}
         </button>
-        {status === "saved" && <span className="text-sm text-emerald-700">Saved</span>}
-        {status === "error" && <span className="text-sm text-red-700">{errorMessage}</span>}
+        {status === "saved" && <span className="text-sm text-admin-success">Saved</span>}
+        {status === "error" && <span className="text-sm text-admin-danger">{errorMessage}</span>}
       </div>
     </div>
   );

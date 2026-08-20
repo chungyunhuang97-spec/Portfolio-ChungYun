@@ -34,6 +34,33 @@
      there for why next/font/google can't be used for this specific
      family). Single weight only, so no font-weight variants exist. */
   --font-fredoka: "Fredoka One", cursive, sans-serif;
+
+  /* ---------------------------------------------------------------
+     Admin dashboard design system -- intentionally separate from the
+     marketing/portfolio tokens above (ink / bg / accent / line) and
+     from the project-page tokens below. The admin is an operating
+     tool, not an editorial surface: neutral zinc scale, one functional
+     accent, sans-serif only. Changing the marketing palette must never
+     touch these, and vice versa -- that's the whole point of the split.
+     --------------------------------------------------------------- */
+  --color-admin-bg: #f6f6f7;
+  --color-admin-surface: #ffffff;
+  --color-admin-surface-hover: #f1f1f3;
+  --color-admin-border: #e4e4e7;
+  --color-admin-border-strong: #d4d4d8;
+  --color-admin-text: #18181b;
+  --color-admin-text-muted: #52525b;
+  --color-admin-text-faint: #a1a1aa;
+  --color-admin-accent: #1d4ed8;
+  --color-admin-accent-hover: #1e3a8a;
+  --color-admin-accent-soft: #eff6ff;
+  --color-admin-danger: #dc2626;
+  --color-admin-danger-soft: #fef2f2;
+  --color-admin-success: #16a34a;
+  --color-admin-success-soft: #f0fdf4;
+  --color-admin-warning: #d97706;
+  --color-admin-warning-soft: #fffbeb;
+  --color-admin-canvas: #dcdce0;
 }
 
 @theme inline {
@@ -65,6 +92,26 @@
   --color-proj-white: var(--color-proj-white);
   --font-nunito: var(--font-nunito);
   --font-fredoka: var(--font-fredoka);
+
+  /* Admin token aliases -> Tailwind utilities (bg-admin-*, text-admin-*, border-admin-*) */
+  --color-admin-bg: var(--color-admin-bg);
+  --color-admin-surface: var(--color-admin-surface);
+  --color-admin-surface-hover: var(--color-admin-surface-hover);
+  --color-admin-border: var(--color-admin-border);
+  --color-admin-border-strong: var(--color-admin-border-strong);
+  --color-admin-text: var(--color-admin-text);
+  --color-admin-text-muted: var(--color-admin-text-muted);
+  --color-admin-text-faint: var(--color-admin-text-faint);
+  --color-admin-accent: var(--color-admin-accent);
+  --color-admin-accent-hover: var(--color-admin-accent-hover);
+  --color-admin-accent-soft: var(--color-admin-accent-soft);
+  --color-admin-danger: var(--color-admin-danger);
+  --color-admin-danger-soft: var(--color-admin-danger-soft);
+  --color-admin-success: var(--color-admin-success);
+  --color-admin-success-soft: var(--color-admin-success-soft);
+  --color-admin-warning: var(--color-admin-warning);
+  --color-admin-warning-soft: var(--color-admin-warning-soft);
+  --color-admin-canvas: var(--color-admin-canvas);
 }
 
 html,
@@ -86,4 +133,15 @@ h4 {
   font-style: normal;
   overflow-wrap: anywhere;
   min-width: 0;
+}
+
+/* Admin is a tool, not an editorial page -- headings stay sans-serif here
+   even though the site-wide rule above defaults every h1-h4 to the
+   Outfit display font. Scoped to .admin-shell so nothing outside /admin
+   is affected. */
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3,
+.admin-shell h4 {
+  font-family: var(--font-sans);
 }

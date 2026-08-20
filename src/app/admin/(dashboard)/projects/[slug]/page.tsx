@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
+import { ArrowLeft, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { getProjectWithSectionsAdmin } from "@/lib/admin-data";
 import { deleteSection, updateProjectMeta, upsertSection } from "@/lib/admin-actions";
 import { ProjectMetaForm } from "@/components/admin/ProjectMetaForm";
-import { ContentEditor } from "@/components/admin/ContentEditor";
+import { SectionAccordion } from "@/components/admin/SectionAccordion";
 import { AddSectionForm } from "@/components/admin/AddSectionForm";
-import { DeleteSectionButton } from "@/components/admin/DeleteSectionButton";
+import { StatusBadge } from "@/components/admin/StatusBadge";
+import { ChangesProvider } from "@/components/admin/ChangesContext";
+import { StickyChangesBar } from "@/components/admin/StickyChangesBar";
 import type { SectionType } from "@/lib/types";
 
 interface PageProps {
@@ -47,68 +49,75 @@ export default async function ProjectEditPage({ params }: PageProps) {
   }
 
   return (
-    <div>
-      <Link
-        href="/admin"
-        className="inline-flex items-center gap-2 text-xs tracking-[0.15em] text-ink-faint transition-colors hover:text-ink"
-      >
-        <ArrowLeft size={14} weight="light" />
-        BACK
-      </Link>
-      <div className="mt-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl">{project.title}</h1>
-          <p className="mt-1 font-mono text-xs text-ink-faint">/work/{project.slug}</p>
-        </div>
-        <Link
-          href={`/admin/projects/${project.slug}/edit`}
-          className="rounded-md bg-ink px-4 py-2 text-xs tracking-[0.1em] text-white transition-opacity hover:opacity-90"
-        >
-          視覺編輯
-        </Link>
-      </div>
+    <ChangesProvider>
+      <div>
+        <nav className="flex items-center gap-1.5 text-xs text-admin-text-faint">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1.5 transition-colors hover:text-admin-text"
+          >
+            <ArrowLeft size={12} weight="bold" />
+            ADMIN
+          </Link>
+          <CaretRight size={10} weight="bold" />
+          <span className="truncate text-admin-text">{project.title}</span>
+        </nav>
 
-      <div className="mt-10 max-w-3xl">
-        <h2 className="text-xs tracking-[0.2em] text-ink-faint">DETAILS</h2>
-        <div className="mt-4">
-          <ProjectMetaForm project={project} onSave={saveMeta} />
-        </div>
-      </div>
+        <StickyChangesBar />
 
-      <div className="mt-14 max-w-3xl">
-        <h2 className="text-xs tracking-[0.2em] text-ink-faint">SECTIONS</h2>
-        <div className="mt-4 divide-y divide-line border-t border-line">
-          {sections.map((section) => {
-            async function save(content: Record<string, unknown>) {
-              "use server";
-              return saveSection(section.section_type, content, section.display_order);
-            }
-            return (
-              <div key={section.id} className="py-8 first:pt-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-sm tracking-[0.15em] text-accent">
-                    {section.section_type.toUpperCase()}
-                  </h3>
-                  <DeleteSectionButton sectionId={section.id} onDelete={removeSection} />
-                </div>
-                <ContentEditor
-                  initialContent={section.content}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-semibold text-admin-text">{project.title}</h1>
+              <StatusBadge status={project.status} />
+            </div>
+            <p className="mt-1 font-mono text-xs text-admin-text-faint">/work/{project.slug}</p>
+          </div>
+          <Link
+            href={`/admin/projects/${project.slug}/edit`}
+            className="rounded-md bg-admin-text px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors hover:bg-admin-accent"
+          >
+            視覺編輯
+          </Link>
+        </div>
+
+        <div className="mt-10 max-w-3xl">
+          <h2 className="text-xs font-semibold tracking-[0.15em] text-admin-text-faint">DETAILS</h2>
+          <div className="mt-4 rounded-lg border border-admin-border bg-admin-surface p-5">
+            <ProjectMetaForm project={project} onSave={saveMeta} />
+          </div>
+        </div>
+
+        <div className="mt-10 max-w-3xl">
+          <h2 className="text-xs font-semibold tracking-[0.15em] text-admin-text-faint">SECTIONS</h2>
+          <div className="mt-4 space-y-3">
+            {sections.map((section) => {
+              async function save(content: Record<string, unknown>) {
+                "use server";
+                return saveSection(section.section_type, content, section.display_order);
+              }
+              return (
+                <SectionAccordion
+                  key={section.id}
+                  section={section}
                   onSave={save}
+                  onDelete={removeSection}
                   mediaPathPrefix={`${project.slug}/${section.section_type}`}
+                  defaultOpen={sections.length === 1}
                 />
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
 
-        <div className="mt-8">
-          <AddSectionForm
-            existingTypes={sections.map((s) => s.section_type as SectionType)}
-            nextDisplayOrder={sections.length}
-            onAdd={saveSection}
-          />
+          <div className="mt-4">
+            <AddSectionForm
+              existingTypes={sections.map((s) => s.section_type as SectionType)}
+              nextDisplayOrder={sections.length}
+              onAdd={saveSection}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </ChangesProvider>
   );
 }

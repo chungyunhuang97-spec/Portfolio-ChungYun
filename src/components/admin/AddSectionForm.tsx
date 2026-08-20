@@ -43,13 +43,13 @@ export function AddSectionForm({
   }
 
   return (
-    <div className="flex items-end gap-2 border border-dashed border-line p-4">
+    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed border-admin-border-strong bg-admin-surface p-4">
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs tracking-[0.15em] text-ink-faint">ADD SECTION</label>
+        <label className="text-[11px] font-medium tracking-[0.1em] text-admin-text-faint">ADD SECTION</label>
         <select
           value={selected}
           onChange={(e) => setSelected(e.target.value as SectionType)}
-          className="border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
+          className="rounded-md border border-admin-border bg-admin-surface px-3 py-2 text-sm text-admin-text outline-none focus:border-admin-accent"
         >
           {missing.map((t) => (
             <option key={t} value={t}>
@@ -62,9 +62,9 @@ export function AddSectionForm({
         type="button"
         onClick={handleAdd}
         disabled={loading}
-        className="inline-flex items-center gap-1.5 border border-line px-3 py-2 text-xs tracking-wide text-ink-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-md border border-admin-border px-3 py-2 text-xs font-medium text-admin-text-muted transition-colors hover:border-admin-accent hover:text-admin-accent disabled:opacity-50"
       >
-        <Plus size={14} weight="light" />
+        <Plus size={14} weight="bold" />
         {loading ? "ADDING…" : "ADD"}
       </button>
     </div>
