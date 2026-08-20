@@ -22,6 +22,15 @@
  * token — this project's `grey-100` (`#f0f0f0`) doesn't match Figma's
  * `Grey/100` (`#e6e6e6`) value used here, same mismatch already documented
  * and worked around the same way in Results.tsx / SystemArchitecture.tsx.
+ *
+ * Bottom padding bumped 8/20 per Joe's report ("footer 有點太擠了") — the
+ * original `pb-6`/`pb-12` was much smaller than the `pt-32` on the same
+ * block, so the copy sat close against the very bottom edge of the page
+ * with little breathing room below it. Figma's own frame doesn't spec a
+ * bottom-edge margin (the canvas just ends at the content), so this is a
+ * judgment call the same way Closing's background motion was — increased
+ * to `pb-12`/`pb-20` and the mobile line-gap widened slightly too, keeping
+ * the existing `pt-32` and border/layout untouched.
  */
 export function Footer({
   copyright,
@@ -33,7 +42,7 @@ export function Footer({
   return (
     <footer className="bg-primary-orange">
       {/* Mobile layout */}
-      <div className="flex flex-col gap-2 px-6 pt-32 pb-6 md:hidden">
+      <div className="flex flex-col gap-3 px-6 pt-32 pb-12 md:hidden">
         <p className="font-nunito text-[13px] font-normal leading-[20px] text-[#e6e6e6]">
           {copyright}
         </p>
@@ -43,7 +52,7 @@ export function Footer({
       </div>
 
       {/* Desktop layout */}
-      <div className="hidden items-start justify-between border-t border-[#1a1a1a] px-[120px] pt-32 pb-12 md:flex">
+      <div className="hidden items-start justify-between border-t border-[#1a1a1a] px-[120px] pt-32 pb-20 md:flex">
         <p className="font-nunito text-[14px] font-normal leading-[21px] text-[#e6e6e6]">
           {copyright}
         </p>

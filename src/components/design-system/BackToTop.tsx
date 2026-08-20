@@ -20,27 +20,51 @@ import { ArrowUp } from "@phosphor-icons/react/dist/ssr";
  * bold weight instead, which reads the same at this size.
  *
  * Behavior (not specified in Figma, since the static mockup has no
- * interaction layer to read from): hidden until the visitor scrolls past
- * roughly one viewport height, then fades/slides in bottom-right, fixed at
- * a lower z-index than <Navbar /> (z-40 vs Navbar's z-50) so it never
- * competes with the nav pill. Clicking scrolls back to the element whose
- * id matches `targetId` (defaults to "hero" — Hero's outer <section> in
- * every case-study page carries `id="hero"` for exactly this purpose) via
- * native smooth scrollIntoView; if that id isn't present on the page for
- * some reason, falls back to scrolling the window to the very top so the
- * button never silently does nothing.
+ * interaction layer to read from): **8/20 revised per Joe's report** — the
+ * first version showed the button after any scroll past ~60% of one
+ * viewport height, which meant it appeared while scrolling back up through
+ * the middle of the page too. Joe's ask: only show it while the page's
+ * final section (Closing) is actually in view, nowhere else. So visibility
+ * is now driven by an `IntersectionObserver` watching the element whose id
+ * matches `triggerId` (defaults to "closing" — Closing's outer <section>
+ * carries `id="closing"`), not by a scroll-position threshold — the button
+ * fades in only while that section intersects the viewport and fades back
+ * out the moment it doesn't, in either scroll direction. Also 8/20: the
+ * button is now horizontally centered (Joe's ask) via a full-width fixed
+ * wrapper with `flex justify-center` rather than a `left-1/2
+ * -translate-x-1/2` hack — framer-motion writes its own inline `transform`
+ * for the `whileHover`/`animate` y-offset, which would silently clobber a
+ * Tailwind translate-based centering class on the same element, so
+ * centering is done one level up on a plain (non-animated) wrapper
+ * instead. That wrapper spans the full width and is given
+ * `pointer-events-none` so it doesn't swallow clicks on whatever sits
+ * beneath it (e.g. Footer links); `pointer-events-auto` on the button
+ * itself restores its own clickability. Clicking scrolls back to the
+ * element whose id matches `targetId` (defaults to "hero" — Hero's outer
+ * <section> in every case-study page carries `id="hero"` for exactly this
+ * purpose) via native smooth scrollIntoView; if that id isn't present on
+ * the page for some reason, falls back to scrolling the window to the very
+ * top so the button never silently does nothing.
  */
-export function BackToTop({ targetId = "hero" }: { targetId?: string }) {
+export function BackToTop({
+  targetId = "hero",
+  triggerId = "closing",
+}: {
+  targetId?: string;
+  triggerId?: string;
+}) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    function handleScroll() {
-      setVisible(window.scrollY > window.innerHeight * 0.6);
-    }
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    const trigger = document.getElementById(triggerId);
+    if (!trigger) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(entry.isIntersecting),
+      { threshold: 0.25 }
+    );
+    observer.observe(trigger);
+    return () => observer.disconnect();
+  }, [triggerId]);
 
   function handleClick() {
     const el = document.getElementById(targetId);
@@ -52,23 +76,25 @@ export function BackToTop({ targetId = "hero" }: { targetId?: string }) {
   }
 
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.button
-          type="button"
-          onClick={handleClick}
-          aria-label="回到頂部"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 12 }}
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.2 }}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-xl border-[1.5px] border-secondary-blue bg-proj-white px-4 py-3 font-nunito text-[14px] font-bold text-secondary-blue shadow-[0_8px_20px_rgba(13,33,255,0.15)] md:bottom-10 md:right-10 md:text-[16px] md:tracking-[0.5px]"
-        >
-          回到頂部
-          <ArrowUp size={20} weight="bold" />
-        </motion.button>
-      )}
-    </AnimatePresence>
+    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center md:bottom-10">
+      <AnimatePresence>
+        {visible && (
+          <motion.button
+            type="button"
+            onClick={handleClick}
+            aria-label="回到頂部"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            whileHover={{ y: -2 }}
+            transition={{ duration: 0.2 }}
+            className="pointer-events-auto flex items-center gap-2 rounded-xl border-[1.5px] border-secondary-blue bg-proj-white px-4 py-3 font-nunito text-[14px] font-bold text-secondary-blue shadow-[0_8px_20px_rgba(13,33,255,0.15)] md:text-[16px] md:tracking-[0.5px]"
+          >
+            回到頂部
+            <ArrowUp size={20} weight="bold" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
