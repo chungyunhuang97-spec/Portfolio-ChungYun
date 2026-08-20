@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/design-system/Navbar";
 import { DoorReveal } from "@/components/design-system/DoorReveal";
+import { Footer } from "@/components/design-system/Footer";
+import { BackToTop } from "@/components/design-system/BackToTop";
 import { Hero } from "./_sections/Hero";
 import { ProjectOverview } from "./_sections/ProjectOverview";
 import { StrategyBeforeApp } from "./_sections/StrategyBeforeApp";
@@ -15,6 +17,7 @@ import { UserResearch } from "./_sections/UserResearch";
 import { DesignPrinciples } from "./_sections/DesignPrinciples";
 import { Results } from "./_sections/Results";
 import { SystemArchitecture } from "./_sections/SystemArchitecture";
+import { Closing } from "./_sections/Closing";
 import { getProjectWithSections } from "@/lib/data";
 
 // Hand-crafted, bespoke page for this one case study -- deliberately NOT
@@ -90,6 +93,30 @@ import { getProjectWithSections } from "@/lib/data";
 // different copy from desktop, not trims), `resultsRoadmapApp`,
 // `resultsRoadmapService` (2 roadmap cards, same rule) -- section
 // eyebrow/title hardcoded, no media assets, see that file's doc comment.
+// Closing (結論, Figma desktop 127:692 / mobile 151:578, both named
+// "Closing - Proposal A 漸層引號"): slotted in AFTER SystemArchitecture,
+// closing out Figma's page order. Unlike every section since Hero, this one
+// does NOT reuse the `process` row -- it's the first to map onto an
+// existing, still-unused section_type (`reflection`) that fits its content
+// semantically (a closing reflective statement), so it gets its own row:
+// `closingQuote` / `closingBody`, alongside the pre-existing `text` key
+// left over from before this project's per-section refactor. See that
+// file's doc comment for the background-motion design (Joe's "科技動態" /
+// "金屬感" ask -- not itself specified in Figma, which only has a static
+// dot texture on this node).
+//
+// Below the last case-study section, the page also mounts two page-chrome,
+// cross-project components (both new this round, both reused-component
+// tier like <Navbar />): <Footer /> (Figma desktop 127:698 / mobile
+// 151:589) with its left-hand copyright line pulled from the new
+// `projects.footer_copyright` column (editable in the DETAILS form,
+// project-level metadata like `category`/`subtitle` -- NOT a
+// project_sections field, since it's chrome, not case-study body content),
+// and <BackToTop /> (Figma desktop 137:113 / mobile 147:385), a
+// scroll-triggered floating button rendered outside <main> (fixed
+// positioning, same tier as <Navbar />) that scrolls back to Hero's
+// `id="hero"` anchor.
+//
 // Any further section beyond this
 // follows the same pattern and slots in here in order, each wired the same
 // way (fetch content below, pass as props) -- note the Interface &
@@ -110,6 +137,7 @@ async function loadMetro() {
     overview: getSection("overview"),
     challenge: getSection("challenge"),
     process: getSection("process"),
+    reflection: getSection("reflection"),
   };
 }
 
@@ -143,7 +171,15 @@ export default async function MetroPage() {
         <DesignPrinciples process={data.process} />
         <Results process={data.process} />
         <SystemArchitecture process={data.process} />
+        <Closing reflection={data.reflection} />
       </main>
+      <Footer
+        copyright={
+          data.project.footer_copyright ??
+          `© ${new Date().getFullYear()} ${data.project.title}. All rights reserved.`
+        }
+      />
+      <BackToTop />
     </DoorReveal>
   );
 }
