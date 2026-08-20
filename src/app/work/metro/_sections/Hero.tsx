@@ -58,7 +58,10 @@ export function Hero({
   ) : undefined;
 
   return (
-    <section className="relative overflow-hidden bg-proj-white px-6 pt-[104px] pb-16 md:flex md:min-h-screen md:items-center md:px-[176px] md:py-0">
+    <section
+      id="hero"
+      className="relative overflow-hidden bg-proj-white px-6 pt-[104px] pb-16 md:flex md:min-h-screen md:items-center md:px-[176px] md:py-0"
+    >
       {/* Mobile layout */}
       <div className="flex flex-col md:hidden">
         <SlideIn delay={1.0}>
