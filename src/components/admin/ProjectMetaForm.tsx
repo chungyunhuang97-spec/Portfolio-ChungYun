@@ -97,6 +97,34 @@ export function ProjectMetaForm({
 
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+      {(isDirty || status !== "idle") && (
+        <div className="md:col-span-2">
+          {isDirty && status !== "saving" && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-warning">
+              <span className="h-1.5 w-1.5 rounded-full bg-admin-warning" />
+              未儲存
+            </span>
+          )}
+          {status === "saving" && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-text-faint">
+              <span className="h-1.5 w-1.5 rounded-full bg-admin-text-faint" />
+              儲存中…
+            </span>
+          )}
+          {status === "saved" && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-success">
+              <span className="h-1.5 w-1.5 rounded-full bg-admin-success" />
+              已儲存
+            </span>
+          )}
+          {status === "error" && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-danger">
+              <span className="h-1.5 w-1.5 rounded-full bg-admin-danger" />
+              {errorMessage}
+            </span>
+          )}
+        </div>
+      )}
       <div className="flex flex-col gap-1.5 md:col-span-2">
         <label className={labelClass()}>TITLE</label>
         <input
@@ -216,25 +244,6 @@ export function ProjectMetaForm({
           onChange={(e) => set("display_order", Number(e.target.value))}
           className={inputClass()}
         />
-      </div>
-
-      <div className="flex items-center gap-4 md:col-span-2">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={status === "saving"}
-          className="rounded-md bg-admin-text px-5 py-2.5 text-sm font-medium tracking-wide text-white transition-colors hover:bg-admin-accent disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {status === "saving" ? "Saving…" : "Save details"}
-        </button>
-        {isDirty && status === "idle" && (
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-warning">
-            <span className="h-1.5 w-1.5 rounded-full bg-admin-warning" />
-            未儲存
-          </span>
-        )}
-        {status === "saved" && <span className="text-sm text-admin-success">Saved</span>}
-        {status === "error" && <span className="text-sm text-admin-danger">{errorMessage}</span>}
       </div>
     </div>
   );

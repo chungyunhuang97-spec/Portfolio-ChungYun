@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CaretRight } from "@phosphor-icons/react/dist/ssr";
+import { ArrowLeft, ArrowSquareOut, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { getProjectWithSectionsAdmin } from "@/lib/admin-data";
 import { deleteSection, updateProjectMeta, upsertSection } from "@/lib/admin-actions";
 import { ProjectMetaForm } from "@/components/admin/ProjectMetaForm";
@@ -8,7 +8,7 @@ import { SectionAccordion } from "@/components/admin/SectionAccordion";
 import { AddSectionForm } from "@/components/admin/AddSectionForm";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ChangesProvider } from "@/components/admin/ChangesContext";
-import { StickyChangesBar } from "@/components/admin/StickyChangesBar";
+import { GlobalSaveBar } from "@/components/admin/GlobalSaveBar";
 import type { SectionType } from "@/lib/types";
 
 interface PageProps {
@@ -63,7 +63,7 @@ export default async function ProjectEditPage({ params }: PageProps) {
           <span className="truncate text-admin-text">{project.title}</span>
         </nav>
 
-        <StickyChangesBar />
+        <GlobalSaveBar />
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -73,12 +73,15 @@ export default async function ProjectEditPage({ params }: PageProps) {
             </div>
             <p className="mt-1 font-mono text-xs text-admin-text-faint">/work/{project.slug}</p>
           </div>
-          <Link
-            href={`/admin/projects/${project.slug}/edit`}
-            className="rounded-md bg-admin-text px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors hover:bg-admin-accent"
+          <a
+            href={`/work/${project.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-md border border-admin-border px-4 py-2 text-xs font-medium tracking-wide text-admin-text-muted transition-colors hover:border-admin-accent hover:text-admin-accent"
           >
-            視覺編輯
-          </Link>
+            查看前台頁面
+            <ArrowSquareOut size={14} weight="bold" />
+          </a>
         </div>
 
         <div className="mt-10 max-w-3xl">

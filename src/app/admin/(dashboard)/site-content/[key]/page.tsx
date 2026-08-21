@@ -5,7 +5,7 @@ import { getAllSiteContentAdmin } from "@/lib/admin-data";
 import { updateSiteContent } from "@/lib/admin-actions";
 import { ContentEditor } from "@/components/admin/ContentEditor";
 import { ChangesProvider } from "@/components/admin/ChangesContext";
-import { StickyChangesBar } from "@/components/admin/StickyChangesBar";
+import { GlobalSaveBar } from "@/components/admin/GlobalSaveBar";
 
 interface PageProps {
   params: Promise<{ key: string }>;
@@ -40,7 +40,7 @@ export default async function SiteContentEditPage({ params }: PageProps) {
           <span className="truncate text-admin-text">{item.key}</span>
         </nav>
 
-        <StickyChangesBar />
+        <GlobalSaveBar />
 
         <h1 className="mt-4 text-2xl font-semibold text-admin-text">{item.key}</h1>
 

@@ -395,10 +395,28 @@ export function ContentEditor({
           {rawMode ? <CaretUp size={14} weight="bold" /> : <CaretDown size={14} weight="bold" />}
           {rawMode ? "STRUCTURED VIEW" : "ADVANCED: EDIT RAW JSON"}
         </button>
-        {isDirty && (
+        {isDirty && status !== "saving" && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-warning">
             <span className="h-1.5 w-1.5 rounded-full bg-admin-warning" />
             未儲存
+          </span>
+        )}
+        {status === "saving" && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-text-faint">
+            <span className="h-1.5 w-1.5 rounded-full bg-admin-text-faint" />
+            儲存中…
+          </span>
+        )}
+        {status === "saved" && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-success">
+            <span className="h-1.5 w-1.5 rounded-full bg-admin-success" />
+            已儲存
+          </span>
+        )}
+        {status === "error" && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-danger">
+            <span className="h-1.5 w-1.5 rounded-full bg-admin-danger" />
+            {errorMessage}
           </span>
         )}
       </div>
@@ -501,18 +519,6 @@ export function ContentEditor({
         </div>
       )}
 
-      <div className="mt-6 flex items-center gap-4">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={status === "saving"}
-          className="rounded-md bg-admin-text px-5 py-2.5 text-sm font-medium tracking-wide text-white transition-colors hover:bg-admin-accent disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {status === "saving" ? "Saving…" : saveLabel}
-        </button>
-        {status === "saved" && <span className="text-sm text-admin-success">Saved</span>}
-        {status === "error" && <span className="text-sm text-admin-danger">{errorMessage}</span>}
-      </div>
     </div>
   );
 }

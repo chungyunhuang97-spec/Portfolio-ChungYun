@@ -6,6 +6,7 @@ import { CaretDown } from "@phosphor-icons/react";
 import { ContentEditor } from "@/components/admin/ContentEditor";
 import { DeleteSectionButton } from "@/components/admin/DeleteSectionButton";
 import { CompletionBadge } from "@/components/admin/StatusBadge";
+import { useChangesContext } from "@/components/admin/ChangesContext";
 import type { ProjectSection } from "@/lib/types";
 
 function computeCompletion(content: Record<string, unknown>) {
@@ -36,6 +37,8 @@ export function SectionAccordion({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const { filled, total } = computeCompletion(section.content);
+  const changes = useChangesContext();
+  const isDirty = changes?.dirtyEntries.some((e) => e.id === `section-${section.id}`) ?? false;
 
   return (
     <div className="overflow-hidden rounded-lg border border-admin-border bg-admin-surface">
@@ -54,6 +57,12 @@ export function SectionAccordion({
           <span className="truncate text-sm font-medium text-admin-text">
             {section.section_type.toUpperCase()}
           </span>
+          {isDirty && (
+            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-admin-warning">
+              <span className="h-1.5 w-1.5 rounded-full bg-admin-warning" />
+              未儲存
+            </span>
+          )}
         </span>
         <CompletionBadge filled={filled} total={total} />
       </button>
