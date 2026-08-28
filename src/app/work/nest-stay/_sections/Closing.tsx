@@ -1,7 +1,6 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUp } from "@phosphor-icons/react/dist/ssr";
 
 /**
  * Ambient background geometry drift, per spec: translateX/Y ±8-18px,
@@ -109,18 +108,10 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
 
       {/* Desktop layout */}
       <div className="relative hidden w-full flex-col items-center justify-center gap-8 p-[100px] md:flex">
-        {/* Figma places a static "回到頂部" instance inside this section (390:481, desktop only) —
-            same component/behavior as the global floating <BackToTop />, just also rendered inline
-            here per the design. Scrolls back to the page's Hero, same as the floating one. */}
-        <button
-          type="button"
-          onClick={() => document.getElementById("hero")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          aria-label="回到頂部"
-          className="absolute left-1/2 top-[50px] z-10 flex w-[130px] -translate-x-1/2 items-center justify-center gap-2 rounded-xl border-[1.5px] border-secondary-blue bg-proj-white p-4 font-nunito text-[16px] font-bold text-secondary-blue"
-        >
-          回到頂部
-          <ArrowUp size={20} weight="bold" />
-        </button>
+        {/* Figma has a static "回到頂部" instance inside this section (390:481, desktop only), but
+            since it's functionally identical to the global floating <BackToTop /> that's already
+            present on every page, Joe asked to keep just the one (the floating component) rather
+            than duplicate it here. */}
         <span aria-hidden className="absolute left-[120px] top-[80px] font-nunito text-[120px] font-bold leading-[120px] text-proj-white">
           「
         </span>
