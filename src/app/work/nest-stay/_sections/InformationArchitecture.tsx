@@ -2,142 +2,147 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CursorClick } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight, MapTrifold } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 
-/**
- * One node + the arrow leading INTO it (arrow omitted for the first node).
- * The flowing dot travels along the arrow's own length (a fixed-width
- * connector, so a simple 0%→100% `left` tween works without needing SVG
- * path math) -- staggered by `0.12 * index` per the spec, looping with a
- * `repeatDelay` that gives the "1.2s pause" between cycles.
- */
-function FlowNode({
-  label,
-  index,
-  vertical,
-  playing,
-}: {
-  label: string;
-  index: number;
-  vertical: boolean;
-  playing: boolean;
-}) {
+/** Desktop flow-diagram node — a plain white pill card, static arrow between (Figma has no motion here). */
+function FlowCard({ label }: { label: string }) {
   return (
-    <div className={`flex items-center ${vertical ? "flex-col" : ""}`}>
-      {index > 0 && (
-        <div
-          className={
-            vertical
-              ? "relative h-10 w-px bg-[#e5e0db]"
-              : "relative h-px w-10 shrink-0 bg-[#e5e0db] md:w-16"
-          }
-          aria-hidden
-        >
-          {playing && (
-            <motion.span
-              className={`absolute rounded-full bg-primary-orange ${vertical ? "left-1/2 size-[6px] -translate-x-1/2" : "top-1/2 size-[6px] -translate-y-1/2"}`}
-              animate={vertical ? { top: ["0%", "100%"] } : { left: ["0%", "100%"] }}
-              transition={{
-                duration: 0.8,
-                repeat: Infinity,
-                repeatDelay: 1.2,
-                delay: index * 0.12,
-                ease: "easeInOut",
-              }}
-            />
-          )}
-        </div>
-      )}
-      <span className="font-nunito shrink-0 rounded-full border border-[#e5e0db] bg-proj-white px-4 py-2 text-[13px] font-bold text-grey-800 shadow-[0_2px_6px_rgba(64,50,42,0.06)] md:px-6 md:py-3 md:text-[15px]">
-        {label}
+    <div className="flex w-[160px] shrink-0 items-center justify-center rounded-2xl border border-[#ededed] bg-proj-white p-6 text-center">
+      <p className="font-nunito text-[15px] leading-[23px] font-bold text-primary-black">{label}</p>
+    </div>
+  );
+}
+
+/** Mobile numbered list item — orange numeral chip + label, per Figma `FeatureItem`. */
+function FeatureItem({ index, label }: { index: number; label: string }) {
+  return (
+    <div className="flex w-full items-center gap-3 rounded-xl border border-grey-100 bg-proj-white p-3">
+      <span className="font-nunito flex size-6 shrink-0 items-center justify-center rounded-xl bg-primary-orange text-[12px] font-extrabold text-proj-white">
+        {index}
       </span>
+      <p className="font-nunito flex-1 text-[14px] font-bold text-grey-800">{label}</p>
     </div>
   );
 }
 
 /**
- * 資訊架構 (Information Architecture), part of the same Figma flow-diagram
- * block on desktop node 275:87 / mobile node 404:147. The spec only calls
- * for animating the simple 5-node flow row (`iaFlowSteps`); Figma's larger
- * decorative isometric sitemap illustration in this section is skipped --
- * it isn't downloadable through this pipeline (known Figma-asset
- * limitation) and isn't required by the written interaction spec, which
- * only names the flow-diagram animation. Joe can supply it later as a PNG
- * if he wants it added.
+ * 產品資訊架構 (Information Architecture), Figma desktop node 275:131 /
+ * mobile 404:201. Rebuilt against the real page-level Figma frames.
  *
- * Content model: reuses `process` — `iaSubtitle`, `iaFlowSteps` (string
- * array of 5 node labels), `iaMobileCta`.
+ * Desktop: a plain grey-50 band (bordered top/bottom) holding the 5-node
+ * flow row (static white cards + static arrows, no animation in Figma) and,
+ * below it, a large decorative isometric illustration. That illustration is
+ * one big composited vector group in Figma that isn't downloadable through
+ * this pipeline (same known asset limitation as before) — shown here as a
+ * placeholder panel; swap `illustrationSrc` in for the real exported PNG/SVG
+ * whenever Joe sends one (right-click node 281:4301 in Figma → Export).
  *
- * Desktop: horizontal row, animates in at 30% visibility (SlideIn's default
- * viewport threshold approximates this closely enough — see SlideIn.tsx),
- * flowing dot loops continuously once visible.
- * Mobile: collapsed by default behind a CTA button; tapping expands
- * (opacity 0→1, translateY -12→0, 0.45s ease-out) into a vertical flow
- * column, and the flow animation only starts playing once expanded (not
- * before), per spec.
+ * Mobile: the 5 steps render as an always-visible numbered list (no
+ * click-to-expand — that was this build's own invention, not in Figma),
+ * followed by a "点擊查看資訊架構圖" button that reveals a compact vertical
+ * version of the flow for anyone who wants the full picture on a small
+ * screen.
+ *
+ * Content model: reuses `process` — `iaSubtitle`, `iaFlowSteps` (5 labels),
+ * `iaMobileCta`.
  */
 export function InformationArchitecture({ process }: { process: Record<string, unknown> }) {
   const subtitle = process.iaSubtitle as string | undefined;
   const steps = Array.isArray(process.iaFlowSteps) ? (process.iaFlowSteps as string[]) : [];
   const mobileCta = (process.iaMobileCta as string) || "點擊查看資訊架構圖";
+  const illustrationSrc = process.iaIllustrationUrl as string | undefined;
   const [expanded, setExpanded] = useState(false);
 
   if (steps.length === 0) return null;
 
   return (
-    <section className="bg-proj-white px-6 py-12 md:px-[120px] md:py-[100px]">
-      <div className="flex flex-col items-center gap-8 md:gap-12">
+    <section className="border-y border-[#ededed] bg-grey-50 px-6 py-12 md:px-[120px] md:py-[72px]">
+      <div className="flex flex-col gap-8 md:gap-12">
         <SlideIn delay={0.1}>
-          <div className="flex flex-col items-center gap-2 text-center">
-            <span className="font-nunito text-[13px] font-extrabold tracking-[2px] text-secondary-blue uppercase">
-              Information Architecture
+          <div className="flex flex-col items-center gap-2 text-center md:items-start md:gap-3 md:text-left">
+            <span className="font-nunito text-[13px] font-extrabold tracking-[0.78px] text-primary-orange uppercase">
+              Architecture
             </span>
+            <h3 className="font-nunito text-[24px] leading-[36px] font-bold text-[#1a1a1a] md:text-[48px] md:leading-[72px] md:text-primary-black">
+              產品資訊架構
+            </h3>
             {subtitle && (
-              <p className="font-nunito max-w-[560px] text-[14px] leading-[22px] font-normal text-grey-600 md:text-[16px] md:leading-[26px]">
+              <p className="font-nunito max-w-[560px] text-[14px] leading-[21px] font-normal text-grey-600 md:max-w-none md:text-[18px] md:leading-[25px]">
                 {subtitle}
               </p>
             )}
+            <div className="hidden h-px w-full bg-[#e0e0e0] md:block" />
           </div>
         </SlideIn>
 
-        {/* Mobile — collapsed behind CTA */}
-        <div className="w-full md:hidden">
-          {!expanded ? (
-            <SlideIn delay={0.15}>
-              <button
-                type="button"
-                onClick={() => setExpanded(true)}
-                className="mx-auto flex items-center justify-center gap-1.5 rounded-xl bg-primary-orange px-5 py-2.5 shadow-[0_2px_4px_rgba(255,82,13,0.2)]"
-              >
-                <span className="font-nunito text-[13px] font-bold text-proj-white">{mobileCta}</span>
-                <CursorClick size={18} weight="bold" className="text-proj-white" />
-              </button>
-            </SlideIn>
-          ) : (
-            <AnimatePresence>
-              <motion.div
-                initial={{ opacity: 0, y: -12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, ease: "easeOut" }}
-                className="flex flex-col items-center gap-0 rounded-2xl border border-[#e5e0db] bg-grey-50 px-6 py-8"
-              >
-                {steps.map((step, i) => (
-                  <FlowNode key={step} label={step} index={i} vertical playing={expanded} />
-                ))}
-              </motion.div>
-            </AnimatePresence>
-          )}
-        </div>
-
-        {/* Desktop — always visible, flowing dots loop */}
-        <SlideIn delay={0.15} className="hidden md:block">
-          <div className="flex items-center justify-center rounded-2xl border border-[#e5e0db] bg-grey-50 px-10 py-10">
+        {/* Mobile — always-visible numbered list + optional expand */}
+        <div className="flex flex-col gap-4 md:hidden">
+          <div className="flex flex-col gap-3">
             {steps.map((step, i) => (
-              <FlowNode key={step} label={step} index={i} vertical={false} playing />
+              <FeatureItem key={step} index={i + 1} label={step} />
             ))}
           </div>
-        </SlideIn>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="flex w-full items-center justify-center gap-1 rounded-xl bg-primary-orange px-4 py-2 shadow-[0_2px_4px_rgba(255,82,13,0.2)]"
+            aria-expanded={expanded}
+          >
+            <span className="font-nunito text-[13px] font-bold text-proj-white">{mobileCta}</span>
+            <ArrowRight size={16} weight="bold" className="text-proj-white" />
+          </button>
+          <AnimatePresence>
+            {expanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="overflow-hidden"
+              >
+                <div className="flex flex-col items-center gap-0 rounded-2xl bg-[#ededed] px-6 py-8">
+                  {steps.map((step, i) => (
+                    <div key={step} className="flex flex-col items-center">
+                      {i > 0 && <div className="h-6 w-px bg-grey-300" aria-hidden />}
+                      <span className="font-nunito rounded-full border border-[#ededed] bg-proj-white px-4 py-2 text-[13px] font-bold text-grey-800 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
+                        {step}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Desktop — static flow row + illustration */}
+        <div className="hidden flex-col gap-10 md:flex">
+          <SlideIn delay={0.15}>
+            <div className="flex w-full items-center justify-between">
+              {steps.map((step, i) => (
+                <div key={step} className="flex items-center gap-0">
+                  {i > 0 && <ArrowRight size={16} weight="regular" className="mx-6 shrink-0 text-grey-300" />}
+                  <FlowCard label={step} />
+                </div>
+              ))}
+            </div>
+          </SlideIn>
+
+          <SlideIn delay={0.2}>
+            <div className="relative flex h-[420px] w-full items-center justify-center overflow-hidden rounded-[30px] bg-[#ededed]">
+              {illustrationSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={illustrationSrc} alt="產品資訊架構示意圖" className="h-[85%] w-[95%] object-contain" />
+              ) : (
+                <div className="flex flex-col items-center gap-3 text-grey-300">
+                  <MapTrifold size={40} weight="light" />
+                  <span className="font-nunito text-[13px] font-bold">架構示意圖（待補圖）</span>
+                </div>
+              )}
+            </div>
+          </SlideIn>
+        </div>
       </div>
     </section>
   );

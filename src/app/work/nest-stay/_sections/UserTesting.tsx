@@ -23,32 +23,20 @@ interface Insight {
 const EASE_SPEC: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 /**
- * One score row — grows from 0 to its target once 50% visible, per spec.
- * The bar's WIDTH is the score expressed as a percentage (value × 10, e.g.
- * 8.5 → 85%) while the number displayed alongside it is the raw /10 score
- * — both driven off the same tween so they land in sync. `stagger` (0.12s
- * per bar, applied via `delay`) and the small 1→1.03→1 completion bounce
- * are both spec'd explicitly; the bounce plays on the bar's fill once the
- * width tween finishes.
+ * One score card in the "SCORE BY FLOW" row. The first (highest-scoring)
+ * flow is permanently highlighted in orange per Figma (`bg-[#fff7f2]
+ * border-2 border-primary-orange`), the rest sit neutral on `#f7f7f7`. The
+ * thin track along the bottom animates its fill 0 → score once 50% visible.
  */
-function ScoreBar({ score, stagger }: { score: Score; stagger: number }) {
+function ScoreCard({ score, highlighted, stagger }: { score: Score; highlighted: boolean; stagger: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.5 });
   const [display, setDisplay] = useState(0);
-  const [bounce, setBounce] = useState(false);
 
   useEffect(() => {
     if (!inView) return;
     const timeout = setTimeout(() => {
-      const controls = animate(0, score.value, {
-        duration: 1.4,
-        ease: EASE_SPEC,
-        onUpdate: (v) => setDisplay(v),
-        onComplete: () => {
-          setBounce(true);
-          setTimeout(() => setBounce(false), 320);
-        },
-      });
+      const controls = animate(0, score.value, { duration: 1.2, ease: EASE_SPEC, onUpdate: setDisplay });
       return () => controls.stop();
     }, stagger * 1000);
     return () => clearTimeout(timeout);
@@ -56,45 +44,28 @@ function ScoreBar({ score, stagger }: { score: Score; stagger: number }) {
   }, [inView]);
 
   return (
-    <div ref={ref} className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <span className="font-nunito text-[13px] font-semibold text-grey-700 md:text-[14px]">{score.label}</span>
-        <span className="font-fredoka text-[16px] text-primary-orange">{display.toFixed(1)}</span>
+    <div
+      ref={ref}
+      className={`flex h-full flex-1 flex-col justify-center gap-3 rounded-2xl px-6 py-5 ${
+        highlighted ? "border-2 border-primary-orange bg-[#fff7f2]" : "bg-[#f7f7f7]"
+      }`}
+    >
+      <p className={`font-nunito text-[13px] leading-[18px] font-semibold ${highlighted ? "text-primary-orange" : "text-[#6b6b6b]"}`}>
+        {score.label}
+      </p>
+      <div className="flex items-baseline gap-1">
+        <span className={`font-fredoka text-[40px] leading-none ${highlighted ? "text-primary-orange" : "text-primary-black"}`}>
+          {display.toFixed(1)}
+        </span>
+        <span className="font-nunito text-[14px] font-normal text-[#9e9e9e]">/ 10</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-grey-100">
-        <motion.div
-          className="h-full rounded-full bg-primary-orange"
+      <div className="h-[6px] w-full overflow-hidden rounded-[3px] bg-[#f0f0f0]">
+        <div
+          className={`h-full rounded-[3px] ${highlighted ? "bg-primary-orange" : "bg-grey-300"}`}
           style={{ width: `${(display / 10) * 100}%` }}
-          animate={{ scaleY: bounce ? [1, 1.6, 1] : 1 }}
-          transition={{ duration: 0.32, ease: "easeOut" }}
         />
       </div>
     </div>
-  );
-}
-
-/** Average score CountUp — same 0→target tween technique as ScoreBar/metro's CountUpValue, reused for the single big "8.1" headline number. */
-function AverageCountUp({ target }: { target: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.5 });
-  const numeric = parseFloat(target);
-  const [text, setText] = useState("0.0");
-
-  useEffect(() => {
-    if (!inView || Number.isNaN(numeric)) return;
-    const controls = animate(0, numeric, {
-      duration: 1.4,
-      ease: EASE_SPEC,
-      onUpdate: (v) => setText(v.toFixed(1)),
-    });
-    return () => controls.stop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inView]);
-
-  return (
-    <span ref={ref} className="font-fredoka text-[56px] leading-[56px] text-primary-orange md:text-[72px] md:leading-[72px]">
-      {text}
-    </span>
   );
 }
 
@@ -107,22 +78,25 @@ const insightItem = {
 const focusContainer = { hidden: {}, show: { transition: { staggerChildren: 0.12 } } };
 const focusItem = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { duration: 0.35 } } };
 
+/** Insight card accent per Figma — 2 orange-bordered cards (one neutral bg, one tinted) + 1 blue. */
+const INSIGHT_STYLES = [
+  { border: "border-primary-orange", bg: "bg-[#fbfbfb]" },
+  { border: "border-primary-orange", bg: "bg-[#fff7f2]" },
+  { border: "border-secondary-blue", bg: "bg-[#f4f4ff]" },
+] as const;
+
 /**
- * 使用者測試與洞察 (User Testing), Figma desktop node 275:87's testing block /
- * mobile node 404:147 (identical structure both breakpoints). Content
- * model: reuses `process` — `userTestingIntro`, `userTestingFocusPoints`
- * (2 items, paired with the ONE image Joe supplied for this exact section
- * — `userTestingFocusMediaUrl`, shipped as a static /public asset copied in
- * for him rather than a blank admin upload slot, since the file already
- * exists), `userTestingScores` (5× {label, value}), `userTestingAverage`,
- * `userTestingInsights` (3 items).
+ * 使用者測試與洞察 (User Testing), Figma desktop node 300:127 / mobile
+ * 404:345. Rebuilt against the real page-level Figma frame — the header
+ * label is secondary-blue (not orange), the score section is 5 individual
+ * stat cards with thin progress tracks inside an orange "Hero Metric" block
+ * (not a list of horizontal bars next to a floating number), and insight
+ * cards use a left accent border + tinted background rather than a plain
+ * bordered box.
  *
- * Motion: focus points fade in staggered 0.12s (`focusContainer`/`focusItem`
- * variants); score bars + the average CountUp both trigger at 50%
- * visibility per spec (`ScoreBar`/`AverageCountUp`); insight cards fade+rise
- * staggered 0.1s (`insightContainer`/`insightItem`). No persistent glow or
- * sparkle effects on the insight cards, per spec's explicit "no persistent
- * glow/sparkle" note — plain bordered cards only.
+ * Content model unchanged: `process` — `userTestingIntro`,
+ * `userTestingFocusPoints` (2×, paired with `userTestingFocusMediaUrl`),
+ * `userTestingScores` (5×), `userTestingAverage`, `userTestingInsights` (3×).
  */
 export function UserTesting({ process }: { process: Record<string, unknown> }) {
   const intro = process.userTestingIntro as string | undefined;
@@ -137,18 +111,18 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
   if (scores.length === 0) return null;
 
   return (
-    <section className="bg-proj-white px-6 py-12 md:px-[120px] md:py-[100px]">
-      <div className="flex flex-col gap-10 md:gap-14">
+    <section className="bg-proj-white px-6 py-12 md:px-[120px] md:py-[72px]">
+      <div className="flex flex-col gap-8 md:gap-10">
         <SlideIn delay={0.1}>
           <div className="flex flex-col gap-3">
-            <span className="font-nunito text-[13px] font-extrabold tracking-[2px] text-primary-orange uppercase">
-              User Testing &amp; Insights
+            <span className="font-nunito text-[13px] font-extrabold tracking-[0.78px] text-secondary-blue uppercase">
+              User Testing
             </span>
-            <h3 className="font-nunito text-[26px] leading-[34px] font-bold text-primary-black md:text-[36px] md:leading-[48px]">
+            <h3 className="font-nunito text-[28px] leading-[38px] font-bold text-primary-black md:text-[44px] md:leading-[56px]">
               使用者測試與洞察
             </h3>
             {intro && (
-              <p className="font-nunito max-w-[680px] text-[14px] leading-[22px] font-normal text-grey-600 md:text-[16px] md:leading-[26px]">
+              <p className="font-nunito max-w-[680px] text-[14px] leading-[22px] font-normal text-[#6b6b6b] md:max-w-none md:text-[15px] md:leading-[24px]">
                 {intro}
               </p>
             )}
@@ -157,65 +131,96 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
 
         {focusPoints.length > 0 && (
           <motion.div
-            className="flex flex-col items-center gap-6 rounded-2xl border border-[#e5e0db] bg-grey-50 p-6 md:flex-row md:gap-10 md:p-10"
+            className="flex flex-col gap-4 rounded-xl bg-grey-50 p-4 md:flex-row md:gap-4 md:p-4"
             variants={focusContainer}
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, amount: 0.3 }}
           >
             {focusMedia && (
-              <motion.span variants={focusItem} className="relative size-[128px] shrink-0 overflow-hidden rounded-2xl">
+              <motion.span variants={focusItem} className="relative size-[128px] shrink-0 overflow-hidden">
                 <Image src={focusMedia} alt="" fill sizes="128px" className="object-cover" />
               </motion.span>
             )}
-            <div className="flex flex-1 flex-col gap-4 md:flex-row md:gap-6">
-              {focusPoints.map((f) => (
-                <motion.div key={f.title} variants={focusItem} className="flex-1">
-                  <p className="font-nunito text-[15px] font-bold text-secondary-blue">{f.title}</p>
-                  <p className="font-nunito mt-1 text-[13px] leading-[20px] font-normal text-grey-600">{f.desc}</p>
-                </motion.div>
-              ))}
+            <div className="flex flex-1 flex-col gap-3">
+              <p className="font-nunito text-[14px] font-bold text-primary-orange">測試重點</p>
+              <div className="flex flex-col gap-3 md:flex-row">
+                {focusPoints.map((f, i) => (
+                  <motion.div key={f.title} variants={focusItem} className="flex-1 rounded-2xl bg-proj-white p-5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-nunito flex size-7 shrink-0 items-center justify-center rounded-2xl bg-primary-orange text-[12px] font-bold text-proj-white">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <p className="font-nunito text-[14px] font-bold text-primary-black">{f.title}</p>
+                    </div>
+                    <p className="font-nunito mt-2 text-[13px] leading-[21px] font-normal text-[#737373]">{f.desc}</p>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
 
-        <div className="flex flex-col items-center gap-8 md:flex-row md:items-stretch md:gap-12">
-          <SlideIn delay={0.15} className="flex flex-col items-center justify-center gap-2 md:w-[220px] md:shrink-0">
-            <AverageCountUp target={average ?? "0"} />
-            <span className="font-nunito text-[12px] font-bold tracking-[1px] text-grey-500 uppercase">
-              Average Score / 10
-            </span>
-          </SlideIn>
+        <div className="h-px w-full bg-[#ebebeb]" aria-hidden />
 
-          <SlideIn delay={0.2} className="flex-1">
-            <div className="flex flex-col gap-4 rounded-2xl border border-[#e5e0db] bg-proj-white p-6">
-              {scores.map((s, i) => (
-                <ScoreBar key={s.label} score={s} stagger={0.12 * i} />
-              ))}
+        <div className="flex flex-col items-stretch gap-5 md:flex-row md:gap-5">
+          <SlideIn delay={0.15} className="md:w-[320px] md:shrink-0">
+            <div className="flex flex-col items-center justify-center gap-1 rounded-[28px] bg-primary-orange px-10 py-8 text-proj-white">
+              <p className="font-nunito text-[14px] font-bold opacity-85">整體平均分數</p>
+              <div className="flex items-end justify-center gap-1">
+                <span className="font-fredoka text-[72px] leading-[80px] md:text-[96px] md:leading-[104px]">
+                  {average ?? "—"}
+                </span>
+                <span className="font-nunito pb-2 text-[18px] font-semibold opacity-70">/ 10</span>
+              </div>
             </div>
           </SlideIn>
+
+          <div className="flex flex-1 flex-col gap-2">
+            <span className="font-nunito text-[12px] font-extrabold tracking-[1.44px] text-[#9e9e9e] uppercase">
+              Score by Flow
+            </span>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5 md:gap-4">
+              {scores.map((s, i) => (
+                <ScoreCard key={s.label} score={s} highlighted={i === 0} stagger={0.1 * i} />
+              ))}
+            </div>
+          </div>
         </div>
 
-        {insights.length > 0 && (
-          <motion.div
-            className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6"
-            variants={insightContainer}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.2 }}
-          >
-            {insights.map((insight) => (
-              <motion.div
-                key={insight.title}
-                variants={insightItem}
-                className="flex flex-col gap-2 rounded-2xl border border-[#e5e0db] bg-grey-50 p-6"
-              >
-                <p className="font-nunito text-[14px] font-bold text-primary-orange">{insight.title}</p>
-                <p className="font-nunito text-[13px] leading-[20px] font-normal text-grey-700">{insight.desc}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
+        <div className="h-px w-full bg-[#ebebeb]" aria-hidden />
+
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center gap-2">
+            <svg width="20" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="text-secondary-blue">
+              <path d="M12 2l2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5L12 2z" strokeLinejoin="round" />
+            </svg>
+            <p className="font-nunito text-[16px] font-bold text-secondary-blue">Insight Summary</p>
+          </div>
+          {insights.length > 0 && (
+            <motion.div
+              className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5"
+              variants={insightContainer}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+            >
+              {insights.map((insight, i) => {
+                const style = INSIGHT_STYLES[i] ?? INSIGHT_STYLES[0];
+                return (
+                  <motion.div
+                    key={insight.title}
+                    variants={insightItem}
+                    className={`flex flex-col gap-2 rounded-2xl border-l-[3px] ${style.border} ${style.bg} px-6 py-[18px]`}
+                  >
+                    <p className="font-nunito text-[16px] font-bold text-primary-black">{insight.title}</p>
+                    <p className="font-nunito text-[13px] leading-[21px] font-normal text-[#666]">{insight.desc}</p>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          )}
+        </div>
       </div>
     </section>
   );

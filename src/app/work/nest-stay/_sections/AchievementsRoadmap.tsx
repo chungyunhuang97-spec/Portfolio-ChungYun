@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
 
@@ -36,14 +35,21 @@ interface RoadmapVision {
   items: RoadmapVisionItem[];
 }
 
-/**
- * One achievement card. Per spec: the number appears first, title+desc
- * follow 0.08s later — implemented as a 2-level variants tree (the card's
- * own `whileInView` triggers a `staggerChildren: 0.08` container, with the
- * number as the first child and the tag+desc grouped as the second). The
- * outer stagger BETWEEN cards (0.15s, reading order) is owned by the
- * parent grid in `AchievementsRoadmap` below. Plays once, per spec.
- */
+/** Section header — orange left bar + label + white title, reused for both "ACHIEVEMENTS" and "ROADMAP". */
+function SectionHeader({ label, title }: { label: string; title: string }) {
+  return (
+    <div className="flex items-center gap-6">
+      <div className="h-11 w-1 shrink-0 rounded-[2px] bg-primary-orange md:h-[52px]" aria-hidden />
+      <div className="flex flex-col gap-1.5">
+        <p className="font-nunito text-[13px] font-extrabold tracking-[0.78px] text-primary-orange/90">{label}</p>
+        <h3 className="font-nunito text-[28px] leading-[36px] font-bold text-proj-white md:text-[40px] md:leading-[52px]">
+          {title}
+        </h3>
+      </div>
+    </div>
+  );
+}
+
 const achievementInner = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const achievementPart = {
   hidden: { opacity: 0, y: 16 },
@@ -54,93 +60,99 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
   return (
     <motion.div
       variants={achievementInner}
-      className="flex flex-col gap-3 rounded-2xl border border-[#e5e0db] bg-proj-white p-6"
+      className="flex flex-col gap-2 rounded-lg border-l-4 border-white/[0.08] bg-white/[0.06] p-4 md:gap-4 md:rounded-2xl md:border md:border-white/[0.08] md:bg-white/[0.05] md:p-7"
     >
-      <motion.span variants={achievementPart} className="font-fredoka text-[40px] leading-[40px] text-primary-orange/25">
-        {achievement.number}
-      </motion.span>
-      <motion.div variants={achievementPart} className="flex flex-col gap-1.5">
-        <p className="font-nunito text-[14px] font-extrabold tracking-[1px] text-secondary-blue uppercase">
+      <motion.div
+        variants={achievementPart}
+        className="flex items-center justify-between gap-4 md:items-baseline"
+      >
+        <span className="font-fredoka text-[24px] leading-none text-primary-orange md:text-[48px] md:text-primary-orange/70">
+          {achievement.number}
+        </span>
+        <span className="font-nunito text-[10px] font-extrabold tracking-[0.88px] text-proj-white/35 uppercase md:text-[11px]">
           {achievement.tag}
+        </span>
+      </motion.div>
+      <motion.div variants={achievementPart} className="flex flex-col gap-2 md:gap-4">
+        <div className="hidden h-[2px] w-10 rounded-full bg-primary-orange md:block" aria-hidden />
+        <p className="font-nunito text-[13px] leading-[20px] font-normal text-proj-white/85 md:text-[15px] md:leading-[25px]">
+          {achievement.desc}
         </p>
-        <p className="font-nunito text-[14px] leading-[21px] font-normal text-grey-700">{achievement.desc}</p>
       </motion.div>
     </motion.div>
   );
 }
 
+/** Small dot-marker bullet used inside roadmap note boxes. */
+function BulletLine({ text }: { text: string }) {
+  return (
+    <li className="font-nunito ml-[19.5px] list-disc text-[13px] leading-[20px] font-normal text-proj-white/70">{text}</li>
+  );
+}
+
+function NoteBox({ title, bullets }: { title: string; bullets: string[] }) {
+  return (
+    <div className="flex w-full flex-col gap-1 rounded-lg bg-white/[0.05] px-4 py-4">
+      <div className="flex items-center gap-1">
+        <span className="size-[9px] shrink-0 rounded-full bg-primary-orange" aria-hidden />
+        <p className="font-nunito text-[15px] font-bold text-proj-white">{title}</p>
+      </div>
+      <ul className="flex flex-col">
+        {bullets.map((b) => (
+          <BulletLine key={b} text={b} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TagChip({ label, accent }: { label: string; accent: "pink" | "translucent" }) {
+  return (
+    <span
+      className={`font-nunito w-fit rounded-[4px] px-2.5 py-[3px] text-[10px] font-extrabold text-proj-white ${
+        accent === "pink" ? "bg-accent-pink" : "bg-white/10"
+      }`}
+    >
+      {label}
+    </span>
+  );
+}
+
 function RoadmapCardShell({
   tag,
+  accent,
   title,
   children,
 }: {
   tag: string;
+  accent: "pink" | "translucent";
   title: string;
-  children: ReactNode;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-col gap-3 rounded-2xl border border-[#e5e0db] bg-grey-50 p-6 md:p-8">
-      <span className="font-nunito w-fit rounded-full bg-primary-black px-3 py-1 text-[11px] font-bold tracking-[0.5px] text-proj-white">
-        {tag}
-      </span>
-      <h4 className="font-nunito text-[18px] font-bold text-primary-black md:text-[22px]">{title}</h4>
+    <div className="flex flex-1 flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.06] p-4 md:gap-4 md:rounded-2xl md:px-6 md:py-[22px]">
+      <TagChip label={tag} accent={accent} />
+      <h4 className="font-nunito text-[14px] leading-[21px] font-bold text-proj-white md:text-[18px] md:leading-normal">
+        {title}
+      </h4>
       {children}
     </div>
   );
 }
 
-function ShortTermContent({ roadmap, mobile }: { roadmap: RoadmapShortTerm; mobile: boolean }) {
-  return (
-    <>
-      <p className="font-nunito text-[13px] leading-[21px] font-normal text-grey-700 md:text-[14px] md:leading-[22px]">
-        {roadmap.desc}
-      </p>
-      {mobile ? (
-        <div className="rounded-xl border border-[#e5e0db] bg-proj-white px-4 py-3">
-          <p className="font-nunito text-[13px] font-semibold text-primary-black">{roadmap.mobileBullet}</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-0.5 rounded-xl border border-[#e5e0db] bg-proj-white px-4 py-3">
-          <p className="font-nunito text-[14px] font-bold text-primary-black">{roadmap.bulletTitle}</p>
-          <p className="font-nunito text-[13px] font-semibold text-grey-500">{roadmap.bulletSubtitle}</p>
-          <p className="font-nunito mt-1 text-[13px] leading-[20px] font-normal text-grey-700">{roadmap.bulletDesc}</p>
-        </div>
-      )}
-    </>
-  );
-}
-
-function VisionContent({ vision }: { vision: RoadmapVision }) {
-  return (
-    <div className="flex flex-col gap-3">
-      {vision.items.map((item) => (
-        <div key={item.title} className="flex flex-col gap-0.5 rounded-xl border border-[#e5e0db] bg-proj-white px-4 py-3">
-          <p className="font-nunito text-[14px] font-bold text-primary-black">{item.title}</p>
-          <p className="font-nunito text-[13px] leading-[20px] font-normal text-grey-700">{item.desc}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /**
- * Project Achievements + Future Roadmap (regions 6 &amp; 7 minus the closing
- * statement, which lives in Closing.tsx along with the ambient background
- * geometry). Figma desktop node 275:87's achievements/roadmap block /
- * mobile node 404:147.
+ * Project Achievements + Future Roadmap, Figma desktop node 380:267 / mobile
+ * 404:393. Rebuilt against the real page-level Figma frame — this whole
+ * section sits on a near-black background (`#1a1a1f`), not white; achievement
+ * cards are translucent white-on-dark tiles, and roadmap notes use the same
+ * translucent treatment with a pink "NEXT STEP" tag vs. a neutral "VISION"
+ * tag.
  *
- * Content model: reuses `process` — `achievements` (3× {number, tag,
- * desc}), `roadmapContext` ({desktop: string, mobile: [string, string]}),
- * `roadmapShortTerm`, `roadmapVision`.
- *
- * Motion: achievements reveal in reading order (0.15s stagger between
- * cards, number-then-text 0.08s stagger within each — see AchievementCard),
- * plays once. Roadmap cards fade in staggered L/R on desktop (`SlideIn`
- * direction="left"/"right", 0.15s apart) and top-to-bottom on mobile
- * (`SlideIn` direction="up", same 0.15s gap) — two structurally distinct
- * blocks toggled via `md:hidden`/`hidden md:flex`, matching this page's
- * established Hero-style breakpoint pattern, since the two layouts need
- * different SlideIn directions rather than just different spacing.
+ * Content model unchanged: `process` — `achievements` (3× {number, tag,
+ * desc}), `roadmapContext` ({desktop, mobile: [line1, line2]}),
+ * `roadmapShortTerm`, `roadmapVision`. Desktop's short-term note renders
+ * `bulletTitle` + two bullet lines (`bulletSubtitle`, `bulletDesc`); mobile
+ * collapses to the single combined `mobileBullet` line.
  */
 const achievementsGrid = { hidden: {}, show: { transition: { staggerChildren: 0.15 } } };
 
@@ -153,22 +165,15 @@ export function AchievementsRoadmap({ process }: { process: Record<string, unkno
   if (achievements.length === 0) return null;
 
   return (
-    <section className="bg-proj-white px-6 py-12 md:px-[120px] md:py-[100px]">
-      <div className="flex flex-col gap-12 md:gap-16">
+    <section className="bg-[#1a1a1f] px-6 py-12 md:px-[120px] md:py-[72px]">
+      <div className="flex flex-col gap-10">
         <div className="flex flex-col gap-8">
           <SlideIn delay={0.1}>
-            <div className="flex flex-col gap-3">
-              <span className="font-nunito text-[13px] font-extrabold tracking-[2px] text-primary-orange uppercase">
-                Project Achievements
-              </span>
-              <h3 className="font-nunito text-[26px] leading-[34px] font-bold text-primary-black md:text-[36px] md:leading-[48px]">
-                專案成果
-              </h3>
-            </div>
+            <SectionHeader label="ACHIEVEMENTS" title="專案成果亮點" />
           </SlideIn>
 
           <motion.div
-            className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6"
+            className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5"
             variants={achievementsGrid}
             initial="hidden"
             whileInView="show"
@@ -183,52 +188,69 @@ export function AchievementsRoadmap({ process }: { process: Record<string, unkno
         {roadmapShortTerm && roadmapVision && (
           <div className="flex flex-col gap-8">
             <SlideIn delay={0.1}>
-              <div className="flex flex-col gap-3">
-                <span className="font-nunito text-[13px] font-extrabold tracking-[2px] text-secondary-blue uppercase">
-                  Future Roadmap
-                </span>
-                {roadmapContext && (
-                  <>
-                    <p className="font-nunito hidden max-w-[760px] text-[15px] leading-[24px] font-normal text-grey-700 md:block">
-                      {roadmapContext.desktop}
-                    </p>
-                    <div className="flex flex-col gap-1 md:hidden">
-                      <p className="font-nunito text-[13px] leading-[20px] font-normal text-grey-700">
-                        {roadmapContext.mobile[0]}
-                      </p>
-                      <p className="font-nunito text-[13px] leading-[20px] font-normal text-grey-700">
-                        {roadmapContext.mobile[1]}
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
+              <SectionHeader label="ROADMAP" title="未來展望" />
             </SlideIn>
 
-            {/* Mobile — top to bottom */}
+            {roadmapContext && (
+              <SlideIn delay={0.15}>
+                <div className="rounded-xl bg-white/[0.04] p-3.5 text-center md:px-6 md:py-[18px] md:text-left">
+                  <p className="font-nunito hidden text-[16px] leading-[24px] font-normal text-proj-white/80 md:block">
+                    {roadmapContext.desktop}
+                  </p>
+                  <div className="flex flex-col gap-2 md:hidden">
+                    <p className="font-nunito text-[13px] leading-[20px] font-normal text-proj-white/80">
+                      {roadmapContext.mobile[0]}
+                    </p>
+                    <p className="font-nunito text-[13px] leading-[20px] font-normal text-proj-white/80">
+                      {roadmapContext.mobile[1]}
+                    </p>
+                  </div>
+                </div>
+              </SlideIn>
+            )}
+
+            {/* Mobile — stacked, single combined bullet line */}
             <div className="flex flex-col gap-5 md:hidden">
               <SlideIn direction="up" delay={0.1}>
-                <RoadmapCardShell tag={roadmapShortTerm.tag} title={roadmapShortTerm.title}>
-                  <ShortTermContent roadmap={roadmapShortTerm} mobile />
+                <RoadmapCardShell tag={roadmapShortTerm.tag} accent="pink" title={roadmapShortTerm.title}>
+                  <p className="font-nunito text-[13px] leading-[20px] font-normal text-proj-white/60">
+                    {roadmapShortTerm.desc}
+                  </p>
+                  <div className="flex w-full items-center gap-2">
+                    <span className="size-[6px] shrink-0 rounded-full bg-primary-orange" aria-hidden />
+                    <p className="font-nunito flex-1 text-[13px] leading-[18px] font-bold text-proj-white">
+                      {roadmapShortTerm.mobileBullet}
+                    </p>
+                  </div>
                 </RoadmapCardShell>
               </SlideIn>
               <SlideIn direction="up" delay={0.25}>
-                <RoadmapCardShell tag={roadmapVision.tag} title={roadmapVision.title}>
-                  <VisionContent vision={roadmapVision} />
+                <RoadmapCardShell tag={roadmapVision.tag} accent="translucent" title={roadmapVision.title}>
+                  {roadmapVision.items.map((item) => (
+                    <NoteBox key={item.title} title={item.title} bullets={[item.desc]} />
+                  ))}
                 </RoadmapCardShell>
               </SlideIn>
             </div>
 
-            {/* Desktop — staggered left/right */}
-            <div className="hidden gap-6 md:flex">
+            {/* Desktop — side by side */}
+            <div className="hidden gap-5 md:flex">
               <SlideIn direction="left" delay={0.1} className="flex flex-1">
-                <RoadmapCardShell tag={roadmapShortTerm.tag} title={roadmapShortTerm.title}>
-                  <ShortTermContent roadmap={roadmapShortTerm} mobile={false} />
+                <RoadmapCardShell tag={roadmapShortTerm.tag} accent="pink" title={roadmapShortTerm.title}>
+                  <p className="font-nunito text-[12px] leading-[20px] font-normal text-proj-white/55">
+                    {roadmapShortTerm.desc}
+                  </p>
+                  <NoteBox
+                    title={roadmapShortTerm.bulletTitle}
+                    bullets={[roadmapShortTerm.bulletSubtitle, roadmapShortTerm.bulletDesc]}
+                  />
                 </RoadmapCardShell>
               </SlideIn>
               <SlideIn direction="right" delay={0.25} className="flex flex-1">
-                <RoadmapCardShell tag={roadmapVision.tag} title={roadmapVision.title}>
-                  <VisionContent vision={roadmapVision} />
+                <RoadmapCardShell tag={roadmapVision.tag} accent="translucent" title={roadmapVision.title}>
+                  {roadmapVision.items.map((item) => (
+                    <NoteBox key={item.title} title={item.title} bullets={[item.desc]} />
+                  ))}
                 </RoadmapCardShell>
               </SlideIn>
             </div>
