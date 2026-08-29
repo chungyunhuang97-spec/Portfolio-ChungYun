@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
-import { ArrowRight, MapTrifold } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
+import { IAFlowDiagram } from "./IAFlowDiagram";
 
 /** Desktop flow-diagram node — a plain white pill card, static arrow between (Figma has no motion here). */
 function FlowCard({ label }: { label: string }) {
@@ -75,12 +76,11 @@ function FeatureItem({ index, label }: { index: number; label: string }) {
  * mobile 404:201. Rebuilt against the real page-level Figma frames.
  *
  * Desktop: a plain grey-50 band (bordered top/bottom) holding the 5-node
- * flow row (static white cards + static arrows, no animation in Figma) and,
- * below it, a large decorative isometric illustration. That illustration is
- * one big composited vector group in Figma that isn't downloadable through
- * this pipeline (same known asset limitation as before) — shown here as a
- * placeholder panel; swap `illustrationSrc` in for the real exported PNG/SVG
- * whenever Joe sends one (right-click node 281:4301 in Figma → Export).
+ * flow row and, below it, the full sitemap diagram (Figma node 283:4394,
+ * itself a single flattened SVG export) — rebuilt node-for-node as real SVG
+ * in `IAFlowDiagram` rather than an `<img>` of that export, since the
+ * raster asset scaled up soft/blurry on the page. See that file for the
+ * exact card/label/connector layout.
  *
  * Mobile: the 5 steps render as an always-visible numbered list (no
  * click-to-expand — that was this build's own invention, not in Figma),
@@ -95,7 +95,6 @@ export function InformationArchitecture({ process }: { process: Record<string, u
   const subtitle = process.iaSubtitle as string | undefined;
   const steps = Array.isArray(process.iaFlowSteps) ? (process.iaFlowSteps as string[]) : [];
   const mobileCta = (process.iaMobileCta as string) || "點擊查看資訊架構圖";
-  const illustrationSrc = process.iaIllustrationUrl as string | undefined;
   const [expanded, setExpanded] = useState(false);
   const flowRowRef = useRef<HTMLDivElement>(null);
   const flowRowInView = useInView(flowRowRef, { amount: 0.3 });
@@ -200,16 +199,8 @@ export function InformationArchitecture({ process }: { process: Record<string, u
           </SlideIn>
 
           <SlideIn delay={0.2}>
-            <div className="relative flex h-[420px] w-full items-center justify-center overflow-hidden rounded-[30px] bg-[#ededed]">
-              {illustrationSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={illustrationSrc} alt="產品資訊架構示意圖" className="h-[85%] w-[95%] object-contain" />
-              ) : (
-                <div className="flex flex-col items-center gap-3 text-grey-300">
-                  <MapTrifold size={40} weight="light" />
-                  <span className="font-nunito text-[13px] font-bold">架構示意圖（待補圖）</span>
-                </div>
-              )}
+            <div className="relative flex h-[420px] w-full items-center justify-center overflow-hidden rounded-[30px] bg-[#ededed] p-6">
+              <IAFlowDiagram />
             </div>
           </SlideIn>
         </div>
