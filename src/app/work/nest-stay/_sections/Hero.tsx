@@ -2,10 +2,9 @@
 
 import { useRef } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { DisplayHero, BodyLarge, LabelSmall } from "@/components/design-system/Typography";
+import { LabelSmall } from "@/components/design-system/Typography";
 import { Tag } from "@/components/design-system/Tag";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
-import { SlideIn } from "@/components/design-system/SlideIn";
 import type { Project } from "@/lib/types";
 
 function isVideoUrl(url: string) {
@@ -14,11 +13,8 @@ function isVideoUrl(url: string) {
 
 /**
  * Desktop-only ±2° mouse-tracking parallax tilt on the phone mockup, per the
- * interaction spec ("桌面版 Mockup 有輕微視差傾斜效果（±2°），手機版停用"). Reuses
- * the same iPhone-frame component every other project's Hero uses
- * (<PhoneFrame />), so this only wraps it with a motion transform -- no
- * layout/paint-triggering properties, rotateX/rotateY only. Explicitly not
- * mounted inside the mobile block below.
+ * interaction spec ("桌面端：Mockup 可保留極輕微滑鼠視差，最大 rotateX/Y ±2deg /
+ * 手機端：停用視差"). Transform-only (rotateX/rotateY), never mounted on mobile.
  */
 function TiltMockup({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -53,22 +49,42 @@ function TiltMockup({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** The "專案角色 ⋯ · 時程 ⋯" frosted pill (Figma `Frame` 359:904 / 407:675). */
+function MetaPill({ role, timeframe, className = "" }: { role: string; timeframe: string; className?: string }) {
+  return (
+    <div
+      className={`font-nunito flex items-center gap-4 rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2 text-[12px] backdrop-blur-[6px] ${className}`}
+    >
+      <div className="flex items-center gap-1.5 whitespace-nowrap">
+        <span className="text-grey-500">專案角色</span>
+        <span className="font-semibold text-[#262626]">{role}</span>
+      </div>
+      <span className="size-[3px] shrink-0 rounded-full bg-grey-300" aria-hidden />
+      <div className="flex items-center gap-1.5 whitespace-nowrap">
+        <span className="text-grey-500">時程</span>
+        <span className="font-semibold text-[#262626]">{timeframe}</span>
+      </div>
+    </div>
+  );
+}
+
 /**
- * Section 1 — Hero (Figma desktop node 275:87 / mobile node 404:147). Same
- * structural pattern as metro's Hero.tsx (kicker/title/body/phone mockup,
- * two structurally distinct mobile/desktop blocks per the project's
- * established convention), extended with the two fields nest-stay's Figma
- * adds on top: `timeframeLabel` (small meta line under the title) and
- * `badges` (3 status chips, reusing <Tag variant="orange"> exactly like
- * metro's Hero chips rather than inventing a new chip style).
+ * Section 1 — Hero (Figma desktop node 275:87 / mobile node 404:148).
+ * Rebuilt against the actual fetched Figma design context — both
+ * breakpoints are a CENTERED, STACKED column (kicker → title → subtitle →
+ * meta pill → badges → phone mockup), not the left-text/right-mockup split
+ * layout Metro's Hero uses. Mobile keeps the title block left-aligned per
+ * Figma, while everything else (meta pill, badges, mockup, subtitle) stays
+ * full-width/centered, with the subtitle moved to the very bottom.
  *
- * Entrance motion: the interaction spec asks for a staggered fade+rise
- * (0.12s stagger, 0.6s duration, cubic-bezier(0.16,1,0.3,1)) rather than
- * metro's spring-based SlideIn. Implemented as a small local variants
- * object driving kicker → title → body → badges → mockup, reusing SlideIn
- * only for the mockup's own scroll-independent entrance (delay chained off
- * the same stagger). Mobile drops the badges row to keep the section inside
- * one viewport, matching metro's own mobile simplification precedent.
+ * `role`/`timeframe` come straight off the `projects` row (`project.role` =
+ * "組長 & UI/UX 設計", `project.timeframe`) rather than the `hero` JSONB —
+ * Figma's meta pill text matches those fields exactly, and `hero.
+ * timeframeLabel` duplicates the short form already used elsewhere, so it's
+ * preferred when present.
+ *
+ * Entrance motion: interaction spec 1 — 標題/副標題/專案資訊/Mockup 依序淡入上移,
+ * 0.12s stagger, 0.6s duration, cubic-bezier(0.16,1,0.3,1).
  */
 const EASE_SPEC: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -94,7 +110,8 @@ export function Hero({
   const kicker = (hero.kicker as string) || project.category || "UI/UX DESIGN PROJECT";
   const title = (hero.title as string) ?? project.title;
   const body = project.subtitle ?? "";
-  const timeframeLabel = hero.timeframeLabel as string | undefined;
+  const role = project.role || "組長 & UI/UX 設計";
+  const timeframe = (hero.timeframeLabel as string) || project.timeframe || "";
   const badges = Array.isArray(hero.badges) ? (hero.badges as string[]) : [];
   const mediaUrl = (hero.mockup_media_url as string) || undefined;
 
@@ -108,65 +125,76 @@ export function Hero({
   ) : undefined;
 
   return (
-    <section
-      id="hero"
-      className="relative overflow-hidden bg-proj-white px-6 pt-[104px] pb-16 md:flex md:min-h-screen md:items-center md:px-[176px] md:py-0"
-    >
-      {/* Mobile layout — no tilt (spec: disabled on mobile), badges dropped */}
+    <section id="hero" className="relative overflow-hidden bg-proj-white">
+      {/* Mobile layout — no tilt, title block left-aligned, subtitle at the bottom */}
       <motion.div
-        className="flex flex-col md:hidden"
+        className="flex flex-col gap-4 px-6 pt-[104px] pb-12 md:hidden"
         variants={heroContainer}
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={heroItem}>
+        <motion.div variants={heroItem} className="flex flex-col items-start gap-2">
           <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
-          <DisplayHero className="mt-2 text-primary-black">{title}</DisplayHero>
-          {timeframeLabel && (
-            <p className="font-nunito mt-1 text-[13px] font-semibold text-grey-500">{timeframeLabel}</p>
-          )}
+          <h1 className="font-nunito text-[35px] leading-[48px] font-bold text-[#333]">{title}</h1>
         </motion.div>
 
-        <motion.div variants={heroItem} className="mx-auto mt-8 w-[62%] max-w-[240px]">
+        {timeframe && (
+          <motion.div variants={heroItem}>
+            <MetaPill role={role} timeframe={timeframe} className="w-full justify-between" />
+          </motion.div>
+        )}
+
+        {badges.length > 0 && (
+          <motion.div variants={heroItem} className="flex w-full flex-wrap items-center justify-between gap-y-1.5">
+            {badges.map((badge) => (
+              <Tag key={badge} variant="orange">
+                {badge}
+              </Tag>
+            ))}
+          </motion.div>
+        )}
+
+        <motion.div variants={heroItem} className="mx-auto w-[62%] max-w-[240px] py-4">
           <PhoneFrame screen={screen} float />
         </motion.div>
 
         <motion.div variants={heroItem}>
-          <BodyLarge className="mt-8 text-center text-grey-600">{body}</BodyLarge>
+          <p className="font-nunito text-center text-[14px] leading-[21px] font-normal text-[#666]">{body}</p>
         </motion.div>
       </motion.div>
 
-      {/* Desktop layout — ±2° parallax tilt on the mockup */}
+      {/* Desktop layout — centered stacked column, ±2° parallax tilt on the mockup */}
       <motion.div
-        className="hidden w-full items-center justify-between gap-x-20 md:flex"
+        className="hidden flex-col items-center gap-10 px-[120px] pt-[180px] pb-[100px] md:flex"
         variants={heroContainer}
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={heroItem} className="w-[749px] shrink-0">
+        <motion.div variants={heroItem} className="flex flex-col items-center gap-3">
           <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
-          <DisplayHero className="mt-5 text-primary-black">{title}</DisplayHero>
-          {timeframeLabel && (
-            <p className="font-nunito mt-2 text-[15px] font-semibold text-grey-500">{timeframeLabel}</p>
-          )}
-          <BodyLarge className="mt-5 max-w-[610px] text-grey-600">{body}</BodyLarge>
-          {badges.length > 0 && (
-            <motion.div variants={heroItem} className="mt-5 flex flex-wrap gap-3">
-              {badges.map((badge) => (
-                <Tag key={badge} variant="outline">
-                  {badge}
-                </Tag>
-              ))}
+          <h1 className="font-nunito text-center text-[80px] leading-[112px] font-bold text-primary-black">{title}</h1>
+          {body && <p className="font-nunito max-w-[667px] text-center text-[18px] leading-normal font-normal text-[#737373]">{body}</p>}
+          {timeframe && (
+            <motion.div variants={heroItem}>
+              <MetaPill role={role} timeframe={timeframe} />
             </motion.div>
           )}
         </motion.div>
 
-        <motion.div variants={heroItem} className="w-[259px] shrink-0">
-          <SlideIn direction="right" delay={0}>
-            <TiltMockup>
-              <PhoneFrame screen={screen} float />
-            </TiltMockup>
-          </SlideIn>
+        {badges.length > 0 && (
+          <motion.div variants={heroItem} className="flex items-center justify-center gap-4">
+            {badges.map((badge) => (
+              <Tag key={badge} variant="orange">
+                {badge}
+              </Tag>
+            ))}
+          </motion.div>
+        )}
+
+        <motion.div variants={heroItem} className="w-[188px]">
+          <TiltMockup>
+            <PhoneFrame screen={screen} float />
+          </TiltMockup>
         </motion.div>
       </motion.div>
     </section>

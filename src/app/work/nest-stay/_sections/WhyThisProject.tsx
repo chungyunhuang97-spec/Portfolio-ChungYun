@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { useInView } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
 
 interface WhyStep {
@@ -27,22 +29,31 @@ function QuoteGlyph({ close }: { close?: boolean }) {
 }
 
 /**
- * One item in the right-hand list. Figma keeps this static (no scroll
- * spotlight) — items 01–03 sit neutral (white/15% accent bar, white title,
- * grey-500 desc) while the LAST item (04 / 架構推導, the one that bridges
- * into Information Architecture) is permanently highlighted in orange, since
- * it's the transition beat into the next section.
+ * One item in the right-hand list. Interaction spec 1 ("四步驟漸進聚焦") —
+ * once the list scrolls into view, steps 01→04 auto-play through an
+ * "active" state one at a time (1.2s each), then settle back to full
+ * opacity so nothing reads as permanently dimmed. Active: full opacity +
+ * (desktop only) scale 1 + orange text. Inactive: opacity 0.4 + (desktop
+ * only) scale 0.98. Mobile drops the scale per spec ("僅使用 opacity 與色彩切換
+ * ，不做縮放").
  */
-function WhyStepItem({ step, highlighted }: { step: WhyStep; highlighted: boolean }) {
+function WhyStepItem({ step, active, settled }: { step: WhyStep; active: boolean; settled: boolean }) {
   const [label, desc] = [step.title, step.desc];
+  const highlighted = active || settled;
   return (
-    <div className="flex w-full items-start gap-3.5">
-      <div className={`h-11 w-[3px] shrink-0 rounded-[2px] ${highlighted ? "bg-primary-orange" : "bg-white/15"}`} aria-hidden />
+    <div
+      className={`flex w-full origin-left items-start gap-3.5 transition-[opacity,transform] duration-300 ease-out md:duration-[350ms] ${
+        highlighted ? "opacity-100 md:scale-100" : "opacity-40 md:scale-[0.98]"
+      }`}
+    >
+      <div className={`h-11 w-[3px] shrink-0 rounded-[2px] transition-colors duration-300 ${highlighted ? "bg-primary-orange" : "bg-white/15"}`} aria-hidden />
       <div className="flex flex-1 flex-col gap-1">
-        <p className={`font-nunito text-[14px] leading-[20px] font-bold ${highlighted ? "text-primary-orange" : "text-white"}`}>
+        <p className={`font-nunito text-[14px] leading-[20px] font-bold transition-colors duration-300 ${highlighted ? "text-primary-orange" : "text-white"}`}>
           {label}
         </p>
-        <p className={`font-nunito text-[13px] leading-[20px] font-normal md:text-[14px] md:leading-[22px] ${highlighted ? "text-[#d9d9d9]" : "text-grey-500"}`}>
+        <p className={`font-nunito text-[13px] leading-[20px] font-normal md:text-[14px] md:leading-[22px] transition-colors duration-300 ${
+          highlighted ? "text-[#d9d9d9]" : "text-grey-500"
+        }`}>
           {desc}
         </p>
       </div>
@@ -52,18 +63,30 @@ function WhyStepItem({ step, highlighted }: { step: WhyStep; highlighted: boolea
 
 /**
  * 為什麼做這個專案 (Why This Project / Figma "Problem Story"), node 359:135
- * desktop / mobile 404:181. Rebuilt against the real page-level Figma frame
- * — the actual design is a STATIC two-column layout (quote card left, 4-item
- * list right), not the scroll-linked spotlight grid the first build used.
- * Mobile stacks the quote card above the list, both full width.
+ * desktop / mobile 404:181. Static two-column layout (quote card left,
+ * 4-item list right); mobile stacks the quote card above the list.
  *
  * Content model: reuses the `process` row — `whyIntro` (quote) and `whySteps`
- * (4× `{title, desc}`, title formatted "01 / 觀察" — the last item is always
- * rendered as the highlighted orange one, matching Figma's fixed treatment).
+ * (4× `{title, desc}`, title formatted "01 / 觀察").
  */
 export function WhyThisProject({ process }: { process: Record<string, unknown> }) {
   const intro = process.whyIntro as string | undefined;
   const steps = Array.isArray(process.whySteps) ? (process.whySteps as WhyStep[]) : [];
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(listRef, { once: true, amount: 0.4 });
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [settled, setSettled] = useState(false);
+
+  useEffect(() => {
+    if (!inView || settled) return;
+    if (activeIndex >= steps.length - 1) {
+      const finish = setTimeout(() => setSettled(true), 1200);
+      return () => clearTimeout(finish);
+    }
+    const timer = setTimeout(() => setActiveIndex((i) => i + 1), 1200);
+    return () => clearTimeout(timer);
+  }, [inView, activeIndex, steps.length, settled]);
 
   if (!intro || steps.length === 0) return null;
 
@@ -94,9 +117,11 @@ export function WhyThisProject({ process }: { process: Record<string, unknown> }
           </SlideIn>
 
           <SlideIn direction="right" delay={0.2} className="flex w-full flex-1 flex-col gap-4 md:gap-5">
-            {steps.map((step, i) => (
-              <WhyStepItem key={step.title} step={step} highlighted={i === steps.length - 1} />
-            ))}
+            <div ref={listRef} className="flex w-full flex-col gap-4 md:gap-5">
+              {steps.map((step, i) => (
+                <WhyStepItem key={step.title} step={step} active={inView && !settled && i === activeIndex} settled={settled} />
+              ))}
+            </div>
             <div className="flex w-full justify-center pt-1" aria-hidden>
               <span className="size-[5px] rounded-full bg-white/30" />
             </div>

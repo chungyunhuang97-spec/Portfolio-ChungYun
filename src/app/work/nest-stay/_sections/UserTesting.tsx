@@ -32,11 +32,17 @@ function ScoreCard({ score, highlighted, stagger }: { score: Score; highlighted:
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.5 });
   const [display, setDisplay] = useState(0);
+  const [settled, setSettled] = useState(false);
 
   useEffect(() => {
     if (!inView) return;
     const timeout = setTimeout(() => {
-      const controls = animate(0, score.value, { duration: 1.2, ease: EASE_SPEC, onUpdate: setDisplay });
+      const controls = animate(0, score.value, {
+        duration: 1.4,
+        ease: EASE_SPEC,
+        onUpdate: setDisplay,
+        onComplete: () => setSettled(true),
+      });
       return () => controls.stop();
     }, stagger * 1000);
     return () => clearTimeout(timeout);
@@ -44,8 +50,10 @@ function ScoreCard({ score, highlighted, stagger }: { score: Score; highlighted:
   }, [inView]);
 
   return (
-    <div
+    <motion.div
       ref={ref}
+      animate={settled ? { scale: [1, 1.03, 1] } : {}}
+      transition={{ duration: 0.2 }}
       className={`flex h-full flex-1 flex-col justify-center gap-3 rounded-2xl px-6 py-5 ${
         highlighted ? "border-2 border-primary-orange bg-[#fff7f2]" : "bg-[#f7f7f7]"
       }`}
@@ -65,6 +73,28 @@ function ScoreCard({ score, highlighted, stagger }: { score: Score; highlighted:
           style={{ width: `${(display / 10) * 100}%` }}
         />
       </div>
+    </motion.div>
+  );
+}
+
+/** The orange "整體平均分數" hero metric — CountUp 0 → average, per spec, same 1.4s/easing as the score bars. */
+function AverageScore({ average }: { average: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.5 });
+  const [display, setDisplay] = useState(0);
+  const target = parseFloat(average) || 0;
+
+  useEffect(() => {
+    if (!inView) return;
+    const controls = animate(0, target, { duration: 1.4, ease: EASE_SPEC, onUpdate: setDisplay });
+    return () => controls.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inView]);
+
+  return (
+    <div ref={ref} className="flex items-end justify-center gap-1">
+      <span className="font-fredoka text-[72px] leading-[80px] md:text-[96px] md:leading-[104px]">{display.toFixed(1)}</span>
+      <span className="font-nunito pb-2 text-[18px] font-semibold opacity-70">/ 10</span>
     </div>
   );
 }
@@ -167,12 +197,7 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
           <SlideIn delay={0.15} className="md:w-[320px] md:shrink-0">
             <div className="flex flex-col items-center justify-center gap-1 rounded-[28px] bg-primary-orange px-10 py-8 text-proj-white">
               <p className="font-nunito text-[14px] font-bold opacity-85">整體平均分數</p>
-              <div className="flex items-end justify-center gap-1">
-                <span className="font-fredoka text-[72px] leading-[80px] md:text-[96px] md:leading-[104px]">
-                  {average ?? "—"}
-                </span>
-                <span className="font-nunito pb-2 text-[18px] font-semibold opacity-70">/ 10</span>
-              </div>
+              {average ? <AverageScore average={average} /> : <span className="font-fredoka text-[72px] leading-[80px]">—</span>}
             </div>
           </SlideIn>
 
@@ -182,7 +207,7 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
             </span>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5 md:gap-4">
               {scores.map((s, i) => (
-                <ScoreCard key={s.label} score={s} highlighted={i === 0} stagger={0.1 * i} />
+                <ScoreCard key={s.label} score={s} highlighted={i === 0} stagger={0.12 * i} />
               ))}
             </div>
           </div>

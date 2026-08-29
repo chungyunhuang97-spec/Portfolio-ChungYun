@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { WifiHigh, CellSignalFull, BatteryFull } from "@phosphor-icons/react/dist/ssr";
 import type { ReactNode } from "react";
 
@@ -54,7 +54,9 @@ export function PhoneFrame({
     </div>
   );
 
-  if (!float) return frame;
+  const reduceMotion = useReducedMotion();
+
+  if (!float || reduceMotion) return frame;
 
   return (
     <motion.div

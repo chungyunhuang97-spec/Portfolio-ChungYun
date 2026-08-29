@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useRef, useState } from "react";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { ArrowRight, MapTrifold } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 
@@ -11,6 +11,30 @@ function FlowCard({ label }: { label: string }) {
     <div className="flex w-[160px] shrink-0 items-center justify-center rounded-2xl border border-[#ededed] bg-proj-white p-6 text-center">
       <p className="font-nunito text-[15px] leading-[23px] font-bold text-primary-black">{label}</p>
     </div>
+  );
+}
+
+/**
+ * Interaction spec 1 — "流動箭頭": a grey base arrow with an orange light
+ * dot that travels the gap once the row is 30% visible, 0.12s stagger per
+ * arrow, 0.8s per pass, pausing 1.2s between loops, and pausing entirely
+ * once the row scrolls out of view.
+ */
+function FlowArrow({ delay, active }: { delay: number; active: boolean }) {
+  return (
+    <svg width="48" height="16" viewBox="0 0 48 16" fill="none" className="mx-2 shrink-0 overflow-visible">
+      <line x1="2" y1="8" x2="40" y2="8" stroke="var(--color-grey-300)" strokeWidth="1.5" />
+      <path d="M36 3l6 5-6 5" stroke="var(--color-grey-300)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      {active && (
+        <motion.circle
+          r="3"
+          fill="var(--color-primary-orange)"
+          initial={{ cx: 2, opacity: 0 }}
+          animate={{ cx: [2, 2, 40, 40], opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 0.8, delay, repeat: Infinity, repeatDelay: 1.2, ease: "easeInOut" }}
+        />
+      )}
+    </svg>
   );
 }
 
@@ -53,6 +77,8 @@ export function InformationArchitecture({ process }: { process: Record<string, u
   const mobileCta = (process.iaMobileCta as string) || "點擊查看資訊架構圖";
   const illustrationSrc = process.iaIllustrationUrl as string | undefined;
   const [expanded, setExpanded] = useState(false);
+  const flowRowRef = useRef<HTMLDivElement>(null);
+  const flowRowInView = useInView(flowRowRef, { amount: 0.3 });
 
   if (steps.length === 0) return null;
 
@@ -119,10 +145,10 @@ export function InformationArchitecture({ process }: { process: Record<string, u
         {/* Desktop — static flow row + illustration */}
         <div className="hidden flex-col gap-10 md:flex">
           <SlideIn delay={0.15}>
-            <div className="flex w-full items-center justify-between">
+            <div ref={flowRowRef} className="flex w-full items-center justify-between">
               {steps.map((step, i) => (
                 <div key={step} className="flex items-center gap-0">
-                  {i > 0 && <ArrowRight size={16} weight="regular" className="mx-6 shrink-0 text-grey-300" />}
+                  {i > 0 && <FlowArrow delay={(i - 1) * 0.12} active={flowRowInView} />}
                   <FlowCard label={step} />
                 </div>
               ))}
