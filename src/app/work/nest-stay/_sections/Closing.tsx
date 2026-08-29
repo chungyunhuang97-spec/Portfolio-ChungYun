@@ -14,12 +14,15 @@ import { motion, useReducedMotion, useInView } from "framer-motion";
  * low-opacity) decoration rather than unmounting them outright.
  */
 /**
- * Static honeycomb texture tiled across the Closing section's blue
- * background per Figma — soft, blurred hexagon blobs on a loose hex grid.
- * Purely decorative (not part of the interaction spec's drift animation),
- * so it's a single static tiled SVG background-image rather than individual
- * animated nodes — no extra continuous-animation elements added.
+ * Honeycomb texture tiled across the Closing section's blue background per
+ * Figma — soft, blurred hexagon blobs on a loose hex grid. Per Joe's request
+ * it drifts slowly up-and-left as one continuous, never-reversing pan
+ * ("感覺在無限移動") rather than the ping-pong sway the other three shapes use
+ * — the translate distance exactly matches one tile (`HEX_PATTERN_TILE`), so
+ * the loop's reset back to (0,0) lands on a pixel-identical frame and reads
+ * as an unbroken drift instead of a visible jump.
  */
+const HEX_PATTERN_TILE = { width: 150, height: 130 };
 const HEX_PATTERN_URL =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='130' viewBox='0 0 150 130'%3E%3Cg fill='%23ffffff' fill-opacity='0.07'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3Ccircle cx='105' cy='30' r='20'/%3E%3Ccircle cx='67' cy='95' r='20'/%3E%3C/g%3E%3C/svg%3E";
 
@@ -34,10 +37,17 @@ function GeometricBackdrop() {
   return (
     <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <motion.div
-        className="absolute -inset-[15%] blur-[6px]"
-        style={{ backgroundImage: `url("${HEX_PATTERN_URL}")`, backgroundRepeat: "repeat" }}
-        animate={run ? { x: [0, -40, 0], y: [0, 30, 0] } : { x: 0, y: 0 }}
-        transition={{ duration: 26, repeat: run ? Infinity : 0, repeatType: "mirror", ease: "easeInOut" }}
+        className="absolute blur-[6px]"
+        style={{
+          top: -HEX_PATTERN_TILE.height,
+          left: -HEX_PATTERN_TILE.width,
+          right: -HEX_PATTERN_TILE.width,
+          bottom: -HEX_PATTERN_TILE.height,
+          backgroundImage: `url("${HEX_PATTERN_URL}")`,
+          backgroundRepeat: "repeat",
+        }}
+        animate={run ? { x: [0, -HEX_PATTERN_TILE.width], y: [0, -HEX_PATTERN_TILE.height] } : { x: 0, y: 0 }}
+        transition={{ duration: 34, repeat: run ? Infinity : 0, repeatType: "loop", ease: "linear" }}
       />
       <motion.div
         className="absolute -top-10 -left-10 size-[180px] rounded-[40px] border border-white/10 md:size-[280px]"
