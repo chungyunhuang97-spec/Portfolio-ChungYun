@@ -19,8 +19,8 @@ function QuoteGlyph({ close }: { close?: boolean }) {
   return (
     <span
       aria-hidden
-      className={`font-nunito pointer-events-none absolute text-[16px] leading-none font-bold text-white/40 md:static md:block md:text-[64px] md:leading-[0.5] md:text-white/20 ${
-        close ? "right-2 bottom-2 md:self-end" : "top-2 left-2 md:top-auto md:left-auto"
+      className={`font-nunito pointer-events-none absolute text-[16px] leading-none font-bold text-primary-orange md:static md:block md:text-[64px] md:leading-[0.5] ${
+        close ? "top-2 right-2 md:self-end" : "top-2 left-2 md:top-auto md:left-auto"
       }`}
     >
       {close ? "”" : "“"}
@@ -101,7 +101,7 @@ export function WhyThisProject({ process }: { process: Record<string, unknown> }
             <h3 className="font-nunito text-[24px] leading-[34px] font-bold text-primary-orange md:text-[44px] md:leading-[56px]">
               為什麼做這個專案？
             </h3>
-            <div className="h-px w-full bg-white/15 md:hidden" />
+            <div className="w-full border-t border-dashed border-white/15 md:hidden" />
           </div>
         </SlideIn>
 

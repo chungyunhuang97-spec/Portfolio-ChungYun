@@ -98,7 +98,7 @@ export function InformationArchitecture({ process }: { process: Record<string, u
                 {subtitle}
               </p>
             )}
-            <div className="hidden h-px w-full bg-[#e0e0e0] md:block" />
+            <div className="hidden w-full border-t border-dashed border-[#e0e0e0] md:block" />
           </div>
         </SlideIn>
 
@@ -112,7 +112,7 @@ export function InformationArchitecture({ process }: { process: Record<string, u
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex w-full items-center justify-center gap-1 rounded-xl bg-primary-orange px-4 py-2 shadow-[0_2px_4px_rgba(255,82,13,0.2)]"
+            className="flex w-full items-center justify-center gap-1 rounded-xl bg-primary-orange px-4 py-2 shadow-[0_2px_4px_rgba(255,82,13,0.2)] outline-none focus-visible:ring-2 focus-visible:ring-primary-orange focus-visible:ring-offset-2"
             aria-expanded={expanded}
           >
             <span className="font-nunito text-[13px] font-bold text-proj-white">{mobileCta}</span>

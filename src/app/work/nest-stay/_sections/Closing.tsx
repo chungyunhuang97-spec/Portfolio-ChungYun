@@ -1,6 +1,7 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { useRef } from "react";
+import { motion, useReducedMotion, useInView } from "framer-motion";
 
 /**
  * Ambient background geometry drift, per spec: translateX/Y ±8-18px,
@@ -12,37 +13,44 @@ import { motion, useReducedMotion } from "framer-motion";
  * `animate` prop below, leaving the shapes as static (but still visible,
  * low-opacity) decoration rather than unmounting them outright.
  */
+/**
+ * Static honeycomb texture tiled across the Closing section's blue
+ * background per Figma — soft, blurred hexagon blobs on a loose hex grid.
+ * Purely decorative (not part of the interaction spec's drift animation),
+ * so it's a single static tiled SVG background-image rather than individual
+ * animated nodes — no extra continuous-animation elements added.
+ */
+const HEX_PATTERN_URL =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='130' viewBox='0 0 150 130'%3E%3Cg fill='%23ffffff' fill-opacity='0.07'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3Ccircle cx='105' cy='30' r='20'/%3E%3Ccircle cx='67' cy='95' r='20'/%3E%3C/g%3E%3C/svg%3E";
+
 function GeometricBackdrop() {
   const reduceMotion = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  // Not `once` — per spec, these loops should pause once the section leaves
+  // the viewport again, not just wait to start once.
+  const inView = useInView(ref, { amount: 0.1 });
+  const run = inView && !reduceMotion;
 
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div
+        className="absolute inset-0 blur-[6px]"
+        style={{ backgroundImage: `url("${HEX_PATTERN_URL}")`, backgroundRepeat: "repeat" }}
+      />
       <motion.div
         className="absolute -top-10 -left-10 size-[180px] rounded-[40px] border border-white/10 md:size-[280px]"
-        animate={
-          reduceMotion
-            ? undefined
-            : { x: [0, 14, 0], y: [0, -10, 0], rotate: [0, 4, 0] }
-        }
-        transition={{ duration: 8, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+        animate={run ? { x: [0, 14, 0], y: [0, -10, 0], rotate: [0, 4, 0] } : { x: 0, y: 0, rotate: 0 }}
+        transition={{ duration: 8, repeat: run ? Infinity : 0, repeatType: "mirror", ease: "easeInOut" }}
       />
       <motion.div
         className="absolute right-[-40px] top-1/3 size-[140px] rounded-full border border-white/10 md:size-[220px]"
-        animate={
-          reduceMotion
-            ? undefined
-            : { x: [0, -18, 0], y: [0, 12, 0], rotate: [0, -6, 0] }
-        }
-        transition={{ duration: 11, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+        animate={run ? { x: [0, -18, 0], y: [0, 12, 0], rotate: [0, -6, 0] } : { x: 0, y: 0, rotate: 0 }}
+        transition={{ duration: 11, repeat: run ? Infinity : 0, repeatType: "mirror", ease: "easeInOut" }}
       />
       <motion.div
         className="absolute -bottom-16 left-1/4 size-[120px] rounded-[32px] border border-white/10 md:size-[190px]"
-        animate={
-          reduceMotion
-            ? undefined
-            : { x: [0, 8, 0], y: [0, -16, 0], rotate: [0, 3, 0] }
-        }
-        transition={{ duration: 9.5, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+        animate={run ? { x: [0, 8, 0], y: [0, -16, 0], rotate: [0, 3, 0] } : { x: 0, y: 0, rotate: 0 }}
+        transition={{ duration: 9.5, repeat: run ? Infinity : 0, repeatType: "mirror", ease: "easeInOut" }}
       />
     </div>
   );

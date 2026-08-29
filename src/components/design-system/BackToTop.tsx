@@ -77,7 +77,7 @@ export function BackToTop({ targetId = "hero" }: { targetId?: string }) {
             exit={{ opacity: 0, scale: 0.85 }}
             whileHover={{ y: -2 }}
             transition={{ duration: 0.25 }}
-            className="pointer-events-auto flex items-center gap-2 rounded-xl border-[1.5px] border-secondary-blue bg-proj-white px-4 py-3 font-nunito text-[14px] font-bold text-secondary-blue shadow-[0_8px_20px_rgba(13,33,255,0.15)] md:text-[16px] md:tracking-[0.5px]"
+            className="pointer-events-auto flex items-center gap-2 rounded-xl border-[1.5px] border-secondary-blue bg-proj-white px-4 py-3 font-nunito text-[14px] font-bold text-secondary-blue shadow-[0_8px_20px_rgba(13,33,255,0.15)] outline-none focus-visible:ring-2 focus-visible:ring-secondary-blue focus-visible:ring-offset-2 md:text-[16px] md:tracking-[0.5px]"
           >
             回到頂部
             <ArrowUp size={20} weight="bold" />

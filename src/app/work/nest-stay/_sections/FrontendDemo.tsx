@@ -78,7 +78,7 @@ export function FrontendDemo({ project, process }: { project: Project; process: 
             <h3 className="font-nunito text-[26px] leading-[34px] font-bold text-primary-black md:text-[48px] md:leading-[72px]">
               前端開發協作 <span className="text-[#999]">&amp;</span> Demo 實作
             </h3>
-            <div className="hidden h-px w-full bg-[#e0e0e0] md:block" />
+            <div className="hidden w-full border-t border-dashed border-[#e0e0e0] md:block" />
           </div>
         </SlideIn>
 
@@ -100,7 +100,7 @@ export function FrontendDemo({ project, process }: { project: Project; process: 
                 href={project.external_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="absolute top-1/2 left-1/2 inline-flex w-fit -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-xl bg-primary-orange px-4 py-3.5 shadow-[0_2px_4px_rgba(255,82,13,0.2)] transition-transform hover:-translate-y-[calc(50%+2px)]"
+                className="absolute top-1/2 left-1/2 inline-flex w-fit -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-xl bg-primary-orange px-4 py-3.5 shadow-[0_2px_4px_rgba(255,82,13,0.2)] outline-none transition-transform hover:-translate-y-[calc(50%+2px)] focus-visible:ring-2 focus-visible:ring-primary-orange focus-visible:ring-offset-2"
               >
                 <span className="font-nunito text-[14px] font-bold tracking-[0.5px] text-proj-white md:text-[16px]">
                   {demo.buttonLabel}

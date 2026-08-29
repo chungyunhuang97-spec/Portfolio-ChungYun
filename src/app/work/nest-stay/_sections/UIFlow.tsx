@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 
@@ -103,14 +103,18 @@ function MediaPair({ images }: { images: (string | undefined)[] }) {
 function CarouselMediaPair({ images }: { images: (string | undefined)[] }) {
   const pairs = [images.slice(0, 2), images.slice(2, 4)];
   const [active, setActive] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  // Auto-play only while on screen, per spec ("元素離開可視區域時暫停循環動畫").
+  const inView = useInView(ref, { amount: 0.3 });
 
   useEffect(() => {
+    if (!inView) return;
     const timer = setInterval(() => setActive((a) => (a + 1) % pairs.length), 4000);
     return () => clearInterval(timer);
-  }, [pairs.length]);
+  }, [pairs.length, inView]);
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div ref={ref} className="flex flex-col items-center gap-4">
       <AnimatePresence mode="wait">
         <motion.div
           key={active}
@@ -131,7 +135,7 @@ function CarouselMediaPair({ images }: { images: (string | undefined)[] }) {
             aria-selected={i === active}
             aria-label={`第 ${i + 1} 組畫面`}
             onClick={() => setActive(i)}
-            className={`h-[10px] rounded-full transition-all duration-300 ${
+            className={`h-[10px] rounded-full outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary-orange focus-visible:ring-offset-2 ${
               i === active ? "w-7 bg-primary-orange" : "w-[10px] bg-grey-300"
             }`}
           />
@@ -405,7 +409,7 @@ export function UIFlow({ process }: { process: Record<string, unknown> }) {
                 {subtitle}
               </p>
             )}
-            <div className="hidden h-px w-full bg-[#e0e0e0] md:block" />
+            <div className="hidden w-full border-t border-dashed border-[#e0e0e0] md:block" />
           </div>
         </SlideIn>
 
