@@ -13,6 +13,14 @@
  * parent over its children" convention most tree/org-chart layouts use.
  * Connectors are cubic-bezier "elbow" curves from a parent's right edge to
  * each child's left edge, matching the smooth S-curve links in the design.
+ *
+ * Node sizing: per Joe's request every card keeps an even 4px padding
+ * around its label on all four sides, rather than a generic min-width —
+ * width is `charCount * FONT_SIZE + 2*PAD` (CJK glyphs at this weight run
+ * close to 1em of advance width per character, which is what FONT_SIZE
+ * approximates) and height is `FONT_SIZE + 2*PAD`, so short and long
+ * labels both keep the same visual margin instead of long ones (e.g.
+ * "併團申請資訊") crowding their box edges.
  */
 interface FlowNode {
   label: string;
@@ -24,91 +32,91 @@ interface FlowNode {
   children?: FlowNode[];
 }
 
-const H = 21;
+const H = 23;
 const FONT_SIZE = 15;
 const RX = 8;
 
 const tree: FlowNode = {
   label: "首頁",
   x: 0,
-  y: 236.1,
-  w: 53,
+  y: 245.9,
+  w: 38,
   h: H,
   highlighted: true,
   children: [
     {
       label: "搜索欄",
-      x: 79,
-      y: 52.5,
-      w: 62.5,
+      x: 64,
+      y: 54.7,
+      w: 53,
       h: H,
       highlighted: true,
       children: [
         {
           label: "搜尋結果頁",
-          x: 224.5,
-          y: 52.5,
-          w: 81.5,
+          x: 233,
+          y: 54.7,
+          w: 83,
           h: H,
           highlighted: true,
           children: [
-            { label: "排序", x: 341.5, y: 0, w: 53, h: H },
-            { label: "房源列表", x: 341.5, y: 24, w: 72, h: H },
-            { label: "地圖", x: 341.5, y: 48, w: 53, h: H },
+            { label: "排序", x: 357, y: 0, w: 38, h: H },
+            { label: "房源列表", x: 357, y: 25, w: 68, h: H },
+            { label: "地圖", x: 357, y: 50, w: 38, h: H },
             {
               label: "篩選併團服務",
-              x: 341.5,
-              y: 138,
-              w: 91,
+              x: 357,
+              y: 143.8,
+              w: 98,
               h: H,
               highlighted: true,
               children: [
                 {
                   label: "房源資訊頁",
-                  x: 458.5,
-                  y: 138,
-                  w: 81.5,
+                  x: 481,
+                  y: 143.8,
+                  w: 83,
                   h: H,
                   highlighted: true,
                   children: [
-                    { label: "房源詳情", x: 566, y: 72, w: 72, h: H },
+                    { label: "房源詳情", x: 590, y: 75, w: 68, h: H },
                     {
                       label: "房型資訊頁",
-                      x: 566,
-                      y: 126,
-                      w: 81.5,
+                      x: 590,
+                      y: 131.2,
+                      w: 83,
                       h: H,
                       highlighted: true,
                       children: [
-                        { label: "房型詳情", x: 673.5, y: 96, w: 72, h: H },
-                        { label: "一般訂房", x: 673.5, y: 120, w: 72, h: H },
+                        { label: "房型詳情", x: 699, y: 100, w: 68, h: H },
+                        { label: "一般訂房", x: 699, y: 125, w: 68, h: H },
                         {
                           label: "併團/開團",
-                          x: 673.5,
-                          y: 162,
-                          w: 81.5,
+                          x: 699,
+                          y: 168.8,
+                          w: 83,
                           h: H,
                           highlighted: true,
                           children: [
                             {
                               label: "併團資訊",
-                              x: 781,
-                              y: 162,
-                              w: 72,
+                              x: 808,
+                              y: 168.8,
+                              w: 68,
                               h: H,
                               highlighted: true,
                               children: [
-                                { label: "併團資訊", x: 879, y: 144, w: 72, h: H },
+                                { label: "併團資訊", x: 902, y: 150, w: 68, h: H },
                                 {
                                   label: "加入併團",
-                                  x: 879,
-                                  y: 180,
-                                  w: 72,
+                                  x: 902,
+                                  y: 187.5,
+                                  w: 68,
                                   h: H,
                                   highlighted: true,
                                   children: [
-                                    { label: "併團申請資訊", x: 977, y: 168, w: 91, h: H },
-                                    { label: "送出申請", x: 977, y: 192, w: 72, h: H, highlighted: true },
+                                    { label: "併團申請資訊", x: 996, y: 175, w: 98, h: H },
+                                    { label: "送出申請", x: 996, y: 200, w: 68, h: H, highlighted: true },
                                   ],
                                 },
                               ],
@@ -117,7 +125,7 @@ const tree: FlowNode = {
                         },
                       ],
                     },
-                    { label: "房源評價", x: 566, y: 216, w: 72, h: H },
+                    { label: "房源評價", x: 590, y: 225, w: 68, h: H },
                   ],
                 },
               ],
@@ -126,19 +134,19 @@ const tree: FlowNode = {
         },
       ],
     },
-    { label: "併團倒數區", x: 79, y: 240, w: 81.5, h: H },
-    { label: "推薦房源", x: 79, y: 264, w: 72, h: H },
-    { label: "音樂節/演唱會資訊", x: 79, y: 288, w: 119.5, h: H },
+    { label: "併團倒數區", x: 64, y: 250, w: 83, h: H },
+    { label: "推薦房源", x: 64, y: 275, w: 68, h: H },
+    { label: "音樂節/演唱會資訊", x: 64, y: 300, w: 143, h: H },
     {
       label: "Tab bar",
-      x: 79,
-      y: 336,
-      w: 100.5,
+      x: 64,
+      y: 350,
+      w: 113,
       h: H,
       children: [
-        { label: "併團", x: 224.5, y: 312, w: 53, h: H },
-        { label: "我的訂單", x: 224.5, y: 336, w: 72, h: H },
-        { label: "個人帳戶頁面", x: 224.5, y: 360, w: 91, h: H },
+        { label: "併團", x: 233, y: 325, w: 38, h: H },
+        { label: "我的訂單", x: 233, y: 350, w: 68, h: H },
+        { label: "個人帳戶頁面", x: 233, y: 375, w: 98, h: H },
       ],
     },
   ],
@@ -161,7 +169,7 @@ function collectEdges(node: FlowNode, acc: [FlowNode, FlowNode][] = []): [FlowNo
 const allNodes = collectNodes(tree);
 const allEdges = collectEdges(tree);
 
-const VIEW = { minX: -14, minY: -14, width: 1096, height: 409 };
+const VIEW = { minX: -14, minY: -14, width: 1122, height: 426 };
 
 export function IAFlowDiagram() {
   return (
