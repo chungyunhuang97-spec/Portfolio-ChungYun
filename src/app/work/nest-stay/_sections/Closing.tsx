@@ -4,27 +4,19 @@ import { useRef } from "react";
 import { motion, useReducedMotion, useInView } from "framer-motion";
 
 /**
- * Ambient background geometry drift, per spec: translateX/Y ±8-18px,
- * rotation ±3-6°, 6-12s cycles, ease-in-out, alternate/infinite — reduced
- * to ±6-10px on mobile. Three independent shapes with different
- * amplitude/duration combinations so they don't read as one synced loop.
- * Fully disabled under `prefers-reduced-motion` (spec: "disable loops/
- * scale/drift, keep short fade-ins") — `useReducedMotion()` gates every
- * `animate` prop below, leaving the shapes as static (but still visible,
- * low-opacity) decoration rather than unmounting them outright.
+ * Diamond-outline texture tiled across the Closing section's blue
+ * background, per Figma — thin white rhombus outlines on a regular grid
+ * (not filled/blurred circles, and no separate circle/square frame shapes —
+ * corrected per Joe's direct comparison against the design file). The whole
+ * tile layer drifts slowly up-and-left as one continuous, never-reversing
+ * pan ("感覺在無限移動"), not a ping-pong sway — the translate distance exactly
+ * matches one tile (`DIAMOND_PATTERN_TILE`), so the loop's reset back to
+ * (0,0) lands on a pixel-identical frame and reads as an unbroken drift
+ * instead of a visible jump. Disabled under `prefers-reduced-motion`.
  */
-/**
- * Honeycomb texture tiled across the Closing section's blue background per
- * Figma — soft, blurred hexagon blobs on a loose hex grid. Per Joe's request
- * it drifts slowly up-and-left as one continuous, never-reversing pan
- * ("感覺在無限移動") rather than the ping-pong sway the other three shapes use
- * — the translate distance exactly matches one tile (`HEX_PATTERN_TILE`), so
- * the loop's reset back to (0,0) lands on a pixel-identical frame and reads
- * as an unbroken drift instead of a visible jump.
- */
-const HEX_PATTERN_TILE = { width: 150, height: 130 };
-const HEX_PATTERN_URL =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='130' viewBox='0 0 150 130'%3E%3Cg fill='%23ffffff' fill-opacity='0.07'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3Ccircle cx='105' cy='30' r='20'/%3E%3Ccircle cx='67' cy='95' r='20'/%3E%3C/g%3E%3C/svg%3E";
+const DIAMOND_PATTERN_TILE = { width: 90, height: 90 };
+const DIAMOND_PATTERN_URL =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'%3E%3Crect x='31' y='31' width='28' height='28' fill='none' stroke='%23ffffff' stroke-opacity='0.16' stroke-width='2' transform='rotate(45 45 45)'/%3E%3C/svg%3E";
 
 function GeometricBackdrop() {
   const reduceMotion = useReducedMotion();
@@ -37,32 +29,17 @@ function GeometricBackdrop() {
   return (
     <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <motion.div
-        className="absolute blur-[6px]"
+        className="absolute"
         style={{
-          top: -HEX_PATTERN_TILE.height,
-          left: -HEX_PATTERN_TILE.width,
-          right: -HEX_PATTERN_TILE.width,
-          bottom: -HEX_PATTERN_TILE.height,
-          backgroundImage: `url("${HEX_PATTERN_URL}")`,
+          top: -DIAMOND_PATTERN_TILE.height,
+          left: -DIAMOND_PATTERN_TILE.width,
+          right: -DIAMOND_PATTERN_TILE.width,
+          bottom: -DIAMOND_PATTERN_TILE.height,
+          backgroundImage: `url("${DIAMOND_PATTERN_URL}")`,
           backgroundRepeat: "repeat",
         }}
-        animate={run ? { x: [0, -HEX_PATTERN_TILE.width], y: [0, -HEX_PATTERN_TILE.height] } : { x: 0, y: 0 }}
+        animate={run ? { x: [0, -DIAMOND_PATTERN_TILE.width], y: [0, -DIAMOND_PATTERN_TILE.height] } : { x: 0, y: 0 }}
         transition={{ duration: 34, repeat: run ? Infinity : 0, repeatType: "loop", ease: "linear" }}
-      />
-      <motion.div
-        className="absolute -top-10 -left-10 size-[180px] rounded-[40px] border border-white/10 md:size-[280px]"
-        animate={run ? { x: [0, 14, 0], y: [0, -10, 0], rotate: [0, 4, 0] } : { x: 0, y: 0, rotate: 0 }}
-        transition={{ duration: 8, repeat: run ? Infinity : 0, repeatType: "mirror", ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute right-[-40px] top-1/3 size-[140px] rounded-full border border-white/10 md:size-[220px]"
-        animate={run ? { x: [0, -18, 0], y: [0, 12, 0], rotate: [0, -6, 0] } : { x: 0, y: 0, rotate: 0 }}
-        transition={{ duration: 11, repeat: run ? Infinity : 0, repeatType: "mirror", ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute -bottom-16 left-1/4 size-[120px] rounded-[32px] border border-white/10 md:size-[190px]"
-        animate={run ? { x: [0, 8, 0], y: [0, -16, 0], rotate: [0, 3, 0] } : { x: 0, y: 0, rotate: 0 }}
-        transition={{ duration: 9.5, repeat: run ? Infinity : 0, repeatType: "mirror", ease: "easeInOut" }}
       />
     </div>
   );
