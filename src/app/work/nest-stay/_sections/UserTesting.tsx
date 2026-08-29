@@ -56,22 +56,22 @@ function ScoreCard({ score, highlighted, stagger }: { score: Score; highlighted:
       ref={ref}
       animate={settled ? { scale: [1, 1.03, 1] } : {}}
       transition={{ duration: 0.2 }}
-      className={`flex h-full flex-1 flex-col justify-center gap-3 rounded-2xl border-2 px-6 py-5 transition-colors duration-500 ${
+      className={`flex h-full w-[108px] shrink-0 flex-col justify-center gap-1 rounded-xl border-2 p-2.5 transition-colors duration-500 sm:w-auto sm:flex-1 sm:gap-3 sm:rounded-2xl sm:px-6 sm:py-5 ${
         highlighted ? "border-primary-orange bg-[#fff7f2]" : "border-transparent bg-[#f7f7f7]"
       }`}
     >
-      <p className={`font-nunito text-[13px] leading-[18px] font-semibold transition-colors duration-500 ${highlighted ? "text-primary-orange" : "text-[#6b6b6b]"}`}>
+      <p className={`font-nunito text-[12px] leading-[17px] font-semibold transition-colors duration-500 sm:text-[13px] sm:leading-[18px] ${highlighted ? "text-primary-orange" : "text-[#6b6b6b]"}`}>
         {score.label}
       </p>
-      <div className="flex items-baseline gap-1">
-        <span className={`font-fredoka text-[40px] leading-none transition-colors duration-500 ${highlighted ? "text-primary-orange" : "text-primary-black"}`}>
+      <div className="flex items-baseline gap-0.5 sm:gap-1">
+        <span className={`font-sans text-[18px] leading-none transition-colors duration-500 sm:font-fredoka sm:text-[40px] ${highlighted ? "text-primary-orange" : "text-primary-black"}`}>
           {display.toFixed(1)}
         </span>
-        <span className="font-nunito text-[14px] font-normal text-[#9e9e9e]">/ 10</span>
+        <span className="font-nunito text-[10px] font-normal text-[#9e9e9e] sm:text-[14px]">/ 10</span>
       </div>
-      <div className="h-[6px] w-full overflow-hidden rounded-[3px] bg-[#f0f0f0]">
+      <div className="h-1 w-full overflow-hidden rounded-[2px] bg-[#f0f0f0] sm:h-[6px] sm:rounded-[3px]">
         <div
-          className={`h-full rounded-[3px] transition-colors duration-500 ${highlighted ? "bg-primary-orange" : "bg-grey-300"}`}
+          className={`h-full rounded-[2px] transition-colors duration-500 sm:rounded-[3px] ${highlighted ? "bg-primary-orange" : "bg-grey-300"}`}
           style={{ width: `${(display / 10) * 100}%` }}
         />
       </div>
@@ -98,7 +98,7 @@ function ScoreGrid({ scores }: { scores: Score[] }) {
   }, [inView, scores.length]);
 
   return (
-    <div ref={ref} className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5 md:gap-4">
+    <div ref={ref} className="flex flex-wrap justify-center gap-2 sm:grid sm:grid-cols-2 sm:gap-3 md:grid-cols-5 md:gap-4">
       {scores.map((s, i) => (
         <ScoreCard key={s.label} score={s} highlighted={i === activeIndex} stagger={0.12 * i} />
       ))}
@@ -132,10 +132,12 @@ function AverageScore({ average }: { average: string }) {
       ref={ref}
       animate={settled ? { scale: [1, 1.05, 1] } : {}}
       transition={{ duration: 0.25 }}
-      className="flex items-end justify-center gap-1"
+      className="flex items-baseline justify-center gap-1"
     >
-      <span className="font-fredoka text-[72px] leading-[80px] md:text-[96px] md:leading-[104px]">{display.toFixed(1)}</span>
-      <span className="font-nunito pb-2 text-[18px] font-semibold opacity-70">/ 10</span>
+      <span className="font-fredoka text-[48px] leading-none sm:text-[72px] sm:leading-[80px] md:text-[96px] md:leading-[104px]">
+        {display.toFixed(1)}
+      </span>
+      <span className="font-nunito text-[12px] font-semibold opacity-70 sm:pb-2 sm:text-[18px]">/ 10</span>
     </motion.div>
   );
 }
@@ -192,18 +194,18 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
   if (scores.length === 0) return null;
 
   return (
-    <section className="bg-proj-white px-6 py-12 md:px-[120px] md:py-[72px]">
-      <div className="flex flex-col gap-8 md:gap-10">
+    <section className="bg-proj-white px-6 py-8 md:px-[120px] md:py-[72px]">
+      <div className="flex flex-col gap-4 md:gap-10">
         <SlideIn delay={0.1}>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col items-center gap-3 text-center md:items-start md:text-left">
             <span className="font-nunito text-[13px] font-extrabold tracking-[0.78px] text-secondary-blue uppercase">
               User Testing
             </span>
-            <h3 className="font-nunito text-[28px] leading-[38px] font-bold text-primary-black md:text-[44px] md:leading-[56px]">
+            <h3 className="font-nunito text-[24px] leading-[36px] font-bold text-primary-black md:text-[44px] md:leading-[56px]">
               使用者測試與洞察
             </h3>
             {intro && (
-              <p className="font-nunito max-w-[680px] text-[14px] leading-[22px] font-normal text-[#6b6b6b] md:max-w-none md:text-[15px] md:leading-[24px]">
+              <p className="font-nunito max-w-[680px] text-[13px] leading-normal font-normal text-[#666] md:max-w-none md:text-[15px] md:leading-[24px]">
                 {intro}
               </p>
             )}
@@ -212,7 +214,7 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
 
         {focusPoints.length > 0 && (
           <motion.div
-            className="flex flex-col gap-4 rounded-xl bg-grey-50 p-4 md:flex-row md:gap-4 md:p-4"
+            className="hidden gap-4 rounded-xl bg-grey-50 p-4 md:flex md:flex-row"
             variants={focusContainer}
             initial="hidden"
             whileInView="show"
@@ -249,9 +251,9 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
 
         <div className="flex flex-col items-stretch gap-5 md:flex-row md:gap-5">
           <SlideIn delay={0.15} className="md:w-[320px] md:shrink-0">
-            <div className="flex flex-col items-center justify-center gap-1 rounded-[28px] bg-primary-orange px-10 py-8 text-proj-white">
+            <div className="flex w-full flex-row items-center justify-center gap-4 rounded-[20px] border-[1.5px] border-primary-orange bg-primary-orange p-4 text-proj-white md:flex-col md:gap-1 md:rounded-[28px] md:border-0 md:px-10 md:py-8">
               <p className="font-nunito text-[14px] font-bold opacity-85">整體平均分數</p>
-              {average ? <AverageScore average={average} /> : <span className="font-fredoka text-[72px] leading-[80px]">—</span>}
+              {average ? <AverageScore average={average} /> : <span className="font-fredoka text-[48px] leading-none">—</span>}
             </div>
           </SlideIn>
 
@@ -298,10 +300,10 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
                   <motion.div
                     key={insight.title}
                     variants={insightItem}
-                    className={`flex flex-col gap-2 rounded-2xl border-l-[3px] ${style.border} ${style.bg} px-6 py-[18px]`}
+                    className={`flex flex-col gap-0.5 rounded-xl border-l-[3px] ${style.border} ${style.bg} p-3 md:gap-2 md:rounded-2xl md:px-6 md:py-[18px]`}
                   >
-                    <p className="font-nunito text-[16px] font-bold text-primary-black">{insight.title}</p>
-                    <p className="font-nunito text-[13px] leading-[21px] font-normal text-[#666]">{insight.desc}</p>
+                    <p className="font-nunito text-[13px] font-bold text-primary-black md:text-[16px]">{insight.title}</p>
+                    <p className="font-nunito text-[12px] leading-[17px] font-normal text-[#666] md:text-[13px] md:leading-[21px]">{insight.desc}</p>
                   </motion.div>
                 );
               })}

@@ -74,7 +74,10 @@ export function WhyThisProject({ process }: { process: Record<string, unknown> }
   const steps = Array.isArray(process.whySteps) ? (process.whySteps as WhyStep[]) : [];
 
   const listRef = useRef<HTMLDivElement>(null);
-  const inView = useInView(listRef, { once: true, amount: 0.4 });
+  // Margin-based trigger (not a % of the list itself) — on mobile the 4-item
+  // list can be taller than the viewport, so an `amount` threshold could
+  // never be satisfied and the sequential-focus animation would never start.
+  const inView = useInView(listRef, { once: true, margin: "0px 0px -15% 0px" });
   const [activeIndex, setActiveIndex] = useState(0);
   const [settled, setSettled] = useState(false);
 
@@ -91,7 +94,7 @@ export function WhyThisProject({ process }: { process: Record<string, unknown> }
   if (!intro || steps.length === 0) return null;
 
   return (
-    <section className="bg-primary-black px-6 py-8 md:px-[120px] md:py-[72px]">
+    <section className="flex min-h-[100dvh] flex-col justify-center bg-primary-black px-6 py-8 md:min-h-0 md:px-[120px] md:py-[72px]">
       <div className="flex flex-col gap-5 md:gap-10">
         <SlideIn delay={0.1}>
           <div className="flex flex-col gap-3">

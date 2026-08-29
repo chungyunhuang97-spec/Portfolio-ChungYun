@@ -287,20 +287,25 @@ function DesktopStepPanel({
  * Mobile folder-tab switcher — a sliding inset pill via `layoutId`, generic
  * over an arbitrary `tabs` array since each of the 3 mobile blocks owns its
  * own 2-tab switcher rather than one switcher choosing between blocks.
+ * `dark` swaps the chrome (wrapper + inactive-label colors) for legibility
+ * when the block sits on the orange block-03 background — the active pill
+ * itself stays white/black regardless, since Figma keeps that consistent.
  */
 function TabSwitcher({
   tabs,
   active,
   onChange,
   layoutId,
+  dark = false,
 }: {
   tabs: UiFlowTab[];
   active: number;
   onChange: (i: number) => void;
   layoutId: string;
+  dark?: boolean;
 }) {
   return (
-    <div className="flex w-full gap-1 rounded-t-2xl border border-b-0 border-[#e5e0db] bg-grey-100 p-1.5">
+    <div className={`flex w-full gap-1 rounded-t-2xl border border-b-0 p-1.5 ${dark ? "border-white/20 bg-white/15" : "border-[#e5e0db] bg-grey-100"}`}>
       {tabs.map((tab, i) => {
         const isActive = i === active;
         return (
@@ -317,7 +322,11 @@ function TabSwitcher({
                 transition={{ type: "spring", stiffness: 380, damping: 34 }}
               />
             )}
-            <span className={`font-nunito relative z-10 text-[14px] font-bold ${isActive ? "text-primary-black" : "text-grey-600"}`}>
+            <span
+              className={`font-nunito relative z-10 text-[14px] font-bold ${
+                isActive ? "text-primary-black" : dark ? "text-white/70" : "text-grey-600"
+              }`}
+            >
               {tab.tabLabel}
             </span>
           </button>
@@ -356,17 +365,41 @@ function TabPanel({ tab, media }: { tab: UiFlowTab; media?: string }) {
   );
 }
 
-function MobileBlock({ block, media, delay }: { block: UiFlowBlock; media: (string | undefined)[]; delay: number }) {
+/**
+ * Each of the 3 mobile blocks carries its own distinct background per
+ * Figma (block 01 white, 02 grey-50, 03 solid orange with white text) —
+ * previously all three used the same white wrapper. Block 0 gets a hairline
+ * border since it would otherwise blend into the section's own white
+ * background.
+ */
+const BLOCK_TONES = [
+  { wrapper: "bg-proj-white border border-grey-100", numberColor: "text-primary-orange", titleColor: "text-primary-black", dark: false },
+  { wrapper: "bg-grey-50", numberColor: "text-primary-orange", titleColor: "text-primary-black", dark: false },
+  { wrapper: "bg-primary-orange", numberColor: "text-proj-white", titleColor: "text-proj-white", dark: true },
+] as const;
+
+function MobileBlock({
+  block,
+  media,
+  delay,
+  toneIndex,
+}: {
+  block: UiFlowBlock;
+  media: (string | undefined)[];
+  delay: number;
+  toneIndex: number;
+}) {
   const [active, setActive] = useState(0);
+  const tone = BLOCK_TONES[toneIndex] ?? BLOCK_TONES[0];
   return (
     <SlideIn delay={delay}>
-      <div className="flex flex-col gap-3">
+      <div className={`flex flex-col gap-3 rounded-2xl p-4 ${tone.wrapper}`}>
         <div className="flex items-center gap-3">
-          <span className="font-fredoka text-[24px] leading-[24px] text-primary-orange">{block.sectionNumber}</span>
-          <h4 className="font-nunito text-[18px] leading-[26px] font-bold text-primary-black">{block.sectionTitle}</h4>
+          <span className={`font-fredoka text-[24px] leading-[24px] ${tone.numberColor}`}>{block.sectionNumber}</span>
+          <h4 className={`font-nunito text-[18px] leading-[26px] font-bold ${tone.titleColor}`}>{block.sectionTitle}</h4>
         </div>
         <div className="flex flex-col">
-          <TabSwitcher tabs={block.tabs} active={active} onChange={setActive} layoutId={`uiflow-tab-${block.sectionNumber}`} />
+          <TabSwitcher tabs={block.tabs} active={active} onChange={setActive} layoutId={`uiflow-tab-${block.sectionNumber}`} dark={tone.dark} />
           <div className="w-full overflow-hidden rounded-b-2xl border border-t-0 border-[#e5e0db] bg-proj-white px-4 py-5">
             <TabPanel tab={block.tabs[active]} media={media[active]} />
           </div>
@@ -440,7 +473,7 @@ export function UIFlow({ process }: { process: Record<string, unknown> }) {
                 {subtitle}
               </p>
             )}
-            <div className="hidden w-full border-t border-dashed border-[#e0e0e0] md:block" />
+            <div className="w-full border-t border-dashed border-[#e0e0e0]" />
           </div>
         </SlideIn>
 
@@ -452,6 +485,7 @@ export function UIFlow({ process }: { process: Record<string, unknown> }) {
               block={block}
               media={[mobileMedia[i * 2], mobileMedia[i * 2 + 1]]}
               delay={0.1 + i * 0.08}
+              toneIndex={i}
             />
           ))}
         </div>

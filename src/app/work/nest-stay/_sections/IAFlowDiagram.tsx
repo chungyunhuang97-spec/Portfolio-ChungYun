@@ -171,6 +171,10 @@ const allEdges = collectEdges(tree);
 
 const VIEW = { minX: -14, minY: -14, width: 1122, height: 426 };
 
+/** Native pixel dimensions of the diagram, exported so the mobile pop-up can render it at true size instead of scaled down. */
+export const IA_DIAGRAM_WIDTH = VIEW.width;
+export const IA_DIAGRAM_HEIGHT = VIEW.height;
+
 export function IAFlowDiagram() {
   return (
     <svg

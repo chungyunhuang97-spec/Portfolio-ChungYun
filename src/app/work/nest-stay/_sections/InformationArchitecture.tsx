@@ -2,9 +2,69 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
-import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight, X } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
-import { IAFlowDiagram } from "./IAFlowDiagram";
+import { IAFlowDiagram, IA_DIAGRAM_HEIGHT, IA_DIAGRAM_WIDTH } from "./IAFlowDiagram";
+
+/**
+ * Mobile "查看資訊架構圖" pop-up — per Joe's ask, this should read like
+ * viewing an image (the same full diagram desktop gets, at true/native
+ * pixel size so every label stays legible) rather than the compact vertical
+ * list the old inline-expand version showed. The diagram is rendered at its
+ * real `IA_DIAGRAM_WIDTH`×`IA_DIAGRAM_HEIGHT` inside a pan/scrollable frame
+ * instead of being scaled down to fit the phone's width.
+ */
+function IADiagramModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="fixed inset-0 z-[70] flex flex-col bg-black/80 p-4 md:hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+          onClick={onClose}
+        >
+          <motion.div
+            className="relative flex flex-1 flex-col overflow-hidden rounded-2xl bg-[#ededed]"
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.94 }}
+            transition={{ duration: 0.25 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="關閉資訊架構圖"
+              className="absolute top-3 right-3 z-10 flex size-9 items-center justify-center rounded-full bg-proj-white shadow-[0_2px_8px_rgba(0,0,0,0.15)] outline-none focus-visible:ring-2 focus-visible:ring-primary-orange focus-visible:ring-offset-2"
+            >
+              <X size={18} weight="bold" className="text-primary-black" />
+            </button>
+            <p className="font-nunito absolute top-4 left-4 z-10 text-[12px] font-bold text-grey-500">
+              左右滑動可查看完整架構圖
+            </p>
+            <div className="flex-1 overflow-auto p-6 pt-14">
+              <div style={{ width: IA_DIAGRAM_WIDTH, height: IA_DIAGRAM_HEIGHT }}>
+                <IAFlowDiagram />
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 /** Desktop flow-diagram node — a plain white pill card, static arrow between (Figma has no motion here). */
 function FlowCard({ label }: { label: string }) {
@@ -82,11 +142,12 @@ function FeatureItem({ index, label }: { index: number; label: string }) {
  * raster asset scaled up soft/blurry on the page. See that file for the
  * exact card/label/connector layout.
  *
- * Mobile: the 5 steps render as an always-visible numbered list (no
- * click-to-expand — that was this build's own invention, not in Figma),
- * followed by a "点擊查看資訊架構圖" button that reveals a compact vertical
- * version of the flow for anyone who wants the full picture on a small
- * screen.
+ * Mobile: the 5 steps render as an always-visible numbered list, followed by
+ * a "點擊查看資訊架構圖" button that opens the same `IAFlowDiagram` desktop
+ * uses in a full-screen pop-up, at true pixel size inside a pan/scrollable
+ * frame — per Joe's ask, it should read like viewing a (legible) image
+ * rather than the compact vertical arrow-list the previous inline-expand
+ * version showed.
  *
  * Content model: reuses `process` — `iaSubtitle`, `iaFlowSteps` (5 labels),
  * `iaMobileCta`.
@@ -154,35 +215,14 @@ export function InformationArchitecture({ process }: { process: Record<string, u
           </div>
           <button
             type="button"
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => setExpanded(true)}
             className="flex w-full items-center justify-center gap-1 rounded-xl bg-primary-orange px-4 py-2 shadow-[0_2px_4px_rgba(255,82,13,0.2)] outline-none focus-visible:ring-2 focus-visible:ring-primary-orange focus-visible:ring-offset-2"
-            aria-expanded={expanded}
+            aria-haspopup="dialog"
           >
             <span className="font-nunito text-[13px] font-bold text-proj-white">{mobileCta}</span>
             <ArrowRight size={16} weight="bold" className="text-proj-white" />
           </button>
-          <AnimatePresence>
-            {expanded && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
-                className="overflow-hidden"
-              >
-                <div className="flex flex-col items-center gap-0 rounded-2xl bg-[#ededed] px-6 py-8">
-                  {steps.map((step, i) => (
-                    <div key={step} className="flex flex-col items-center">
-                      {i > 0 && <div className="h-6 w-px bg-grey-300" aria-hidden />}
-                      <span className="font-nunito rounded-full border border-[#ededed] bg-proj-white px-4 py-2 text-[13px] font-bold text-grey-800 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
-                        {step}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <IADiagramModal open={expanded} onClose={() => setExpanded(false)} />
         </div>
 
         {/* Desktop — static flow row + illustration */}

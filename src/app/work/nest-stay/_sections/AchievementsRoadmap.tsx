@@ -114,7 +114,7 @@ function NoteBox({ title, bullets }: { title: string; bullets: string[] }) {
   return (
     <div className="flex w-full flex-col gap-1 rounded-lg bg-white/[0.05] px-4 py-4">
       <div className="flex items-center gap-1">
-        <span className="size-[9px] shrink-0 rounded-full bg-primary-orange" aria-hidden />
+        <span className="size-[6px] shrink-0 rounded-full bg-accent-pink" aria-hidden />
         <p className="font-nunito text-[15px] font-bold text-proj-white">{title}</p>
       </div>
       <motion.ul
