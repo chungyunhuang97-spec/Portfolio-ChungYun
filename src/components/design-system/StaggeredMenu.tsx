@@ -199,7 +199,11 @@ export function StaggeredMenu({
       data-position={position}
       aria-hidden={!open}
     >
-      <div ref={preLayersRef} className="sm-prelayers pointer-events-none absolute top-0 right-0 bottom-0 z-[5]" aria-hidden="true">
+      <div
+        ref={preLayersRef}
+        className="sm-prelayers pointer-events-none absolute top-0 right-0 bottom-0 z-[5] w-full sm:w-[clamp(260px,38vw,420px)]"
+        aria-hidden="true"
+      >
         {layerColors.map((c, i) => (
           <div key={i} className="sm-prelayer absolute top-0 right-0 h-full w-full translate-x-0" style={{ background: c }} />
         ))}
@@ -207,7 +211,7 @@ export function StaggeredMenu({
 
       <aside
         ref={panelRef}
-        className="staggered-menu-panel bg-proj-white pointer-events-auto absolute top-0 right-0 z-10 flex h-full flex-col overflow-y-auto p-8 pt-28"
+        className="staggered-menu-panel bg-proj-white pointer-events-auto absolute top-0 right-0 z-10 flex h-full w-full flex-col overflow-y-auto p-8 pt-28 sm:w-[clamp(260px,38vw,420px)]"
       >
         <ul className="sm-panel-list m-0 flex list-none flex-col gap-2 p-0" role="list" data-numbering={displayItemNumbering || undefined}>
           {items.map((it, idx) => (
