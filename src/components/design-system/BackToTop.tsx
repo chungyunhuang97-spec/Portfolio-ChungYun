@@ -20,18 +20,21 @@ import { ArrowUp } from "@phosphor-icons/react/dist/ssr";
  * bold weight instead, which reads the same at this size.
  *
  * Behavior (not specified in Figma, since the static mockup has no
- * interaction layer to read from): per the current interaction spec
- * ("互動4 — 回到頂部：使用者滾動超過頁面60%後顯示"), visibility is driven by a
- * page-scroll-percentage threshold — shown once `scrollY / (scrollHeight -
- * innerHeight)` passes 0.6, hidden again if the user scrolls back above
- * that line. (Supersedes an earlier revision that gated visibility on the
- * Closing section's own intersection instead.) The button is horizontally
- * centered via a full-width fixed wrapper with `flex justify-center` rather
- * than a `left-1/2 -translate-x-1/2` hack — framer-motion writes its own
- * inline `transform` for the `whileHover`/`animate` scale, which would
- * silently clobber a Tailwind translate-based centering class on the same
- * element, so centering is done one level up on a plain (non-animated)
- * wrapper instead. That wrapper spans the full width and is given
+ * interaction layer to read from): per Joe's explicit ask, the button only
+ * appears once the page's final section (Closing) is actually in view,
+ * nowhere else — not a page-scroll-percentage threshold (that briefly
+ * showed the button mid-page on tall in-between sections, which wasn't
+ * wanted). Visibility is driven by an `IntersectionObserver` watching the
+ * element whose id matches `triggerId` (defaults to "closing" — Closing's
+ * outer <section> carries `id="closing"`): the button fades in only while
+ * that section intersects the viewport and fades back out the moment it
+ * doesn't, in either scroll direction. The button is horizontally centered
+ * via a full-width fixed wrapper with `flex justify-center` rather than a
+ * `left-1/2 -translate-x-1/2` hack — framer-motion writes its own inline
+ * `transform` for the `whileHover`/`animate` scale, which would silently
+ * clobber a Tailwind translate-based centering class on the same element,
+ * so centering is done one level up on a plain (non-animated) wrapper
+ * instead. That wrapper spans the full width and is given
  * `pointer-events-none` so it doesn't swallow clicks on whatever sits
  * beneath it (e.g. Footer links); `pointer-events-auto` on the button
  * itself restores its own clickability. Clicking scrolls back to the
@@ -41,19 +44,25 @@ import { ArrowUp } from "@phosphor-icons/react/dist/ssr";
  * the page for some reason, falls back to scrolling the window to the very
  * top so the button never silently does nothing.
  */
-export function BackToTop({ targetId = "hero" }: { targetId?: string }) {
+export function BackToTop({
+  targetId = "hero",
+  triggerId = "closing",
+}: {
+  targetId?: string;
+  triggerId?: string;
+}) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    function handleScroll() {
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      const ratio = max > 0 ? window.scrollY / max : 0;
-      setVisible(ratio > 0.6);
-    }
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    const trigger = document.getElementById(triggerId);
+    if (!trigger) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(entry.isIntersecting),
+      { threshold: 0.25 }
+    );
+    observer.observe(trigger);
+    return () => observer.disconnect();
+  }, [triggerId]);
 
   function handleClick() {
     const el = document.getElementById(targetId);

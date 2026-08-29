@@ -61,6 +61,37 @@ function RichText({ text }: { text: string }) {
   );
 }
 
+const DESC_TEXT_CLASS = "font-nunito text-[15px] leading-[22px] font-normal text-grey-800 md:text-[16px] md:leading-[24px]";
+
+/**
+ * A step's `desc` renders as a plain paragraph, EXCEPT where the content
+ * itself is authored as multiple `\n\n`-separated points (per Figma, e.g.
+ * step 03's two-part explanation) — those render as a bulleted list
+ * instead, matching the design's bullet-point treatment for that step.
+ */
+function DescBlock({ text }: { text: string }) {
+  const points = text.split("\n\n").filter(Boolean);
+  if (points.length <= 1) {
+    return (
+      <p className={DESC_TEXT_CLASS}>
+        <RichText text={text} />
+      </p>
+    );
+  }
+  return (
+    <ul className="flex flex-col gap-2">
+      {points.map((point, i) => (
+        <li key={i} className={`flex items-start gap-2.5 ${DESC_TEXT_CLASS}`}>
+          <span className="mt-[9px] size-[5px] shrink-0 rounded-full bg-grey-800" aria-hidden />
+          <span>
+            <RichText text={point} />
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Orange circular chevron badge sitting between a step's two mockups (Figma: `chevron-right`). */
 function ChevronBadge() {
   return (
@@ -222,9 +253,9 @@ function DesktopStepPanel({
           {step.title}
         </h4>
       </motion.div>
-      <motion.p variants={stepItem} className="font-nunito text-[15px] leading-[22px] font-normal text-grey-800 md:text-[16px] md:leading-[24px]">
-        <RichText text={step.desc} />
-      </motion.p>
+      <motion.div variants={stepItem} className="w-full">
+        <DescBlock text={step.desc} />
+      </motion.div>
       {step.callout && (
         <motion.div variants={stepItem} className="w-full">
           <CalloutBox text={step.callout} />

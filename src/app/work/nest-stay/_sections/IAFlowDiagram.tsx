@@ -24,89 +24,91 @@ interface FlowNode {
   children?: FlowNode[];
 }
 
-const H = 44;
+const H = 21;
+const FONT_SIZE = 15;
+const RX = 8;
 
 const tree: FlowNode = {
   label: "首頁",
   x: 0,
-  y: 592.6,
-  w: 70,
+  y: 236.1,
+  w: 53,
   h: H,
   highlighted: true,
   children: [
     {
       label: "搜索欄",
-      x: 126,
-      y: 148.9,
-      w: 85,
+      x: 79,
+      y: 52.5,
+      w: 62.5,
       h: H,
       highlighted: true,
       children: [
         {
           label: "搜尋結果頁",
-          x: 357,
-          y: 148.9,
-          w: 115,
+          x: 224.5,
+          y: 52.5,
+          w: 81.5,
           h: H,
           highlighted: true,
           children: [
-            { label: "排序", x: 543, y: 22, w: 70, h: H },
-            { label: "房源列表", x: 543, y: 80, w: 100, h: H },
-            { label: "地圖", x: 543, y: 138, w: 70, h: H },
+            { label: "排序", x: 341.5, y: 0, w: 53, h: H },
+            { label: "房源列表", x: 341.5, y: 24, w: 72, h: H },
+            { label: "地圖", x: 341.5, y: 48, w: 53, h: H },
             {
               label: "篩選併團服務",
-              x: 543,
-              y: 355.5,
-              w: 130,
+              x: 341.5,
+              y: 138,
+              w: 91,
               h: H,
               highlighted: true,
               children: [
                 {
                   label: "房源資訊頁",
-                  x: 729,
-                  y: 355.5,
-                  w: 115,
+                  x: 458.5,
+                  y: 138,
+                  w: 81.5,
                   h: H,
                   highlighted: true,
                   children: [
-                    { label: "房源詳情", x: 900, y: 196, w: 100, h: H },
+                    { label: "房源詳情", x: 566, y: 72, w: 72, h: H },
                     {
                       label: "房型資訊頁",
-                      x: 900,
-                      y: 326.5,
-                      w: 115,
+                      x: 566,
+                      y: 126,
+                      w: 81.5,
                       h: H,
                       highlighted: true,
                       children: [
-                        { label: "房型詳情", x: 1071, y: 254, w: 100, h: H },
-                        { label: "一般訂房", x: 1071, y: 312, w: 100, h: H },
+                        { label: "房型詳情", x: 673.5, y: 96, w: 72, h: H },
+                        { label: "一般訂房", x: 673.5, y: 120, w: 72, h: H },
                         {
                           label: "併團/開團",
-                          x: 1071,
-                          y: 413.5,
-                          w: 115,
+                          x: 673.5,
+                          y: 162,
+                          w: 81.5,
                           h: H,
                           highlighted: true,
                           children: [
                             {
                               label: "併團資訊",
-                              x: 1242,
-                              y: 413.5,
-                              w: 100,
+                              x: 781,
+                              y: 162,
+                              w: 72,
                               h: H,
                               highlighted: true,
                               children: [
-                                { label: "併團資訊", x: 1398, y: 370, w: 100, h: H },
+                                { label: "併團資訊", x: 879, y: 144, w: 72, h: H },
                                 {
                                   label: "加入併團",
-                                  x: 1398,
-                                  y: 457,
-                                  w: 100,
+                                  x: 879,
+                                  y: 180,
+                                  w: 72,
                                   h: H,
                                   highlighted: true,
                                   children: [
-                                    { label: "併團申請資訊", x: 1554, y: 428, w: 130, h: H },
-                                    { label: "送出申請", x: 1554, y: 486, w: 100, h: H, highlighted: true },
+                                    { label: "併團申請資訊", x: 977, y: 168, w: 91, h: H },
+                                    { label: "送出申請", x: 977, y: 192, w: 72, h: H, highlighted: true },
                                   ],
                                 },
                               ],
@@ -115,7 +117,7 @@ const tree: FlowNode = {
                         },
                       ],
                     },
-                    { label: "房源評價", x: 900, y: 544, w: 100, h: H },
+                    { label: "房源評價", x: 566, y: 216, w: 72, h: H },
                   ],
                 },
               ],
@@ -124,19 +126,19 @@ const tree: FlowNode = {
         },
       ],
     },
-    { label: "併團倒數區", x: 126, y: 602, w: 115, h: H },
-    { label: "推薦房源", x: 126, y: 660, w: 100, h: H },
-    { label: "音樂節/演唱會資訊", x: 126, y: 718, w: 175, h: H },
+    { label: "併團倒數區", x: 79, y: 240, w: 81.5, h: H },
+    { label: "推薦房源", x: 79, y: 264, w: 72, h: H },
+    { label: "音樂節/演唱會資訊", x: 79, y: 288, w: 119.5, h: H },
     {
       label: "Tab bar",
-      x: 126,
-      y: 834,
-      w: 145,
+      x: 79,
+      y: 336,
+      w: 100.5,
       h: H,
       children: [
-        { label: "併團", x: 357, y: 776, w: 70, h: H },
-        { label: "我的訂單", x: 357, y: 834, w: 100, h: H },
-        { label: "個人帳戶頁面", x: 357, y: 892, w: 130, h: H },
+        { label: "併團", x: 224.5, y: 312, w: 53, h: H },
+        { label: "我的訂單", x: 224.5, y: 336, w: 72, h: H },
+        { label: "個人帳戶頁面", x: 224.5, y: 360, w: 91, h: H },
       ],
     },
   ],
@@ -159,7 +161,7 @@ function collectEdges(node: FlowNode, acc: [FlowNode, FlowNode][] = []): [FlowNo
 const allNodes = collectNodes(tree);
 const allEdges = collectEdges(tree);
 
-const VIEW = { minX: -20, minY: -20, width: 1724, height: 954 };
+const VIEW = { minX: -14, minY: -14, width: 1096, height: 409 };
 
 export function IAFlowDiagram() {
   return (
@@ -176,20 +178,20 @@ export function IAFlowDiagram() {
           const x2 = child.x;
           const y2 = child.y + child.h / 2;
           const midX = x1 + (x2 - x1) * 0.55;
-          const tipX = x2 - 6;
+          const tipX = x2 - 4;
           return (
             <g key={i}>
               <path
                 d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${tipX} ${y2}`}
                 fill="none"
                 stroke="#d6d6d6"
-                strokeWidth={1.5}
+                strokeWidth={1.1}
               />
               <path
-                d={`M ${tipX} ${y2 - 4} L ${x2} ${y2} L ${tipX} ${y2 + 4}`}
+                d={`M ${tipX} ${y2 - 2.5} L ${x2} ${y2} L ${tipX} ${y2 + 2.5}`}
                 fill="none"
                 stroke="#d6d6d6"
-                strokeWidth={1.5}
+                strokeWidth={1.1}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -205,7 +207,7 @@ export function IAFlowDiagram() {
             y={n.y}
             width={n.w}
             height={n.h}
-            rx={16}
+            rx={RX}
             fill={n.highlighted ? "var(--color-primary-orange)" : "var(--color-proj-white)"}
             stroke={n.highlighted ? "none" : "#ededed"}
             strokeWidth={n.highlighted ? 0 : 1}
@@ -218,7 +220,7 @@ export function IAFlowDiagram() {
             y={n.y + n.h / 2}
             textAnchor="middle"
             dominantBaseline="central"
-            fontSize={14}
+            fontSize={FONT_SIZE}
             fontWeight={700}
             fill={n.highlighted ? "var(--color-proj-white)" : "var(--color-grey-900)"}
           >

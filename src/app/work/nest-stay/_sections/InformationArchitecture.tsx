@@ -199,7 +199,7 @@ export function InformationArchitecture({ process }: { process: Record<string, u
           </SlideIn>
 
           <SlideIn delay={0.2}>
-            <div className="relative flex h-[420px] w-full items-center justify-center overflow-hidden rounded-[30px] bg-[#ededed] p-6">
+            <div className="relative h-[420px] w-full overflow-hidden rounded-[30px] bg-[#ededed] p-6">
               <IAFlowDiagram />
             </div>
           </SlideIn>
