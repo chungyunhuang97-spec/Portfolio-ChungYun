@@ -23,10 +23,12 @@ interface Insight {
 const EASE_SPEC: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 /**
- * One score card in the "SCORE BY FLOW" row. The first (highest-scoring)
- * flow is permanently highlighted in orange per Figma (`bg-[#fff7f2]
- * border-2 border-primary-orange`), the rest sit neutral on `#f7f7f7`. The
- * thin track along the bottom animates its fill 0 → score once 50% visible.
+ * One score card in the "SCORE BY FLOW" row. The orange "highlighted"
+ * treatment (`bg-[#fff7f2] border-2 border-primary-orange`) rotates between
+ * cards — see `ScoreGrid` — rather than staying fixed on one, so every
+ * color/text change here is transitioned instead of snapping. The thin
+ * track along the bottom animates its fill 0 → score once 50% visible,
+ * independent of which card is currently highlighted.
  */
 function ScoreCard({ score, highlighted, stagger }: { score: Score; highlighted: boolean; stagger: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -54,26 +56,53 @@ function ScoreCard({ score, highlighted, stagger }: { score: Score; highlighted:
       ref={ref}
       animate={settled ? { scale: [1, 1.03, 1] } : {}}
       transition={{ duration: 0.2 }}
-      className={`flex h-full flex-1 flex-col justify-center gap-3 rounded-2xl px-6 py-5 ${
-        highlighted ? "border-2 border-primary-orange bg-[#fff7f2]" : "bg-[#f7f7f7]"
+      className={`flex h-full flex-1 flex-col justify-center gap-3 rounded-2xl border-2 px-6 py-5 transition-colors duration-500 ${
+        highlighted ? "border-primary-orange bg-[#fff7f2]" : "border-transparent bg-[#f7f7f7]"
       }`}
     >
-      <p className={`font-nunito text-[13px] leading-[18px] font-semibold ${highlighted ? "text-primary-orange" : "text-[#6b6b6b]"}`}>
+      <p className={`font-nunito text-[13px] leading-[18px] font-semibold transition-colors duration-500 ${highlighted ? "text-primary-orange" : "text-[#6b6b6b]"}`}>
         {score.label}
       </p>
       <div className="flex items-baseline gap-1">
-        <span className={`font-fredoka text-[40px] leading-none ${highlighted ? "text-primary-orange" : "text-primary-black"}`}>
+        <span className={`font-fredoka text-[40px] leading-none transition-colors duration-500 ${highlighted ? "text-primary-orange" : "text-primary-black"}`}>
           {display.toFixed(1)}
         </span>
         <span className="font-nunito text-[14px] font-normal text-[#9e9e9e]">/ 10</span>
       </div>
       <div className="h-[6px] w-full overflow-hidden rounded-[3px] bg-[#f0f0f0]">
         <div
-          className={`h-full rounded-[3px] ${highlighted ? "bg-primary-orange" : "bg-grey-300"}`}
+          className={`h-full rounded-[3px] transition-colors duration-500 ${highlighted ? "bg-primary-orange" : "bg-grey-300"}`}
           style={{ width: `${(display / 10) * 100}%` }}
         />
       </div>
     </motion.div>
+  );
+}
+
+/**
+ * The 5 score cards, with the "highlighted" orange treatment rotating
+ * through them one at a time (2.5s each) rather than staying fixed on the
+ * first card — per Joe's report that "Score by Flow" should read as taking
+ * turns. Pauses while off-screen; each card's own count-up/settle-bounce
+ * (in `ScoreCard`) is unaffected and still only plays once.
+ */
+function ScoreGrid({ scores }: { scores: Score[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { amount: 0.3 });
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (!inView || scores.length === 0) return;
+    const timer = setInterval(() => setActiveIndex((i) => (i + 1) % scores.length), 2500);
+    return () => clearInterval(timer);
+  }, [inView, scores.length]);
+
+  return (
+    <div ref={ref} className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5 md:gap-4">
+      {scores.map((s, i) => (
+        <ScoreCard key={s.label} score={s} highlighted={i === activeIndex} stagger={0.12 * i} />
+      ))}
+    </div>
   );
 }
 
@@ -230,11 +259,7 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
             <span className="font-nunito text-[12px] font-extrabold tracking-[1.44px] text-[#9e9e9e] uppercase">
               Score by Flow
             </span>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5 md:gap-4">
-              {scores.map((s, i) => (
-                <ScoreCard key={s.label} score={s} highlighted={i === 0} stagger={0.12 * i} />
-              ))}
-            </div>
+            <ScoreGrid scores={scores} />
           </div>
         </div>
 
