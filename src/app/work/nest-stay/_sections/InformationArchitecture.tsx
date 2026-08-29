@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { ArrowRight, MapTrifold } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
@@ -14,24 +14,44 @@ function FlowCard({ label }: { label: string }) {
   );
 }
 
+const FLOW_SEGMENT_DURATION = 0.7;
+
 /**
- * Interaction spec 1 — "流動箭頭": a grey base arrow with an orange light
- * dot that travels the gap once the row is 30% visible, 0.12s stagger per
- * arrow, 0.8s per pass, pausing 1.2s between loops, and pausing entirely
- * once the row scrolls out of view.
+ * Interaction spec 1 — "流動箭頭": one segment lights up (orange line +
+ * travelling dot) at a time, left to right, then hands off to the next —
+ * a clear one-at-a-time relay rather than four independently-looping dots,
+ * per Joe's feedback that the simultaneous version didn't read as
+ * progressive. The base grey arrow is always visible; `active` swaps it
+ * orange and plays the dot travelling the gap once.
  */
-function FlowArrow({ delay, active }: { delay: number; active: boolean }) {
+function FlowArrow({ active }: { active: boolean }) {
   return (
     <svg width="48" height="16" viewBox="0 0 48 16" fill="none" className="mx-2 shrink-0 overflow-visible">
-      <line x1="2" y1="8" x2="40" y2="8" stroke="var(--color-grey-300)" strokeWidth="1.5" />
-      <path d="M36 3l6 5-6 5" stroke="var(--color-grey-300)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <motion.line
+        x1="2"
+        y1="8"
+        x2="40"
+        y2="8"
+        strokeWidth="1.5"
+        animate={{ stroke: active ? "var(--color-primary-orange)" : "var(--color-grey-300)" }}
+        transition={{ duration: 0.2 }}
+      />
+      <motion.path
+        d="M36 3l6 5-6 5"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        animate={{ stroke: active ? "var(--color-primary-orange)" : "var(--color-grey-300)" }}
+        transition={{ duration: 0.2 }}
+      />
       {active && (
         <motion.circle
           r="3"
           fill="var(--color-primary-orange)"
           initial={{ cx: 2, opacity: 0 }}
           animate={{ cx: [2, 2, 40, 40], opacity: [0, 1, 1, 0] }}
-          transition={{ duration: 0.8, delay, repeat: Infinity, repeatDelay: 1.2, ease: "easeInOut" }}
+          transition={{ duration: FLOW_SEGMENT_DURATION, ease: "easeInOut" }}
         />
       )}
     </svg>
@@ -79,6 +99,30 @@ export function InformationArchitecture({ process }: { process: Record<string, u
   const [expanded, setExpanded] = useState(false);
   const flowRowRef = useRef<HTMLDivElement>(null);
   const flowRowInView = useInView(flowRowRef, { amount: 0.3 });
+  const segmentCount = Math.max(steps.length - 1, 0);
+  const [activeSegment, setActiveSegment] = useState(0);
+
+  useEffect(() => {
+    if (!flowRowInView || segmentCount === 0) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let i = 0;
+    const advance = () => {
+      if (cancelled) return;
+      setActiveSegment(i);
+      const isLast = i === segmentCount - 1;
+      const wait = FLOW_SEGMENT_DURATION + (isLast ? 1.2 : 0.15);
+      timer = setTimeout(() => {
+        i = (i + 1) % segmentCount;
+        advance();
+      }, wait * 1000);
+    };
+    advance();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [flowRowInView, segmentCount]);
 
   if (steps.length === 0) return null;
 
@@ -148,7 +192,7 @@ export function InformationArchitecture({ process }: { process: Record<string, u
             <div ref={flowRowRef} className="flex w-full items-center justify-between">
               {steps.map((step, i) => (
                 <div key={step} className="flex items-center gap-0">
-                  {i > 0 && <FlowArrow delay={(i - 1) * 0.12} active={flowRowInView} />}
+                  {i > 0 && <FlowArrow active={flowRowInView && i - 1 === activeSegment} />}
                   <FlowCard label={step} />
                 </div>
               ))}

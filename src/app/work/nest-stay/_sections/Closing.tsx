@@ -33,9 +33,11 @@ function GeometricBackdrop() {
 
   return (
     <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div
-        className="absolute inset-0 blur-[6px]"
+      <motion.div
+        className="absolute -inset-[15%] blur-[6px]"
         style={{ backgroundImage: `url("${HEX_PATTERN_URL}")`, backgroundRepeat: "repeat" }}
+        animate={run ? { x: [0, -40, 0], y: [0, 30, 0] } : { x: 0, y: 0 }}
+        transition={{ duration: 26, repeat: run ? Infinity : 0, repeatType: "mirror", ease: "easeInOut" }}
       />
       <motion.div
         className="absolute -top-10 -left-10 size-[180px] rounded-[40px] border border-white/10 md:size-[280px]"

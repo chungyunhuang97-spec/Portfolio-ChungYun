@@ -55,6 +55,16 @@ const achievementPart = {
   hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
 } as const;
+/** The number is the headline of each card, so it gets its own springy pop rather than just fading up with the row. */
+const numberPop = {
+  hidden: { opacity: 0, scale: 0.5, y: 16 },
+  show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 15 } },
+} as const;
+/** The little orange rule draws left-to-right after the number lands, per the "one thing finishes, the next begins" cue used elsewhere on this page. */
+const ruleDraw = {
+  hidden: { width: 0 },
+  show: { width: 40, transition: { duration: 0.4, delay: 0.1, ease: "easeOut" } },
+} as const;
 
 function AchievementCard({ achievement }: { achievement: Achievement }) {
   return (
@@ -62,19 +72,22 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
       variants={achievementInner}
       className="flex flex-col gap-2 rounded-lg border-l-4 border-white/[0.08] bg-white/[0.06] p-4 md:gap-4 md:rounded-2xl md:border md:border-white/[0.08] md:bg-white/[0.05] md:p-7"
     >
-      <motion.div
-        variants={achievementPart}
-        className="flex items-center justify-between gap-4 md:items-baseline"
-      >
-        <span className="font-fredoka text-[24px] leading-none text-primary-orange md:text-[48px] md:text-primary-orange/70">
+      <motion.div className="flex items-center justify-between gap-4 md:items-baseline">
+        <motion.span
+          variants={numberPop}
+          className="font-fredoka text-[24px] leading-none text-primary-orange md:text-[48px] md:text-primary-orange/70"
+        >
           {achievement.number}
-        </span>
-        <span className="font-nunito text-[10px] font-extrabold tracking-[0.88px] text-proj-white/35 uppercase md:text-[11px]">
+        </motion.span>
+        <motion.span
+          variants={achievementPart}
+          className="font-nunito text-[10px] font-extrabold tracking-[0.88px] text-proj-white/35 uppercase md:text-[11px]"
+        >
           {achievement.tag}
-        </span>
+        </motion.span>
       </motion.div>
       <motion.div variants={achievementPart} className="flex flex-col gap-2 md:gap-4">
-        <div className="hidden h-[2px] w-10 rounded-full bg-primary-orange md:block" aria-hidden />
+        <motion.div variants={ruleDraw} className="hidden h-[2px] rounded-full bg-primary-orange md:block" aria-hidden />
         <p className="font-nunito text-[13px] leading-[20px] font-normal text-proj-white/85 md:text-[15px] md:leading-[25px]">
           {achievement.desc}
         </p>
@@ -86,9 +99,16 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
 /** Small dot-marker bullet used inside roadmap note boxes. */
 function BulletLine({ text }: { text: string }) {
   return (
-    <li className="font-nunito ml-[19.5px] list-disc text-[13px] leading-[20px] font-normal text-proj-white/70">{text}</li>
+    <motion.li
+      variants={achievementPart}
+      className="font-nunito ml-[19.5px] list-disc text-[13px] leading-[20px] font-normal text-proj-white/70"
+    >
+      {text}
+    </motion.li>
   );
 }
+
+const bulletList = { hidden: {}, show: { transition: { staggerChildren: 0.1, delayChildren: 0.1 } } };
 
 function NoteBox({ title, bullets }: { title: string; bullets: string[] }) {
   return (
@@ -97,11 +117,17 @@ function NoteBox({ title, bullets }: { title: string; bullets: string[] }) {
         <span className="size-[9px] shrink-0 rounded-full bg-primary-orange" aria-hidden />
         <p className="font-nunito text-[15px] font-bold text-proj-white">{title}</p>
       </div>
-      <ul className="flex flex-col">
+      <motion.ul
+        className="flex flex-col"
+        variants={bulletList}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, amount: 0.5 }}
+      >
         {bullets.map((b) => (
           <BulletLine key={b} text={b} />
         ))}
-      </ul>
+      </motion.ul>
     </div>
   );
 }

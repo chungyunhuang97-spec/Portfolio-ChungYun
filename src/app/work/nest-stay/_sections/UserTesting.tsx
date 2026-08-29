@@ -84,18 +84,30 @@ function AverageScore({ average }: { average: string }) {
   const [display, setDisplay] = useState(0);
   const target = parseFloat(average) || 0;
 
+  const [settled, setSettled] = useState(false);
+
   useEffect(() => {
     if (!inView) return;
-    const controls = animate(0, target, { duration: 1.4, ease: EASE_SPEC, onUpdate: setDisplay });
+    const controls = animate(0, target, {
+      duration: 1.4,
+      ease: EASE_SPEC,
+      onUpdate: setDisplay,
+      onComplete: () => setSettled(true),
+    });
     return () => controls.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inView]);
 
   return (
-    <div ref={ref} className="flex items-end justify-center gap-1">
+    <motion.div
+      ref={ref}
+      animate={settled ? { scale: [1, 1.05, 1] } : {}}
+      transition={{ duration: 0.25 }}
+      className="flex items-end justify-center gap-1"
+    >
       <span className="font-fredoka text-[72px] leading-[80px] md:text-[96px] md:leading-[104px]">{display.toFixed(1)}</span>
       <span className="font-nunito pb-2 text-[18px] font-semibold opacity-70">/ 10</span>
-    </div>
+    </motion.div>
   );
 }
 
@@ -107,6 +119,16 @@ const insightItem = {
 
 const focusContainer = { hidden: {}, show: { transition: { staggerChildren: 0.12 } } };
 const focusItem = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { duration: 0.35 } } };
+/** The illustration gets a springier pop-in than the plain cards, since it's the "personality" element in this row. */
+const focusIllustration = {
+  hidden: { opacity: 0, scale: 0.7, rotate: -8 },
+  show: { opacity: 1, scale: 1, rotate: 0, transition: { type: "spring", stiffness: 140, damping: 14 } },
+} as const;
+/** Numbered badge chips pop with a small spring, inheriting the "show" label from the parent focusItem card. */
+const badgePop = {
+  hidden: { scale: 0 },
+  show: { scale: 1, transition: { type: "spring", stiffness: 320, damping: 16, delay: 0.1 } },
+} as const;
 
 /** Insight card accent per Figma — 2 orange-bordered cards (one neutral bg, one tinted) + 1 blue. */
 const INSIGHT_STYLES = [
@@ -168,7 +190,7 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
             viewport={{ once: true, amount: 0.3 }}
           >
             {focusMedia && (
-              <motion.span variants={focusItem} className="relative size-[128px] shrink-0 overflow-hidden">
+              <motion.span variants={focusIllustration} className="relative size-[128px] shrink-0 overflow-hidden">
                 <Image src={focusMedia} alt="" fill sizes="128px" className="object-cover" />
               </motion.span>
             )}
@@ -178,9 +200,12 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
                 {focusPoints.map((f, i) => (
                   <motion.div key={f.title} variants={focusItem} className="flex-1 rounded-2xl bg-proj-white p-5">
                     <div className="flex items-center gap-2.5">
-                      <span className="font-nunito flex size-7 shrink-0 items-center justify-center rounded-2xl bg-primary-orange text-[12px] font-bold text-proj-white">
+                      <motion.span
+                        variants={badgePop}
+                        className="font-nunito flex size-7 shrink-0 items-center justify-center rounded-2xl bg-primary-orange text-[12px] font-bold text-proj-white"
+                      >
                         {String(i + 1).padStart(2, "0")}
-                      </span>
+                      </motion.span>
                       <p className="font-nunito text-[14px] font-bold text-primary-black">{f.title}</p>
                     </div>
                     <p className="font-nunito mt-2 text-[13px] leading-[21px] font-normal text-[#737373]">{f.desc}</p>
@@ -217,9 +242,21 @@ export function UserTesting({ process }: { process: Record<string, unknown> }) {
 
         <div className="flex flex-col gap-5">
           <div className="flex items-center gap-2">
-            <svg width="20" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="text-secondary-blue">
+            <motion.svg
+              width="20"
+              height="19"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              className="text-secondary-blue"
+              initial={{ opacity: 0, scale: 0.4, rotate: -45 }}
+              whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
+              viewport={{ once: true, amount: 0.8 }}
+              transition={{ type: "spring", stiffness: 260, damping: 16 }}
+            >
               <path d="M12 2l2.5 6.5L21 11l-6.5 2.5L12 20l-2.5-6.5L3 11l6.5-2.5L12 2z" strokeLinejoin="round" />
-            </svg>
+            </motion.svg>
             <p className="font-nunito text-[16px] font-bold text-secondary-blue">Insight Summary</p>
           </div>
           {insights.length > 0 && (
