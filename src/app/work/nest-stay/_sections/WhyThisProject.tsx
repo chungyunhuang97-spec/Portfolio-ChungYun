@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useInView } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
+import { TextRoll } from "@/components/design-system/TextRoll";
 
 interface WhyStep {
   title: string;
@@ -78,6 +79,12 @@ export function WhyThisProject({ process }: { process: Record<string, unknown> }
   // list can be taller than the viewport, so an `amount` threshold could
   // never be satisfied and the sequential-focus animation would never start.
   const inView = useInView(listRef, { once: true, margin: "0px 0px -15% 0px" });
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  // TextRoll has no idle/whileInView state of its own (a letter mid-flip
+  // has nothing stable to revert to), so it only mounts once the title is
+  // actually in view — before that an invisible twin reserves the same
+  // layout space to avoid a layout jump when it swaps in.
+  const titleInView = useInView(titleRef, { once: true, margin: "0px 0px -10% 0px" });
   const [activeIndex, setActiveIndex] = useState(0);
   const [settled, setSettled] = useState(false);
 
@@ -101,8 +108,17 @@ export function WhyThisProject({ process }: { process: Record<string, unknown> }
             <span className="font-nunito text-[13px] font-extrabold tracking-[1px] text-white uppercase md:tracking-[1.04px]">
               Why This Project
             </span>
-            <h3 className="font-nunito text-[24px] leading-[34px] font-bold text-primary-orange md:text-[44px] md:leading-[56px]">
-              為什麼做這個專案？
+            <h3
+              ref={titleRef}
+              className="font-nunito text-[24px] leading-[34px] font-bold text-primary-orange md:text-[44px] md:leading-[56px]"
+            >
+              {titleInView ? (
+                <TextRoll duration={0.45} getEnterDelay={(i) => i * 0.04} getExitDelay={(i) => i * 0.04 + 0.18}>
+                  為什麼做這個專案？
+                </TextRoll>
+              ) : (
+                <span className="invisible">為什麼做這個專案？</span>
+              )}
             </h3>
             <div className="w-full border-t border-dashed border-white/15 md:hidden" />
           </div>

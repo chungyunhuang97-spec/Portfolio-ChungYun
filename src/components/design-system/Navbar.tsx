@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { List, X } from "@phosphor-icons/react/dist/ssr";
+import { StaggeredMenu } from "./StaggeredMenu";
 
 /**
  * Fixed top navigation for project (case-study) pages — reused across
@@ -49,6 +50,18 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // The StaggeredMenu panel is a full-viewport takeover — lock body scroll
+  // while it's open so the underlying page can't scroll behind it (which
+  // would also trip the scroll listener above and auto-close the menu).
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
   return (
     <header className="fixed inset-x-0 top-0 z-50">
       {/* Mobile: wordmark (top-of-page only) + hamburger (hides on scroll down) */}
@@ -84,20 +97,16 @@ export function Navbar() {
           )}
         </AnimatePresence>
       </div>
-      {open && (
-        <div className="mx-6 flex flex-col overflow-hidden rounded-2xl border border-grey-100 bg-proj-white shadow-[0_12px_32px_rgba(0,0,0,0.08)] md:hidden">
-          {LINKS.map((link) => (
-            <Link
-              key={link.label}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className="font-nunito border-b border-grey-100 px-6 py-4 text-[15px] font-bold text-grey-800 last:border-b-0"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      )}
+      {/* Mobile menu panel — same trigger/data as before (hamburger button
+          above, LINKS array), just rendered via the staggered color-wipe
+          panel instead of the old small dropdown. Desktop never sets `open`
+          true (its pill nav below is independent), so this stays inert
+          off-screen at md+ widths. */}
+      <StaggeredMenu
+        open={open}
+        onRequestClose={() => setOpen(false)}
+        items={LINKS.map((link) => ({ label: link.label, ariaLabel: link.label, link: link.href }))}
+      />
 
       {/* Desktop: centered pill (unchanged, always visible) */}
       <div className="hidden justify-center pt-16 md:flex">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Outfit, Nunito } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { ClickEffects } from "@/components/design-system/ClickEffects";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -70,6 +71,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-bg text-ink">
         {children}
+        <ClickEffects />
         <Analytics />
       </body>
     </html>
