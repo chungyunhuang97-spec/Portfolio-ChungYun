@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 
 export interface StaggeredMenuItem {
@@ -52,6 +52,15 @@ export function StaggeredMenu({
   const openTlRef = useRef<gsap.core.Timeline | null>(null);
   const closeTweenRef = useRef<gsap.core.Tween | null>(null);
   const busyRef = useRef(false);
+  // Items are only actually tappable once the entrance timeline (~1s of
+  // items sliding/rotating up into place) has finished. Without this, a
+  // second impatient tap while the panel is still animating in can land on
+  // whatever item happens to be passing under that point mid-animation —
+  // it navigates fine (the <a> is already at its final DOM position, only
+  // its visual transform is mid-flight), but reads as "the menu never
+  // showed, it just jumped straight to the link" since the user never
+  // perceived the panel as settled first.
+  const [settled, setSettled] = useState(false);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -91,7 +100,7 @@ export function StaggeredMenu({
     if (itemEls.length) gsap.set(itemEls, { yPercent: 140, rotate: 10 });
     if (numberEls.length) gsap.set(numberEls, { "--sm-num-opacity": 0 } as gsap.TweenVars);
 
-    const tl = gsap.timeline({ paused: true });
+    const tl = gsap.timeline({ paused: true, onStart: () => setSettled(false) });
 
     layers.forEach((el, i) => {
       tl.fromTo(el, { xPercent: offscreen }, { xPercent: 0, duration: 0.5, ease: "power4.out" }, i * 0.07);
@@ -135,6 +144,7 @@ export function StaggeredMenu({
     if (tl) {
       tl.eventCallback("onComplete", () => {
         busyRef.current = false;
+        setSettled(true);
       });
       tl.play(0);
     } else {
@@ -157,6 +167,7 @@ export function StaggeredMenu({
       duration: 0.32,
       ease: "power3.in",
       overwrite: "auto",
+      onStart: () => setSettled(false),
       onComplete: () => {
         const itemEls = Array.from(panel.querySelectorAll(".sm-panel-itemLabel")) as HTMLElement[];
         if (itemEls.length) gsap.set(itemEls, { yPercent: 140, rotate: 10 });
@@ -213,7 +224,11 @@ export function StaggeredMenu({
         ref={panelRef}
         className="staggered-menu-panel bg-proj-white pointer-events-auto absolute top-0 right-0 z-10 flex h-full w-full flex-col overflow-y-auto p-8 pt-28 sm:w-[clamp(260px,38vw,420px)]"
       >
-        <ul className="sm-panel-list m-0 flex list-none flex-col gap-2 p-0" role="list" data-numbering={displayItemNumbering || undefined}>
+        <ul
+          className={`sm-panel-list m-0 flex list-none flex-col gap-2 p-0 ${settled ? "pointer-events-auto" : "pointer-events-none"}`}
+          role="list"
+          data-numbering={displayItemNumbering || undefined}
+        >
           {items.map((it, idx) => (
             <li key={it.label + idx} className="sm-panel-itemWrap relative overflow-hidden leading-none">
               <a
