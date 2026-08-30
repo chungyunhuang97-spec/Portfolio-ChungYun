@@ -24,7 +24,18 @@ const LINKS = [
   { label: "Contact", href: "mailto:chungyunhuang97@gmail.com" },
 ];
 
-export function Navbar() {
+export function Navbar({
+  wordmarkTone = "dark",
+}: {
+  /**
+   * The mobile-only wordmark ("Chung Yun") only ever shows at the very
+   * top of the page, directly over that page's hero. Case-study heroes
+   * are white (bg-proj-white), so "dark" (grey) reads correctly there;
+   * the homepage hero is bg-primary-orange, so it needs "light" (cream)
+   * for contrast instead.
+   */
+  wordmarkTone?: "dark" | "light";
+}) {
   const [open, setOpen] = useState(false);
   const [atTop, setAtTop] = useState(true);
   const [iconVisible, setIconVisible] = useState(true);
@@ -73,7 +84,9 @@ export function Navbar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="font-fredoka text-[20px] text-grey-700"
+              className={`font-fredoka text-[20px] ${
+                wordmarkTone === "light" ? "text-cream" : "text-grey-700"
+              }`}
             >
               Chung Yun
             </motion.span>
