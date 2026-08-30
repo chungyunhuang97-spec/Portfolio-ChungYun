@@ -20,6 +20,11 @@
   --color-primary-black: #000000;
   --color-secondary-blue: #0d21ff;
   --color-accent-pink: #ff5bc0;
+  /* Cream/ivory used for Joe's name wherever it appears as the masthead
+     treatment (homepage hero, and anywhere else the wordmark shows up at
+     display size) -- sampled from the hero poster reference. Kept as its
+     own token rather than a grey, since it's warmer than any grey step. */
+  --color-cream: #f5efdc;
   --color-grey-900: #1a1a1a;
   --color-grey-800: #333333;
   --color-grey-700: #4d4d4d;
@@ -81,6 +86,7 @@
   --color-primary-black: var(--color-primary-black);
   --color-secondary-blue: var(--color-secondary-blue);
   --color-accent-pink: var(--color-accent-pink);
+  --color-cream: var(--color-cream);
   --color-grey-900: var(--color-grey-900);
   --color-grey-800: var(--color-grey-800);
   --color-grey-700: var(--color-grey-700);

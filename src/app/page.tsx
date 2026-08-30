@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { getAllSiteContent, getPublishedProjects } from "@/lib/data";
 import { FadeIn } from "@/components/FadeIn";
-import { ScrollHero } from "@/components/ScrollHero";
+import { Hero } from "@/components/Hero";
 
 export const revalidate = 60;
 
@@ -20,8 +20,8 @@ export default async function Home() {
 
   return (
     <main className="flex-1">
-      {/* Hero — scroll-scrubbed video journey through the room. */}
-      <ScrollHero tagline={heroTagline} />
+      {/* Hero — scribble-collage poster with scroll parallax + idle doodle motion. */}
+      <Hero tagline={heroTagline} />
 
       {/* About + positioning */}
       <section className="border-t border-line">
