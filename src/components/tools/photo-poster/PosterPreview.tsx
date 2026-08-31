@@ -163,6 +163,7 @@ export function PosterPreview({
     >
       {/* Top zone: poetic caption with inline cropped-photo thumbnails */}
       <div
+        data-role="top-zone"
         className="flex flex-shrink-0 flex-wrap content-start items-center gap-x-1 gap-y-2 px-[6%] py-[7%]"
         style={{
           color: textColor,

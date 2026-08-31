@@ -1,4 +1,5 @@
-import type { BracketOption, CanvasPreset, FontOption, ShapeOption } from "./types";
+import { clipPathFor } from "./shapes";
+import type { BracketOption, CanvasPreset, FontOption, ShapeId, ShapeOption } from "./types";
 
 export const CANVAS_PRESETS: CanvasPreset[] = [
   { id: "ig-post", label: "IG 貼文", sublabel: "1080 × 1350 · 4:5", width: 1080, height: 1350 },
@@ -17,41 +18,27 @@ export const FONT_OPTIONS: FontOption[] = [
 // Every cutout "window" -- both the mask on the photo and its matching
 // inline thumbnail -- is clipped with the same clip-path, so reshaping it
 // never breaks the crop-matching math (clip-path only affects the visible
-// silhouette, not the underlying background-position crop).
-export const SHAPE_OPTIONS: ShapeOption[] = [
-  { id: "square", label: "方形", clipPath: "none" },
-  { id: "rounded", label: "圓角方形", clipPath: "inset(0% round 22%)" },
-  { id: "circle", label: "圓形", clipPath: "circle(50% at 50% 50%)" },
-  { id: "diamond", label: "菱形", clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" },
-  { id: "triangle", label: "三角形", clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" },
-  {
-    id: "pentagon",
-    label: "五邊形",
-    clipPath: "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)",
-  },
-  {
-    id: "hexagon",
-    label: "六邊形",
-    clipPath: "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)",
-  },
-  {
-    id: "star",
-    label: "星形",
-    clipPath:
-      "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)",
-  },
-  {
-    id: "cross",
-    label: "十字形",
-    clipPath:
-      "polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%)",
-  },
-  {
-    id: "parallelogram",
-    label: "平行四邊形",
-    clipPath: "polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%)",
-  },
-];
+// silhouette, not the underlying background-position crop). clipPathFor
+// shares its point data with the canvas Path2D used at export time
+// (shapes.ts), so the preview and the exported PNG always agree.
+const SHAPE_LABELS: Record<ShapeId, string> = {
+  square: "方形",
+  rounded: "圓角方形",
+  circle: "圓形",
+  diamond: "菱形",
+  triangle: "三角形",
+  pentagon: "五邊形",
+  hexagon: "六邊形",
+  star: "星形",
+  cross: "十字形",
+  parallelogram: "平行四邊形",
+};
+
+export const SHAPE_OPTIONS: ShapeOption[] = (Object.keys(SHAPE_LABELS) as ShapeId[]).map((id) => ({
+  id,
+  label: SHAPE_LABELS[id],
+  clipPath: clipPathFor(id),
+}));
 
 export const BRACKET_OPTIONS: BracketOption[] = [
   { id: "round-small", label: "（小圖）全形括號", open: "（", close: "）" },

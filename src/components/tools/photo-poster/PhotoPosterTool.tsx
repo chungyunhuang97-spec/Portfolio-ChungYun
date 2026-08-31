@@ -6,6 +6,7 @@ import { CaretLeft } from "@phosphor-icons/react/dist/ssr";
 import { BRACKET_OPTIONS, FONT_OPTIONS, generatePoeticCaption, SHAPE_OPTIONS } from "./constants";
 import { CanvasSizeStep } from "./CanvasSizeStep";
 import { ControlPanel } from "./ControlPanel";
+import { renderPosterToCanvas } from "./exportPoster";
 import { PosterPreview } from "./PosterPreview";
 import type { BracketStyleId, CanvasPreset, Cutout, FontOptionId, ShapeId } from "./types";
 import { randomizeCutouts, resizeCutouts, wordCountOf } from "./useCutoutLayout";
@@ -48,21 +49,45 @@ export function PhotoPosterTool() {
   }, [caption]);
 
   const handleExport = useCallback(async () => {
-    if (!canvasRef.current || !preset) return;
+    if (!canvasRef.current || !preset || !imageUrl) return;
     setExporting(true);
     try {
-      const { toPng } = await import("html-to-image");
-      const renderedWidth = canvasRef.current.getBoundingClientRect().width;
-      const pixelRatio = renderedWidth ? preset.width / renderedWidth : 1;
-      const dataUrl = await toPng(canvasRef.current, { pixelRatio, cacheBust: true });
+      const previewWidthPx = canvasRef.current.getBoundingClientRect().width;
+      const topZoneEl = canvasRef.current.querySelector<HTMLElement>('[data-role="top-zone"]');
+      const fontOption = FONT_OPTIONS.find((f) => f.id === fontOptionId)!;
+      await document.fonts.ready;
+      const fontFamily = topZoneEl ? getComputedStyle(topZoneEl).fontFamily : fontOption.fallback;
+      const bracket = BRACKET_OPTIONS.find((b) => b.id === bracketId)!;
+      const shape = SHAPE_OPTIONS.find((s) => s.id === shapeId)!;
+
+      const posterCanvas = await renderPosterToCanvas({
+        width: preset.width,
+        height: preset.height,
+        imageUrl,
+        caption,
+        cutouts,
+        shape,
+        bracket,
+        topBgColor,
+        textColor,
+        baseFontSizePx,
+        squareSizePx: baseFontSizePx * scaleMultiplier,
+        fontFamily,
+        previewWidthPx,
+      });
+
+      const blob = await new Promise<Blob | null>((resolve) => posterCanvas.toBlob(resolve, "image/png"));
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.download = "photo-poster.png";
-      link.href = dataUrl;
+      link.href = url;
       link.click();
+      URL.revokeObjectURL(url);
     } finally {
       setExporting(false);
     }
-  }, [preset]);
+  }, [preset, imageUrl, caption, cutouts, shapeId, bracketId, fontOptionId, topBgColor, textColor, baseFontSizePx, scaleMultiplier]);
 
   if (!preset) {
     return <CanvasSizeStep onSelect={setPreset} />;
