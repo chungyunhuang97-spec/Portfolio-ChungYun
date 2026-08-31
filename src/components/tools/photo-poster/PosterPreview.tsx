@@ -23,18 +23,21 @@ function clamp01(v: number): number {
  * image, at the exact same scale. Unlike plain CSS `background-position:
  * center`, pan.x/pan.y (0-1, default 0.5) let the *centered* position be
  * shifted anywhere within the "slack" the cover-crop leaves on each axis --
- * 0 = left/top-aligned, 1 = right/bottom-aligned. */
+ * 0 = left/top-aligned, 1 = right/bottom-aligned. zoom (>=1, default 1)
+ * scales the image up beyond the minimum cover-fit size, creating more
+ * slack to pan within for a tighter crop. */
 function computeCoverGeometry(
   boxW: number,
   boxH: number,
   naturalW: number,
   naturalH: number,
   pan: { x: number; y: number },
+  zoom: number,
 ): CoverGeometry {
   if (!boxW || !boxH || !naturalW || !naturalH) {
     return { boxW, boxH, renderedW: boxW, renderedH: boxH, offsetX: 0, offsetY: 0 };
   }
-  const scale = Math.max(boxW / naturalW, boxH / naturalH);
+  const scale = Math.max(boxW / naturalW, boxH / naturalH) * zoom;
   const renderedW = naturalW * scale;
   const renderedH = naturalH * scale;
   return {
@@ -67,6 +70,7 @@ export interface PosterPreviewProps {
   textColor: string;
   pan: { x: number; y: number };
   onPanChange: (next: { x: number; y: number }) => void;
+  zoom: number;
 }
 
 export function PosterPreview({
@@ -89,6 +93,7 @@ export function PosterPreview({
   textColor,
   pan,
   onPanChange,
+  zoom,
 }: PosterPreviewProps) {
   const bottomZoneRef = useRef<HTMLDivElement>(null);
   const [boxSize, setBoxSize] = useState({ w: 0, h: 0 });
@@ -118,7 +123,7 @@ export function PosterPreview({
     return () => observer.disconnect();
   }, []);
 
-  const geometry = computeCoverGeometry(boxSize.w, boxSize.h, natural.w, natural.h, pan);
+  const geometry = computeCoverGeometry(boxSize.w, boxSize.h, natural.w, natural.h, pan, zoom);
   const squareXPct = boxSize.w ? (squareSizePx / boxSize.w) * 100 : 0;
   const squareYPct = boxSize.h ? (squareSizePx / boxSize.h) * 100 : 0;
 
@@ -282,7 +287,7 @@ export function PosterPreview({
                 top: `${cutout.yPct}%`,
                 width: squareSizePx,
                 height: squareSizePx,
-                backgroundColor: topBgColor,
+                backgroundColor: cutout.color ?? topBgColor,
                 clipPath: shape.clipPath,
                 cursor: locked ? "default" : "grab",
               }}

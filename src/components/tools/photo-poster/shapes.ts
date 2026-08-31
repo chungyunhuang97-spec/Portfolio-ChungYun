@@ -1,11 +1,134 @@
 import type { ShapeId } from "./types";
 
+type Point = [number, number];
+
+/** Rescales an arbitrary point cloud to fit centered inside a
+ * boxW x boxH box (with paddingPct on each side), preserving aspect
+ * ratio. Used to turn parametric curves (heart, flower, blob, ...),
+ * generated in whatever coordinate space is convenient for their math,
+ * into the shared 0-100 percentage space every other shape uses. */
+function normalizeToBox(pts: Point[], boxW: number, boxH: number, paddingPct = 4): Point[] {
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const pad = (paddingPct / 100) * boxW;
+  const availW = boxW - pad * 2;
+  const availH = boxH - pad * 2;
+  const spanX = maxX - minX || 1;
+  const spanY = maxY - minY || 1;
+  const scale = Math.min(availW / spanX, availH / spanY);
+  const renderedW = spanX * scale;
+  const renderedH = spanY * scale;
+  const offX = (boxW - renderedW) / 2;
+  const offY = (boxH - renderedH) / 2;
+  return pts.map(([x, y]) => [offX + (x - minX) * scale, offY + (y - minY) * scale]);
+}
+
+/** Classic parametric heart curve (Wolfram MathWorld), y flipped since
+ * the formula's "up" is negative-y in our (SVG-style, y-down) space. */
+function heartPoints(steps = 40): Point[] {
+  const pts: Point[] = [];
+  for (let i = 0; i < steps; i++) {
+    const t = (i / steps) * Math.PI * 2;
+    const x = 16 * Math.sin(t) ** 3;
+    const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+    pts.push([x, -y]);
+  }
+  return normalizeToBox(pts, 100, 100, 3);
+}
+
+/** Lobed polar curve r = 1 + amplitude*cos(petals*theta) -- always
+ * positive (amplitude < 1) so it stays a single simple closed loop, and
+ * reads as a scalloped flower/daisy silhouette. */
+function flowerPoints(steps = 60, petals = 6, amplitude = 0.35): Point[] {
+  const pts: Point[] = [];
+  for (let i = 0; i < steps; i++) {
+    const t = (i / steps) * Math.PI * 2;
+    const r = 1 + amplitude * Math.cos(petals * t);
+    pts.push([r * Math.cos(t), r * Math.sin(t)]);
+  }
+  return normalizeToBox(pts, 100, 100, 4);
+}
+
+/** Two sine harmonics at fixed (non-random, so it's stable across
+ * renders) phases -- an irregular organic "liquid blob" silhouette. */
+function blobPoints(steps = 48): Point[] {
+  const pts: Point[] = [];
+  for (let i = 0; i < steps; i++) {
+    const t = (i / steps) * Math.PI * 2;
+    const r = 1 + 0.18 * Math.sin(3 * t) + 0.12 * Math.sin(5 * t + 1);
+    pts.push([r * Math.cos(t), r * Math.sin(t)]);
+  }
+  return normalizeToBox(pts, 100, 100, 4);
+}
+
+/** 8-point alternating-radius star -- a 4-spike "sparkle/twinkle",
+ * distinct from the 5-point `star` shape below. */
+function sparklePoints(): Point[] {
+  const innerR = 0.24;
+  const pts: Point[] = [];
+  for (let i = 0; i < 8; i++) {
+    const angle = (i * 45 - 90) * (Math.PI / 180);
+    const r = i % 2 === 0 ? 1 : innerR;
+    pts.push([r * Math.cos(angle), r * Math.sin(angle)]);
+  }
+  return normalizeToBox(pts, 100, 100, 2);
+}
+
+/** Crescent moon: the outer arc of a big circle union'd with the inner
+ * (concave) arc of a smaller, offset circle -- derived from actual
+ * circle-circle intersection geometry (not eyeballed points) so the two
+ * arcs meet cleanly with no self-intersection. */
+function moonPoints(steps = 48): Point[] {
+  const R1 = 1;
+  const R2 = 0.82;
+  const d = 0.46;
+  const ix = (R1 * R1 - R2 * R2 + d * d) / (2 * d);
+  const iy = Math.sqrt(Math.max(0, R1 * R1 - ix * ix));
+  const a1 = Math.atan2(iy, ix); // intersection angle on circle 1
+  const a2 = Math.atan2(iy, ix - d); // intersection angle on circle 2 (relative to its own center)
+
+  const outerSteps = Math.round(steps * 0.6);
+  const innerSteps = steps - outerSteps;
+  const pts: Point[] = [];
+
+  // Outer boundary: circle 1's arc that stays outside circle 2 (the long
+  // way around, through pi).
+  for (let i = 0; i <= outerSteps; i++) {
+    const t = a1 + (i / outerSteps) * (2 * Math.PI - 2 * a1);
+    pts.push([R1 * Math.cos(t), R1 * Math.sin(t)]);
+  }
+  // Inner (concave) boundary: circle 2's arc that lies inside circle 1,
+  // swept back the other way to close the loop at the starting point.
+  for (let i = 0; i <= innerSteps; i++) {
+    const t = 2 * Math.PI - a2 - (i / innerSteps) * (2 * Math.PI - 2 * a2);
+    pts.push([d + R2 * Math.cos(t), R2 * Math.sin(t)]);
+  }
+  return normalizeToBox(pts, 100, 100, 4);
+}
+
 /** Percentage-space (0-100) polygon points for the shapes that are plain
  * polygons. square/rounded/circle are handled specially (rect/round-rect/
  * arc) since they aren't naturally a polygon. Single source of truth for
  * both the CSS clip-path used in the live preview and the canvas Path2D
  * used at export time, so the two can never visually drift apart. */
-export const SHAPE_POLYGONS: Partial<Record<ShapeId, [number, number][]>> = {
+export const SHAPE_POLYGONS: Partial<Record<ShapeId, Point[]>> = {
+  heart: heartPoints(),
+  flower: flowerPoints(),
+  blob: blobPoints(),
+  sparkle: sparklePoints(),
+  moon: moonPoints(),
+  lightning: [
+    [65, 0],
+    [25, 55],
+    [45, 55],
+    [35, 100],
+    [75, 45],
+    [55, 45],
+  ],
   diamond: [
     [50, 0],
     [100, 50],

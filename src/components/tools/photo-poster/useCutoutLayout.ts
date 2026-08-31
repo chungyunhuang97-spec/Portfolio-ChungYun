@@ -16,7 +16,19 @@ function randomCutout(wordCount: number): Cutout {
     xPct: 10 + Math.random() * 70,
     yPct: 10 + Math.random() * 70,
     wordIndex: wordCount > 0 ? Math.floor(Math.random() * wordCount) : 0,
+    color: null,
   };
+}
+
+/** Sets a specific cutout's color override (null reverts it to inheriting
+ * the global top-background color). Leaves position/wordIndex untouched. */
+export function setCutoutColor(cutouts: Cutout[], id: string, color: string | null): Cutout[] {
+  return cutouts.map((c) => (c.id === id ? { ...c, color } : c));
+}
+
+/** Clears every cutout's color override back to "inherit". */
+export function resetCutoutColors(cutouts: Cutout[]): Cutout[] {
+  return cutouts.map((c) => (c.color === null ? c : { ...c, color: null }));
 }
 
 /** Keeps existing cutouts (and their positions/word placement) when only
@@ -35,9 +47,14 @@ export function resizeCutouts(current: Cutout[], count: number, wordCount: numbe
 /** Re-rolls both the photo position *and* the caption word placement for
  * every cutout -- this is the single "randomize" action, since the user
  * types their own caption and just wants the cutouts scattered randomly
- * through it (rather than the tool evenly spacing them out). */
-export function randomizeCutouts(count: number, wordCount: number): Cutout[] {
-  return Array.from({ length: count }, () => randomCutout(wordCount));
+ * through it (rather than the tool evenly spacing them out). Any custom
+ * colors in `previous` are preserved by index, since "randomize" is about
+ * shuffling placement, not undoing color choices the user made. */
+export function randomizeCutouts(count: number, wordCount: number, previous: Cutout[] = []): Cutout[] {
+  return Array.from({ length: count }, (_, i) => ({
+    ...randomCutout(wordCount),
+    color: previous[i]?.color ?? null,
+  }));
 }
 
 export function clampPct(value: number, maxSizePct: number): number {

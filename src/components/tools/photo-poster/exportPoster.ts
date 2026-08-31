@@ -12,15 +12,17 @@ interface CoverGeometry {
 
 /** Mirrors PosterPreview.tsx's computeCoverGeometry -- pan.x/pan.y (0-1,
  * default 0.5) shift the cover-crop's centered position anywhere within
- * the slack it leaves on each axis. */
+ * the slack it leaves on each axis, and zoom (>=1) scales beyond the
+ * minimum cover-fit size for a tighter crop. */
 function coverGeometry(
   boxW: number,
   boxH: number,
   naturalW: number,
   naturalH: number,
   pan: { x: number; y: number },
+  zoom: number,
 ): CoverGeometry {
-  const scale = Math.max(boxW / naturalW, boxH / naturalH);
+  const scale = Math.max(boxW / naturalW, boxH / naturalH) * zoom;
   const renderedW = naturalW * scale;
   const renderedH = naturalH * scale;
   return {
@@ -97,6 +99,9 @@ export interface RenderPosterParams {
   /** 0-1 pan within the photo's cover-crop slack, matching the live
    * preview's draggable photo position (0.5 = centered). */
   pan: { x: number; y: number };
+  /** >=1 zoom beyond the minimum cover-fit scale, matching the live
+   * preview's zoom slider (1 = no extra zoom). */
+  zoom: number;
 }
 
 /** Renders the poster directly onto a <canvas>, entirely by hand --
@@ -125,6 +130,7 @@ export async function renderPosterToCanvas(params: RenderPosterParams): Promise<
     fontFamily,
     previewWidthPx,
     pan,
+    zoom,
   } = params;
 
   const scale = previewWidthPx ? width / previewWidthPx : 1;
@@ -196,7 +202,7 @@ export async function renderPosterToCanvas(params: RenderPosterParams): Promise<
   const bottomZoneY = topZoneHeight;
   const bottomZoneHeight = Math.max(0, height - topZoneHeight);
 
-  const bottomGeom = coverGeometry(width, bottomZoneHeight, img.naturalWidth, img.naturalHeight, pan);
+  const bottomGeom = coverGeometry(width, bottomZoneHeight, img.naturalWidth, img.naturalHeight, pan, zoom);
   const cutoutById = new Map(cutouts.map((c) => [c.id, c]));
 
   function cutoutImagePoint(cutout: Cutout) {
@@ -282,13 +288,13 @@ export async function renderPosterToCanvas(params: RenderPosterParams): Promise<
     );
     ctx.restore();
 
-    ctx.fillStyle = topBgColor;
     ctx.shadowColor = "rgba(0,0,0,0.25)";
     ctx.shadowBlur = 4 * scale;
     ctx.shadowOffsetY = 1 * scale;
     cutouts.forEach((cutout) => {
       const x = (cutout.xPct / 100) * width;
       const y = bottomZoneY + (cutout.yPct / 100) * bottomZoneHeight;
+      ctx.fillStyle = cutout.color ?? topBgColor;
       ctx.fill(canvasShapePath(shape.id, x, y, squarePx));
     });
     ctx.shadowColor = "transparent";

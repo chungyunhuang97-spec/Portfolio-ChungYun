@@ -41,8 +41,14 @@ const SHAPE_LABELS: Record<ShapeId, string> = {
   pentagon: "五邊形",
   hexagon: "六邊形",
   star: "星形",
+  sparkle: "閃亮星芒",
   cross: "十字形",
   parallelogram: "平行四邊形",
+  heart: "愛心",
+  flower: "花朵",
+  blob: "液態泡泡",
+  moon: "月牙",
+  lightning: "閃電",
 };
 
 export const SHAPE_OPTIONS: ShapeOption[] = (Object.keys(SHAPE_LABELS) as ShapeId[]).map((id) => ({

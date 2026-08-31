@@ -36,7 +36,13 @@ export type ShapeId =
   | "hexagon"
   | "star"
   | "cross"
-  | "parallelogram";
+  | "parallelogram"
+  | "heart"
+  | "flower"
+  | "blob"
+  | "sparkle"
+  | "moon"
+  | "lightning";
 
 export interface ShapeOption {
   id: ShapeId;
@@ -56,6 +62,9 @@ export interface Cutout {
   /** index into the caption's word list this cutout's thumbnail is
    * inserted after; clamped at render time if the caption gets shorter. */
   wordIndex: number;
+  /** Per-cutout fill color override; null means "inherit the global
+   * top-background color" (the original, still-default behavior). */
+  color: string | null;
 }
 
 /** One token in the flowed caption: either a plain word or a cutout marker
