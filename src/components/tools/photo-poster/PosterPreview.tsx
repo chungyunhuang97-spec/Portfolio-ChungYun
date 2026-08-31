@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { MAX_TOP_ZONE_FRACTION } from "./constants";
 import type { BracketOption, Cutout, FontOption, ShapeOption } from "./types";
 import { buildCaptionTokens, clampPct } from "./useCutoutLayout";
 
@@ -161,15 +162,22 @@ export function PosterPreview({
       className="flex w-full flex-col overflow-hidden shadow-sm"
       style={{ aspectRatio: `${width} / ${height}`, backgroundColor: topBgColor }}
     >
-      {/* Top zone: poetic caption with inline cropped-photo thumbnails */}
+      {/* Top zone: poetic caption with inline cropped-photo thumbnails.
+          Capped to at most MAX_TOP_ZONE_FRACTION of the canvas so a long
+          caption or many cutouts can never squeeze the photo zone below
+          it to zero height -- this exact ratio is mirrored in
+          exportPoster.ts so the two never disagree. On narrow (mobile)
+          screens the fixed-px font size takes up proportionally more of
+          the box, so this isn't just a theoretical edge case. */}
       <div
         data-role="top-zone"
-        className="flex flex-shrink-0 flex-wrap content-start items-center gap-x-1 gap-y-2 px-[6%] py-[7%]"
+        className="flex flex-shrink-0 flex-wrap content-start items-center gap-x-1 gap-y-2 overflow-hidden px-[6%] py-[7%]"
         style={{
           color: textColor,
           fontFamily: `${fontOption.cssVar}, ${fontOption.fallback}`,
           fontSize: baseFontSizePx,
           lineHeight: 1.5,
+          maxHeight: `${MAX_TOP_ZONE_FRACTION * 100}%`,
         }}
       >
         {tokens.map((token, i) =>

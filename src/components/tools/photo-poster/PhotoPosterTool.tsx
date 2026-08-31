@@ -100,7 +100,11 @@ export function PhotoPosterTool() {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 lg:flex-row lg:items-start">
-      <div className="w-full lg:w-80 lg:flex-shrink-0">
+      {/* order-2/order-1: on mobile the poster preview shows first so
+          people see their result immediately, instead of scrolling past
+          the whole (long) settings panel first; desktop keeps the
+          familiar controls-left/preview-right split. */}
+      <div className="order-2 w-full lg:order-1 lg:w-80 lg:flex-shrink-0">
         <ControlPanel
           preset={preset}
           onChangeSize={() => setPreset(null)}
@@ -133,7 +137,7 @@ export function PhotoPosterTool() {
         />
       </div>
 
-      <div className="mx-auto w-full max-w-md">
+      <div className="order-1 mx-auto w-full max-w-md lg:order-2">
         <PosterPreview
           canvasRef={canvasRef}
           width={preset.width}

@@ -1,3 +1,4 @@
+import { MAX_TOP_ZONE_FRACTION } from "./constants";
 import type { BracketOption, Cutout, ShapeOption } from "./types";
 import { buildCaptionTokens } from "./useCutoutLayout";
 import { canvasShapePath } from "./shapes";
@@ -138,7 +139,12 @@ export async function renderPosterToCanvas(params: RenderPosterParams): Promise<
 
   const rowHeights = lines.map((line) => (line.some((it) => it.kind === "cutout") ? Math.max(lineHeight, squarePx) : lineHeight));
   const totalTextHeight = rowHeights.reduce((a, b) => a + b, 0) + gapY * Math.max(0, lines.length - 1);
-  const topZoneHeight = Math.min(height, padY * 2 + totalTextHeight);
+  // Capped the same way as the live preview (MAX_TOP_ZONE_FRACTION) so a
+  // long caption or many cutouts can never squeeze the photo zone to
+  // zero height; any rows that don't fit are simply painted over by the
+  // photo drawn afterward (see the bottom-zone pass below), same as the
+  // DOM preview's overflow:hidden clip.
+  const topZoneHeight = Math.min(height * MAX_TOP_ZONE_FRACTION, padY * 2 + totalTextHeight);
   const bottomZoneY = topZoneHeight;
   const bottomZoneHeight = Math.max(0, height - topZoneHeight);
 
