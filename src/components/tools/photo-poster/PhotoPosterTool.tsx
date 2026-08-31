@@ -25,13 +25,24 @@ export function PhotoPosterTool() {
   const [shapeId, setShapeId] = useState<ShapeId>("square");
   const [scaleMultiplier, setScaleMultiplier] = useState(2);
   const [baseFontSizePx, setBaseFontSizePx] = useState(32);
+  const [lineHeightMultiplier, setLineHeightMultiplier] = useState(1.5);
+  const [letterSpacingPx, setLetterSpacingPx] = useState(0);
   const [fontOptionId, setFontOptionId] = useState<FontOptionId>("sans");
   const [bracketId, setBracketId] = useState<BracketStyleId>("round-small");
   const [topBgColor, setTopBgColor] = useState("#ebebeb");
   const [textColor, setTextColor] = useState("#111111");
+  const [pan, setPan] = useState({ x: 0.5, y: 0.5 });
   const [exporting, setExporting] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // A new photo has different dimensions, so any previous pan offset
+  // (picked for the old photo's "slack") no longer means anything --
+  // reset to centered.
+  const handleImageChange = useCallback((url: string) => {
+    setImageUrl(url);
+    setPan({ x: 0.5, y: 0.5 });
+  }, []);
 
   const handleCutoutCountChange = useCallback(
     (n: number) => {
@@ -71,9 +82,12 @@ export function PhotoPosterTool() {
         topBgColor,
         textColor,
         baseFontSizePx,
+        lineHeightMultiplier,
+        letterSpacingPx,
         squareSizePx: baseFontSizePx * scaleMultiplier,
         fontFamily,
         previewWidthPx,
+        pan,
       });
 
       const blob = await new Promise<Blob | null>((resolve) => posterCanvas.toBlob(resolve, "image/png"));
@@ -87,7 +101,22 @@ export function PhotoPosterTool() {
     } finally {
       setExporting(false);
     }
-  }, [preset, imageUrl, caption, cutouts, shapeId, bracketId, fontOptionId, topBgColor, textColor, baseFontSizePx, scaleMultiplier]);
+  }, [
+    preset,
+    imageUrl,
+    caption,
+    cutouts,
+    shapeId,
+    bracketId,
+    fontOptionId,
+    topBgColor,
+    textColor,
+    baseFontSizePx,
+    lineHeightMultiplier,
+    letterSpacingPx,
+    scaleMultiplier,
+    pan,
+  ]);
 
   if (!preset) {
     return <CanvasSizeStep onSelect={setPreset} />;
@@ -109,7 +138,7 @@ export function PhotoPosterTool() {
           preset={preset}
           onChangeSize={() => setPreset(null)}
           imageUrl={imageUrl}
-          onImageChange={setImageUrl}
+          onImageChange={handleImageChange}
           caption={caption}
           onCaptionChange={setCaption}
           onRegenerateCaption={() => setCaption(generatePoeticCaption())}
@@ -121,6 +150,10 @@ export function PhotoPosterTool() {
           onScaleChange={setScaleMultiplier}
           baseFontSizePx={baseFontSizePx}
           onFontSizeChange={setBaseFontSizePx}
+          lineHeightMultiplier={lineHeightMultiplier}
+          onLineHeightChange={setLineHeightMultiplier}
+          letterSpacingPx={letterSpacingPx}
+          onLetterSpacingChange={setLetterSpacingPx}
           locked={locked}
           onToggleLocked={() => setLocked((v) => !v)}
           onRandomize={handleRandomize}
@@ -149,14 +182,18 @@ export function PhotoPosterTool() {
           locked={locked}
           squareSizePx={squareSizePx}
           baseFontSizePx={baseFontSizePx}
+          lineHeightMultiplier={lineHeightMultiplier}
+          letterSpacingPx={letterSpacingPx}
           fontOption={fontOption}
           bracket={bracket}
           shape={shape}
           topBgColor={topBgColor}
           textColor={textColor}
+          pan={pan}
+          onPanChange={setPan}
         />
         <p className="mt-3 text-center text-xs text-ink-faint">
-          畫布解析度：{preset.width} × {preset.height} · 按住下半部方塊可自由拖曳
+          畫布解析度：{preset.width} × {preset.height} · 拖曳方塊調整挖空 · 拖曳照片本身調整顯示範圍
         </p>
       </div>
     </div>

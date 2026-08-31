@@ -32,6 +32,10 @@ export interface ControlPanelProps {
   onScaleChange: (n: number) => void;
   baseFontSizePx: number;
   onFontSizeChange: (n: number) => void;
+  lineHeightMultiplier: number;
+  onLineHeightChange: (n: number) => void;
+  letterSpacingPx: number;
+  onLetterSpacingChange: (n: number) => void;
   locked: boolean;
   onToggleLocked: () => void;
   onRandomize: () => void;
@@ -66,6 +70,10 @@ export function ControlPanel(props: ControlPanelProps) {
     onScaleChange,
     baseFontSizePx,
     onFontSizeChange,
+    lineHeightMultiplier,
+    onLineHeightChange,
+    letterSpacingPx,
+    onLetterSpacingChange,
     locked,
     onToggleLocked,
     onRandomize,
@@ -214,6 +222,33 @@ export function ControlPanel(props: ControlPanelProps) {
               max={64}
               value={baseFontSizePx}
               onChange={(e) => onFontSizeChange(Number(e.target.value))}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="flex justify-between text-xs text-ink-muted">
+              <span>行距</span>
+              <span>{lineHeightMultiplier.toFixed(1)}</span>
+            </span>
+            <input
+              type="range"
+              min={1}
+              max={2.2}
+              step={0.1}
+              value={lineHeightMultiplier}
+              onChange={(e) => onLineHeightChange(Number(e.target.value))}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="flex justify-between text-xs text-ink-muted">
+              <span>字距</span>
+              <span>{letterSpacingPx}px</span>
+            </span>
+            <input
+              type="range"
+              min={-2}
+              max={10}
+              value={letterSpacingPx}
+              onChange={(e) => onLetterSpacingChange(Number(e.target.value))}
             />
           </label>
           <div className="flex gap-2 pt-1">

@@ -10,11 +10,25 @@ interface CoverGeometry {
   offsetY: number;
 }
 
-function coverGeometry(boxW: number, boxH: number, naturalW: number, naturalH: number): CoverGeometry {
+/** Mirrors PosterPreview.tsx's computeCoverGeometry -- pan.x/pan.y (0-1,
+ * default 0.5) shift the cover-crop's centered position anywhere within
+ * the slack it leaves on each axis. */
+function coverGeometry(
+  boxW: number,
+  boxH: number,
+  naturalW: number,
+  naturalH: number,
+  pan: { x: number; y: number },
+): CoverGeometry {
   const scale = Math.max(boxW / naturalW, boxH / naturalH);
   const renderedW = naturalW * scale;
   const renderedH = naturalH * scale;
-  return { renderedW, renderedH, offsetX: (boxW - renderedW) / 2, offsetY: (boxH - renderedH) / 2 };
+  return {
+    renderedW,
+    renderedH,
+    offsetX: -(renderedW - boxW) * pan.x,
+    offsetY: -(renderedH - boxH) * pan.y,
+  };
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -24,6 +38,29 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error("Failed to load source image"));
     img.src = src;
   });
+}
+
+// Manual per-character measure/fill instead of the newer ctx.letterSpacing
+// API -- older Safari support for that property is shaky, and this
+// project has already been burned twice by Safari-specific canvas/DOM
+// gaps that only showed up on a real device.
+function measureWithSpacing(ctx: CanvasRenderingContext2D, text: string, spacing: number): number {
+  if (spacing === 0 || text.length === 0) return ctx.measureText(text).width;
+  let w = 0;
+  for (const ch of text) w += ctx.measureText(ch).width + spacing;
+  return w - spacing;
+}
+
+function fillWithSpacing(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, spacing: number) {
+  if (spacing === 0) {
+    ctx.fillText(text, x, y);
+    return;
+  }
+  let cx = x;
+  for (const ch of text) {
+    ctx.fillText(ch, cx, y);
+    cx += ctx.measureText(ch).width + spacing;
+  }
 }
 
 interface LineItem {
@@ -45,6 +82,8 @@ export interface RenderPosterParams {
   topBgColor: string;
   textColor: string;
   baseFontSizePx: number;
+  lineHeightMultiplier: number;
+  letterSpacingPx: number;
   squareSizePx: number;
   /** Resolved CSS font-family string (read from the live preview's
    * computed style) so the exported text uses the exact font the user
@@ -55,6 +94,9 @@ export interface RenderPosterParams {
    * up uniformly from there to the export resolution, the same idea as
    * html-to-image's pixelRatio, but computed by hand. */
   previewWidthPx: number;
+  /** 0-1 pan within the photo's cover-crop slack, matching the live
+   * preview's draggable photo position (0.5 = centered). */
+  pan: { x: number; y: number };
 }
 
 /** Renders the poster directly onto a <canvas>, entirely by hand --
@@ -77,19 +119,23 @@ export async function renderPosterToCanvas(params: RenderPosterParams): Promise<
     topBgColor,
     textColor,
     baseFontSizePx,
+    lineHeightMultiplier,
+    letterSpacingPx,
     squareSizePx,
     fontFamily,
     previewWidthPx,
+    pan,
   } = params;
 
   const scale = previewWidthPx ? width / previewWidthPx : 1;
   const fontPx = Math.max(1, baseFontSizePx * scale);
   const squarePx = Math.max(1, squareSizePx * scale);
+  const letterSpacing = letterSpacingPx * scale;
   const gapX = 4 * scale; // matches Tailwind gap-x-1 (0.25rem)
   const gapY = 8 * scale; // matches Tailwind gap-y-2 (0.5rem)
   const padX = width * 0.06; // matches px-[6%]
   const padY = width * 0.07; // matches py-[7%] -- CSS % padding resolves against width, not height
-  const lineHeight = fontPx * 1.5;
+  const lineHeight = fontPx * lineHeightMultiplier;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -124,7 +170,7 @@ export async function renderPosterToCanvas(params: RenderPosterParams): Promise<
 
   for (const token of tokens) {
     if (token.kind === "word") {
-      const w = ctx.measureText(token.text).width;
+      const w = measureWithSpacing(ctx, token.text, letterSpacing);
       if (cursorX > 0 && cursorX + w > availableWidth) commitLine();
       currentLine.push({ kind: "word", text: token.text, x: cursorX, width: w });
       cursorX += w + gapX;
@@ -148,7 +194,7 @@ export async function renderPosterToCanvas(params: RenderPosterParams): Promise<
   const bottomZoneY = topZoneHeight;
   const bottomZoneHeight = Math.max(0, height - topZoneHeight);
 
-  const bottomGeom = coverGeometry(width, bottomZoneHeight, img.naturalWidth, img.naturalHeight);
+  const bottomGeom = coverGeometry(width, bottomZoneHeight, img.naturalWidth, img.naturalHeight, pan);
   const cutoutById = new Map(cutouts.map((c) => [c.id, c]));
 
   function cutoutImagePoint(cutout: Cutout) {
@@ -160,20 +206,28 @@ export async function renderPosterToCanvas(params: RenderPosterParams): Promise<
     };
   }
 
-  // --- Paint pass: caption text + inline cropped thumbnails ---
+  // --- Paint pass: caption text + inline cropped thumbnails, both
+  // horizontally centered per line and vertically centered as a block
+  // within the top zone (matching the live preview's content-center +
+  // justify-center) ---
   ctx.font = `${fontPx}px ${fontFamily}`;
   ctx.fillStyle = textColor;
   ctx.textBaseline = "alphabetic";
 
-  let rowY = padY;
+  const contentBoxHeight = Math.max(0, topZoneHeight - padY * 2);
+  let rowY = padY + Math.max(0, (contentBoxHeight - totalTextHeight) / 2);
+
   lines.forEach((line, rowIndex) => {
     const rowHeight = rowHeights[rowIndex];
     const baselineY = rowY + rowHeight / 2 + fontPx * 0.35;
+    const lastItem = line[line.length - 1];
+    const lineWidth = lastItem.x + lastItem.width;
+    const lineStartX = padX + Math.max(0, (availableWidth - lineWidth) / 2);
 
     line.forEach((item) => {
-      const drawX = padX + item.x;
+      const drawX = lineStartX + item.x;
       if (item.kind === "word") {
-        ctx.fillText(item.text!, drawX, baselineY);
+        fillWithSpacing(ctx, item.text!, drawX, baselineY, letterSpacing);
         return;
       }
       const cutout = cutoutById.get(item.cutoutId!);
