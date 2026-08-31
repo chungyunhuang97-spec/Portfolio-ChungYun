@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { MAX_TOP_ZONE_FRACTION } from "./constants";
+import { TOP_ZONE_FRACTION } from "./constants";
 import type { BracketOption, Cutout, FontOption, ShapeOption } from "./types";
 import { buildCaptionTokens, clampPct } from "./useCutoutLayout";
 
@@ -213,12 +213,15 @@ export function PosterPreview({
       style={{ aspectRatio: `${width} / ${height}`, backgroundColor: topBgColor }}
     >
       {/* Top zone: poetic caption with inline cropped-photo thumbnails.
-          Capped to at most MAX_TOP_ZONE_FRACTION of the canvas so a long
-          caption or many cutouts can never squeeze the photo zone below
-          it to zero height -- this exact ratio is mirrored in
-          exportPoster.ts so the two never disagree. On narrow (mobile)
-          screens the fixed-px font size takes up proportionally more of
-          the box, so this isn't just a theoretical edge case. */}
+          Always exactly TOP_ZONE_FRACTION of the canvas -- a fixed
+          half-and-half split with the photo zone, regardless of caption
+          length -- a short caption is centered within its half rather
+          than shrinking the zone; overflow:hidden protects against an
+          exceptionally long one growing it (which would otherwise
+          squeeze the photo zone toward zero on a narrow phone screen,
+          where the fixed-px font size takes up proportionally more of
+          the box than on desktop). Mirrored in exportPoster.ts so the
+          two never disagree. */}
       <div
         data-role="top-zone"
         className="flex flex-shrink-0 flex-wrap content-center items-center justify-center gap-x-1 gap-y-2 overflow-hidden px-[6%] py-[7%]"
@@ -228,7 +231,7 @@ export function PosterPreview({
           fontSize: baseFontSizePx,
           lineHeight: lineHeightMultiplier,
           letterSpacing: `${letterSpacingPx}px`,
-          maxHeight: `${MAX_TOP_ZONE_FRACTION * 100}%`,
+          height: `${TOP_ZONE_FRACTION * 100}%`,
         }}
       >
         {tokens.map((token, i) =>

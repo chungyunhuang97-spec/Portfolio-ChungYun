@@ -1,14 +1,16 @@
 import { clipPathFor } from "./shapes";
 import type { BracketOption, CanvasPreset, FontOption, ShapeId, ShapeOption } from "./types";
 
-// The caption/thumbnail zone can never take more than this fraction of the
-// canvas height, however long the caption or however many cutouts there
-// are -- otherwise a fixed-px font size (proportionally larger on a narrow
-// phone screen than on desktop) can demand more height than the whole
-// aspect-ratio-boxed canvas has, squeezing the photo zone below it to
-// zero. Shared between the live preview (PosterPreview.tsx) and the
-// canvas exporter (exportPoster.ts) so they can't disagree.
-export const MAX_TOP_ZONE_FRACTION = 0.6;
+// The caption/thumbnail zone is always exactly this fraction of the canvas
+// height -- a fixed half-and-half split, regardless of how long the
+// caption is or how many cutouts there are. A short caption is centered
+// within its half rather than shrinking the zone to fit; an exceptionally
+// long one is clipped rather than growing it (protecting the photo zone,
+// which would otherwise be squeezable to zero by a fixed-px font size that
+// takes up proportionally more of a narrow phone screen than desktop).
+// Shared between the live preview (PosterPreview.tsx) and the canvas
+// exporter (exportPoster.ts) so they can't disagree.
+export const TOP_ZONE_FRACTION = 0.5;
 
 export const CANVAS_PRESETS: CanvasPreset[] = [
   { id: "ig-post", label: "IG 貼文", sublabel: "1080 × 1350 · 4:5", width: 1080, height: 1350 },
