@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Outfit, Nunito } from "next/font/google";
+import { Geist, Geist_Mono, Outfit, Nunito, Newsreader } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { ClickEffects } from "@/components/design-system/ClickEffects";
 import "./globals.css";
@@ -30,6 +30,16 @@ const nunito = Nunito({
   weight: ["400", "600", "700", "800"],
 });
 
+// Elegant serif option for the poetic-caption tool (/tools/photo-poster).
+// Namespaced as its own variable so it never affects the default body font
+// anywhere else on the site.
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
   title: "Chung Yun Huang — Product Designer",
   description:
@@ -44,7 +54,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${nunito.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${nunito.variable} ${newsreader.variable} h-full antialiased`}
     >
       <head>
         {/*
