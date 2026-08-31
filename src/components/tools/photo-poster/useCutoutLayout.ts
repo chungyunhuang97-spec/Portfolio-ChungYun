@@ -6,56 +6,65 @@ function makeId() {
   return `cutout-${idCounter}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-/** Keeps existing cutouts (and their positions) when only growing/shrinking
- * the count, so nudging the "count" slider doesn't reshuffle everything. */
-export function resizeCutouts(current: Cutout[], count: number): Cutout[] {
-  if (count === current.length) return current;
-  if (count < current.length) return current.slice(0, count);
-  const next = [...current];
-  while (next.length < count) {
-    next.push(randomCutout());
-  }
-  return next;
+export function wordCountOf(caption: string): number {
+  return caption.trim().split(/\s+/).filter(Boolean).length;
 }
 
-function randomCutout(): Cutout {
+function randomCutout(wordCount: number): Cutout {
   return {
     id: makeId(),
     xPct: 10 + Math.random() * 70,
     yPct: 10 + Math.random() * 70,
+    wordIndex: wordCount > 0 ? Math.floor(Math.random() * wordCount) : 0,
   };
 }
 
-export function randomizeCutouts(count: number): Cutout[] {
-  return Array.from({ length: count }, randomCutout);
+/** Keeps existing cutouts (and their positions/word placement) when only
+ * growing/shrinking the count, so nudging the "count" slider doesn't
+ * reshuffle everything. */
+export function resizeCutouts(current: Cutout[], count: number, wordCount: number): Cutout[] {
+  if (count === current.length) return current;
+  if (count < current.length) return current.slice(0, count);
+  const next = [...current];
+  while (next.length < count) {
+    next.push(randomCutout(wordCount));
+  }
+  return next;
+}
+
+/** Re-rolls both the photo position *and* the caption word placement for
+ * every cutout -- this is the single "randomize" action, since the user
+ * types their own caption and just wants the cutouts scattered randomly
+ * through it (rather than the tool evenly spacing them out). */
+export function randomizeCutouts(count: number, wordCount: number): Cutout[] {
+  return Array.from({ length: count }, () => randomCutout(wordCount));
 }
 
 export function clampPct(value: number, maxSizePct: number): number {
   return Math.min(Math.max(value, 0), Math.max(0, 100 - maxSizePct));
 }
 
-/** Distributes `cutoutIds` evenly across the words of `caption`, inserting
- * each marker right after a word so the flow reads like the reference tool
- * ("Warm (img) lanterns glow like (img) luminous jewels ..."). Slots are
- * spaced using (count + 1) divisions so markers don't cluster at the ends;
- * on very short captions multiple markers can land after the same word. */
-export function buildCaptionTokens(caption: string, cutoutIds: string[]): CaptionToken[] {
+/** Flows `cutouts` into `caption`'s word stream, each inserted right after
+ * the word at its (clamped) wordIndex -- so "Warm (img) lanterns glow
+ * like (img) ..." reads the same way the reference tool does. Multiple
+ * cutouts can land after the same word (their random wordIndex collided,
+ * or the caption got shorter since they were placed); they're then
+ * inserted in cutout-array order. */
+export function buildCaptionTokens(caption: string, cutouts: Cutout[]): CaptionToken[] {
   const words = caption.trim().split(/\s+/).filter(Boolean);
-  const count = cutoutIds.length;
 
   if (words.length === 0) {
-    return cutoutIds.map((id) => ({ kind: "cutout", cutoutId: id }));
+    return cutouts.map((c) => ({ kind: "cutout", cutoutId: c.id }));
   }
-  if (count === 0) {
+  if (cutouts.length === 0) {
     return words.map((text) => ({ kind: "word", text }));
   }
 
   const byIndex = new Map<number, string[]>();
-  cutoutIds.forEach((id, i) => {
-    const raw = Math.round(((i + 1) * words.length) / (count + 1)) - 1;
-    const index = Math.min(words.length - 1, Math.max(0, raw));
+  cutouts.forEach((c) => {
+    const index = Math.min(words.length - 1, Math.max(0, c.wordIndex));
     const bucket = byIndex.get(index) ?? [];
-    bucket.push(id);
+    bucket.push(c.id);
     byIndex.set(index, bucket);
   });
 

@@ -3,21 +3,25 @@
 import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { CaretLeft } from "@phosphor-icons/react/dist/ssr";
-import { BRACKET_OPTIONS, FONT_OPTIONS, generatePoeticCaption } from "./constants";
+import { BRACKET_OPTIONS, FONT_OPTIONS, generatePoeticCaption, SHAPE_OPTIONS } from "./constants";
 import { CanvasSizeStep } from "./CanvasSizeStep";
 import { ControlPanel } from "./ControlPanel";
 import { PosterPreview } from "./PosterPreview";
-import type { BracketStyleId, CanvasPreset, Cutout, FontOptionId } from "./types";
-import { randomizeCutouts, resizeCutouts } from "./useCutoutLayout";
+import type { BracketStyleId, CanvasPreset, Cutout, FontOptionId, ShapeId } from "./types";
+import { randomizeCutouts, resizeCutouts, wordCountOf } from "./useCutoutLayout";
 
 const DEFAULT_CUTOUT_COUNT = 6;
+const INITIAL_CAPTION = generatePoeticCaption();
 
 export function PhotoPosterTool() {
   const [preset, setPreset] = useState<CanvasPreset | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [caption, setCaption] = useState(generatePoeticCaption());
-  const [cutouts, setCutouts] = useState<Cutout[]>(() => randomizeCutouts(DEFAULT_CUTOUT_COUNT));
+  const [caption, setCaption] = useState(INITIAL_CAPTION);
+  const [cutouts, setCutouts] = useState<Cutout[]>(() =>
+    randomizeCutouts(DEFAULT_CUTOUT_COUNT, wordCountOf(INITIAL_CAPTION)),
+  );
   const [locked, setLocked] = useState(false);
+  const [shapeId, setShapeId] = useState<ShapeId>("square");
   const [scaleMultiplier, setScaleMultiplier] = useState(2);
   const [baseFontSizePx, setBaseFontSizePx] = useState(32);
   const [fontOptionId, setFontOptionId] = useState<FontOptionId>("sans");
@@ -28,13 +32,20 @@ export function PhotoPosterTool() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  const handleCutoutCountChange = useCallback((n: number) => {
-    setCutouts((prev) => resizeCutouts(prev, n));
-  }, []);
+  const handleCutoutCountChange = useCallback(
+    (n: number) => {
+      setCutouts((prev) => resizeCutouts(prev, n, wordCountOf(caption)));
+    },
+    [caption],
+  );
 
+  // Re-rolls both the photo position *and* which word in the caption each
+  // cutout's thumbnail lands after -- the user types their own caption, so
+  // this is the one "shuffle the cutouts" action rather than two separate
+  // randomizers.
   const handleRandomize = useCallback(() => {
-    setCutouts((prev) => randomizeCutouts(prev.length));
-  }, []);
+    setCutouts((prev) => randomizeCutouts(prev.length, wordCountOf(caption)));
+  }, [caption]);
 
   const handleExport = useCallback(async () => {
     if (!canvasRef.current || !preset) return;
@@ -59,6 +70,7 @@ export function PhotoPosterTool() {
 
   const fontOption = FONT_OPTIONS.find((f) => f.id === fontOptionId)!;
   const bracket = BRACKET_OPTIONS.find((b) => b.id === bracketId)!;
+  const shape = SHAPE_OPTIONS.find((s) => s.id === shapeId)!;
   const squareSizePx = baseFontSizePx * scaleMultiplier;
 
   return (
@@ -74,6 +86,8 @@ export function PhotoPosterTool() {
           onRegenerateCaption={() => setCaption(generatePoeticCaption())}
           cutoutCount={cutouts.length}
           onCutoutCountChange={handleCutoutCountChange}
+          shapeId={shapeId}
+          onShapeChange={setShapeId}
           scaleMultiplier={scaleMultiplier}
           onScaleChange={setScaleMultiplier}
           baseFontSizePx={baseFontSizePx}
@@ -108,6 +122,7 @@ export function PhotoPosterTool() {
           baseFontSizePx={baseFontSizePx}
           fontOption={fontOption}
           bracket={bracket}
+          shape={shape}
           topBgColor={topBgColor}
           textColor={textColor}
         />

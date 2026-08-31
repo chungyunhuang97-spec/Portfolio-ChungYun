@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { BRACKET_OPTIONS, FONT_OPTIONS } from "./constants";
-import type { BracketStyleId, CanvasPreset, FontOptionId } from "./types";
+import { BRACKET_OPTIONS, FONT_OPTIONS, SHAPE_OPTIONS } from "./constants";
+import type { BracketStyleId, CanvasPreset, FontOptionId, ShapeId } from "./types";
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -26,6 +26,8 @@ export interface ControlPanelProps {
 
   cutoutCount: number;
   onCutoutCountChange: (n: number) => void;
+  shapeId: ShapeId;
+  onShapeChange: (id: ShapeId) => void;
   scaleMultiplier: number;
   onScaleChange: (n: number) => void;
   baseFontSizePx: number;
@@ -58,6 +60,8 @@ export function ControlPanel(props: ControlPanelProps) {
     onRegenerateCaption,
     cutoutCount,
     onCutoutCountChange,
+    shapeId,
+    onShapeChange,
     scaleMultiplier,
     onScaleChange,
     baseFontSizePx,
@@ -172,6 +176,20 @@ export function ControlPanel(props: ControlPanelProps) {
             />
           </label>
           <label className="flex flex-col gap-1">
+            <span className="text-xs text-ink-muted">挖空形狀</span>
+            <select
+              value={shapeId}
+              onChange={(e) => onShapeChange(e.target.value as ShapeId)}
+              className="rounded-md border border-line bg-white px-2 py-1.5 text-ink"
+            >
+              {SHAPE_OPTIONS.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
             <span className="flex justify-between text-xs text-ink-muted">
               <span>小圖統一縮放倍數</span>
               <span>{scaleMultiplier.toFixed(1)}x</span>
@@ -213,7 +231,7 @@ export function ControlPanel(props: ControlPanelProps) {
               onClick={onRandomize}
               className="flex-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink-muted hover:bg-bg"
             >
-              隨機位置
+              隨機挖空
             </button>
           </div>
         </div>

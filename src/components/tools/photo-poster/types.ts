@@ -26,6 +26,26 @@ export interface BracketOption {
   close: string;
 }
 
+export type ShapeId =
+  | "square"
+  | "rounded"
+  | "circle"
+  | "diamond"
+  | "triangle"
+  | "pentagon"
+  | "hexagon"
+  | "star"
+  | "cross"
+  | "parallelogram";
+
+export interface ShapeOption {
+  id: ShapeId;
+  label: string;
+  /** CSS clip-path value applied to both the photo-side mask and the
+   * matching inline thumbnail, so the "hole" and its crop always agree. */
+  clipPath: string;
+}
+
 /** A single draggable "cutout window" — position is stored as a percentage
  * of the photo's rendered box so it stays correct across canvas sizes. */
 export interface Cutout {
@@ -33,6 +53,9 @@ export interface Cutout {
   /** top-left corner, 0-100, percentage of the photo box */
   xPct: number;
   yPct: number;
+  /** index into the caption's word list this cutout's thumbnail is
+   * inserted after; clamped at render time if the caption gets shorter. */
+  wordIndex: number;
 }
 
 /** One token in the flowed caption: either a plain word or a cutout marker

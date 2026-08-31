@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import type { BracketOption, Cutout, FontOption } from "./types";
+import type { BracketOption, Cutout, FontOption, ShapeOption } from "./types";
 import { buildCaptionTokens, clampPct } from "./useCutoutLayout";
 
 interface CoverGeometry {
@@ -46,6 +46,7 @@ export interface PosterPreviewProps {
   baseFontSizePx: number;
   fontOption: FontOption;
   bracket: BracketOption;
+  shape: ShapeOption;
   topBgColor: string;
   textColor: string;
 }
@@ -63,6 +64,7 @@ export function PosterPreview({
   baseFontSizePx,
   fontOption,
   bracket,
+  shape,
   topBgColor,
   textColor,
 }: PosterPreviewProps) {
@@ -97,7 +99,7 @@ export function PosterPreview({
   const squareXPct = boxSize.w ? (squareSizePx / boxSize.w) * 100 : 0;
   const squareYPct = boxSize.h ? (squareSizePx / boxSize.h) * 100 : 0;
 
-  const tokens = buildCaptionTokens(caption, cutouts.map((c) => c.id));
+  const tokens = buildCaptionTokens(caption, cutouts);
   const cutoutById = new Map(cutouts.map((c) => [c.id, c]));
 
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>, cutout: Cutout) {
@@ -149,6 +151,7 @@ export function PosterPreview({
       // leaving the previous (stale) background-position in place.
       backgroundPosition: `${-left}px ${-top}px`,
       backgroundRepeat: "no-repeat",
+      clipPath: shape.clipPath,
     };
   }
 
@@ -213,6 +216,7 @@ export function PosterPreview({
                 width: squareSizePx,
                 height: squareSizePx,
                 backgroundColor: topBgColor,
+                clipPath: shape.clipPath,
                 cursor: locked ? "default" : "grab",
               }}
             />
