@@ -5,7 +5,7 @@ import { Plus, Trash, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { AdminMediaDropzone } from "@/components/admin/AdminMediaDropzone";
 import { useTrackChanges } from "@/components/admin/ChangesContext";
 
-type FieldType = "text" | "string-list" | "title-desc-list" | "object-list" | "media" | "raw";
+type FieldType = "text" | "structured" | "media" | "raw";
 
 interface Field {
   key: string;
@@ -17,7 +17,11 @@ interface Field {
 // video) fields even though the underlying JSONB value is just a plain
 // string URL -- Postgres JSONB has no concept of a "media" type, so the
 // key name is the only stable signal we have across reloads.
-const MEDIA_KEY_PATTERN = /(_media_url|_image_url|_video_url)$/i;
+// Matches both the snake_case suffix used going forward (`_media_url`) and
+// the camelCase suffix (`MediaUrl`) that predates that convention -- Metro's
+// own already-shipped content still has fields like `bonusPromoMobileMediaUrl`
+// that would otherwise never be recognized as media.
+const MEDIA_KEY_PATTERN = /(_media_url|_image_url|_video_url|MediaUrl|ImageUrl|VideoUrl)$/i;
 const DESKTOP_MOBILE_PATTERN = /desktop|mobile/i;
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{3}([0-9a-f]{3}([0-9a-f]{2})?)?$/i;
 
@@ -25,16 +29,21 @@ function isSimpleValue(v: unknown): v is string | number | boolean {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean";
 }
 
-// An "object-list" row: every value on the object is either a primitive
-// (rendered as a plain input, or a color swatch when it looks like a hex
-// value) or a short list of strings (rendered as a couple of compact
-// inline inputs, e.g. `mediaLabels: ["Before", "After"]`). Anything more
-// nested than that still falls through to the raw JSON editor.
-function isObjectListItem(v: unknown): v is Record<string, unknown> {
-  if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
-  return Object.values(v).every(
-    (val) => isSimpleValue(val) || val == null || (Array.isArray(val) && val.every((x) => typeof x === "string"))
-  );
+/**
+ * Anything that isn't a bare string/number/boolean/media-URL is
+ * "structured": a plain object, or an array. Every structured shape is
+ * rendered recursively (object -> a labeled card of its own keys, array of
+ * objects -> a repeatable list of those cards, array of strings -> a
+ * compact inline list) -- there's no separate "raw" fallback for these
+ * anymore. `raw` now only covers genuinely exotic top-level values this
+ * recursive renderer can't sensibly label (arrays mixing types, arrays of
+ * arrays) -- rare in practice, and editable as JSON when it does happen.
+ */
+function isRecursivelyRenderable(v: unknown): boolean {
+  if (isSimpleValue(v) || v == null) return true;
+  if (Array.isArray(v)) return v.every(isRecursivelyRenderable);
+  if (typeof v === "object") return Object.values(v).every(isRecursivelyRenderable);
+  return false;
 }
 
 function detectType(value: unknown, key?: string): FieldType {
@@ -42,13 +51,8 @@ function detectType(value: unknown, key?: string): FieldType {
     return "media";
   }
   if (typeof value === "string") return "text";
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "string-list";
-    if (value.every((v) => typeof v === "string")) return "string-list";
-    if (value.every((v) => typeof v === "object" && v !== null && "title" in v && "desc" in v)) {
-      return "title-desc-list";
-    }
-    if (value.every(isObjectListItem)) return "object-list";
+  if ((Array.isArray(value) || (typeof value === "object" && value !== null)) && isRecursivelyRenderable(value)) {
+    return "structured";
   }
   return "raw";
 }
@@ -79,16 +83,6 @@ function humanizeKey(key: string) {
     .toUpperCase();
 }
 
-// Same idea as humanizeKey but for a bare object-list item key ("hex",
-// "painLabel", "mediaLabels") -- no media-suffix stripping needed here.
-function humanizeItemKey(key: string) {
-  return key
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/[_-]+/g, " ")
-    .trim()
-    .toUpperCase();
-}
-
 /**
  * Turns an array-field key into the stem used to find its per-row media
  * siblings, e.g. "showcaseRows" -> "showcase_row". Naive pluralization
@@ -101,8 +95,7 @@ function arrayFieldStem(key: string): string {
     .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
     .toLowerCase()
     .replace(/[-\s]+/g, "_");
-  const stripped = snake.endsWith("s") ? snake.slice(0, -1) : snake;
-  return stripped;
+  return snake.endsWith("s") ? snake.slice(0, -1) : snake;
 }
 
 interface AttachedMedia {
@@ -120,10 +113,11 @@ type GroupedField =
       mobile: { field: Field; index: number };
     }
   | {
-      kind: "object-list";
+      kind: "structured";
       field: Field;
       index: number;
-      // 0-based row index -> media fields belonging to that row.
+      // Only populated when field.value is a top-level array -- 0-based
+      // row index -> media fields belonging to that row.
       mediaByRow: Map<number, AttachedMedia[]>;
     };
 
@@ -131,29 +125,28 @@ type GroupedField =
  * Groups the flat field list two ways:
  * 1. `desktopMediaUrl` / `mobileMediaUrl` pairs render side by side instead
  *    of as two identical-looking, seemingly-unrelated dropzones.
- * 2. Any top-level media field whose key matches an object-list array
- *    field's naming stem + row number (e.g. `showcaseRows` pairs with
- *    `showcase_row1_before_media_url` / `showcase_row1_after_media_url` for
- *    row index 0) is pulled OUT of the flat field list entirely and
- *    rendered inline inside that row's own card instead -- otherwise
- *    Postgres's jsonb key ordering (not insertion order) can scatter a
- *    section's own media upload far away from the rest of that section's
- *    content, which is confusing to edit against (reported: media fields
- *    "都移到後面才上傳，這樣有點混亂").
+ * 2. Any top-level media field whose key matches an array field's naming
+ *    stem + row number (e.g. `showcaseRows` pairs with
+ *    `showcase_row1_before_media_url` for row index 0) is pulled OUT of
+ *    the flat field list entirely and rendered inline inside that row's
+ *    own card instead -- otherwise Postgres's jsonb key ordering (not
+ *    insertion order) can scatter a section's own media upload far away
+ *    from the rest of that section's content.
  */
 function groupFields(fields: Field[]): GroupedField[] {
   const used = new Set<number>();
   const result: GroupedField[] = [];
 
-  // Pass 1: object-list fields claim their per-row media siblings first,
-  // so pass 2's desktop/mobile pairing never sees already-claimed fields.
-  const objectListStems = fields
+  // Pass 1: array-of-object "structured" fields claim their per-row media
+  // siblings first, so pass 2's desktop/mobile pairing never sees
+  // already-claimed fields.
+  const arrayStructuredFields = fields
     .map((f, i) => ({ f, i }))
-    .filter(({ f }) => f.type === "object-list");
+    .filter(({ f }) => f.type === "structured" && Array.isArray(f.value));
 
   const mediaByRowByField = new Map<number, Map<number, AttachedMedia[]>>();
 
-  for (const { f: listField, i: listIndex } of objectListStems) {
+  for (const { f: listField, i: listIndex } of arrayStructuredFields) {
     const stem = arrayFieldStem(listField.key);
     const items = Array.isArray(listField.value) ? listField.value : [];
     const mediaByRow = new Map<number, AttachedMedia[]>();
@@ -165,7 +158,7 @@ function groupFields(fields: Field[]): GroupedField[] {
         const m = f.key.match(rowPattern);
         if (!m) return;
         used.add(i);
-        const label = humanizeItemKey(m[1].replace(MEDIA_KEY_PATTERN, ""));
+        const label = humanizeKey(m[1]);
         const list = mediaByRow.get(rowIdx) ?? [];
         list.push({ label, field: f, index: i });
         mediaByRow.set(rowIdx, list);
@@ -179,9 +172,9 @@ function groupFields(fields: Field[]): GroupedField[] {
     if (used.has(i)) continue;
     const field = fields[i];
 
-    if (field.type === "object-list") {
+    if (field.type === "structured") {
       used.add(i);
-      result.push({ kind: "object-list", field, index: i, mediaByRow: mediaByRowByField.get(i) ?? new Map() });
+      result.push({ kind: "structured", field, index: i, mediaByRow: mediaByRowByField.get(i) ?? new Map() });
       continue;
     }
 
@@ -220,20 +213,22 @@ function fieldLabelClass() {
   return "text-[11px] font-medium tracking-[0.1em] text-admin-text-faint";
 }
 
-/** One value inside an object-list row: a hex-looking string gets a real
- * color swatch (`<input type="color">`) synced with a text fallback (for
- * values the color input can't represent, e.g. 8-digit hex with alpha);
- * everything else is a plain, freely-editable text input -- never raw
- * JSON. */
-function ObjectListValueEditor({
-  itemKey,
-  value,
-  onChange,
-}: {
-  itemKey: string;
-  value: unknown;
-  onChange: (value: unknown) => void;
-}) {
+function expandShortHex(hex: string) {
+  const [, r, g, b] = hex;
+  return `#${r}${r}${g}${g}${b}${b}`;
+}
+
+/**
+ * Renders ANY JSON value with no raw-JSON fallback for object/array
+ * shapes: primitives become real inputs (a color swatch for hex-looking
+ * strings), string arrays become compact inline lists, arrays of anything
+ * else become a repeatable list of nested cards, and plain objects become
+ * a single nested card -- each recursing into this same function for its
+ * own values, so arbitrarily nested content (e.g. a row whose own
+ * `features` field is itself a list of {title, desc} objects) never drops
+ * into a JSON textarea.
+ */
+function AnyValueEditor({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) {
   if (typeof value === "string" && HEX_COLOR_PATTERN.test(value)) {
     const colorInputValue = value.length === 4 || value.length === 5 ? expandShortHex(value) : value.slice(0, 7);
     return (
@@ -243,29 +238,9 @@ function ObjectListValueEditor({
           value={colorInputValue}
           onChange={(e) => onChange(e.target.value)}
           className="size-9 shrink-0 cursor-pointer rounded-md border border-admin-border bg-admin-surface p-0.5"
-          aria-label={`${itemKey} color`}
+          aria-label="color"
         />
         <input value={value} onChange={(e) => onChange(e.target.value)} className={inputClass()} />
-      </div>
-    );
-  }
-
-  if (Array.isArray(value)) {
-    const items = value as string[];
-    return (
-      <div className="flex flex-wrap gap-2">
-        {items.map((item, i) => (
-          <input
-            key={i}
-            value={item}
-            onChange={(e) => {
-              const next = [...items];
-              next[i] = e.target.value;
-              onChange(next);
-            }}
-            className={`${inputClass()} w-auto flex-1 basis-32`}
-          />
-        ))}
       </div>
     );
   }
@@ -292,89 +267,129 @@ function ObjectListValueEditor({
     );
   }
 
-  const text = (value as string) ?? "";
+  if (value == null) {
+    return <input value="" onChange={(e) => onChange(e.target.value)} className={inputClass()} />;
+  }
+
+  if (Array.isArray(value)) {
+    const isStringArray = value.every((v) => typeof v === "string");
+
+    if (isStringArray) {
+      const items = value as string[];
+      return (
+        <div className="space-y-2">
+          {items.map((item, i) => (
+            <div key={i} className="flex gap-2">
+              <input
+                value={item}
+                onChange={(e) => {
+                  const next = [...items];
+                  next[i] = e.target.value;
+                  onChange(next);
+                }}
+                className={inputClass()}
+              />
+              <button
+                type="button"
+                onClick={() => onChange(items.filter((_, idx) => idx !== i))}
+                className="shrink-0 rounded-md px-2 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
+                aria-label="Remove item"
+              >
+                <Trash size={16} weight="light" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => onChange([...items, ""])}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-muted transition-colors hover:text-admin-accent"
+          >
+            <Plus size={14} weight="bold" />
+            ADD ITEM
+          </button>
+        </div>
+      );
+    }
+
+    const items = value as unknown[];
+    const templateKeys =
+      items[0] && typeof items[0] === "object" && !Array.isArray(items[0]) ? Object.keys(items[0] as object) : [];
+    return (
+      <div className="space-y-3">
+        {items.map((item, i) => (
+          <div key={i} className="space-y-3 rounded-md border border-admin-border bg-admin-surface p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium tracking-[0.1em] text-admin-text-faint">#{i + 1}</span>
+              <button
+                type="button"
+                onClick={() => onChange(items.filter((_, idx) => idx !== i))}
+                className="shrink-0 rounded-md px-2 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
+                aria-label="Remove item"
+              >
+                <Trash size={16} weight="light" />
+              </button>
+            </div>
+            <NestedObjectFields
+              obj={(item as Record<string, unknown>) ?? {}}
+              onChange={(next) => {
+                const nextItems = [...items];
+                nextItems[i] = next;
+                onChange(nextItems);
+              }}
+            />
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => onChange([...items, Object.fromEntries(templateKeys.map((k) => [k, ""]))])}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-muted transition-colors hover:text-admin-accent"
+        >
+          <Plus size={14} weight="bold" />
+          ADD ITEM
+        </button>
+      </div>
+    );
+  }
+
+  if (typeof value === "object") {
+    return (
+      <div className="rounded-md border border-admin-border bg-admin-surface p-3">
+        <NestedObjectFields obj={value as Record<string, unknown>} onChange={onChange} />
+      </div>
+    );
+  }
+
+  // Text (default) -- long strings get a multi-line textarea.
+  const text = value as string;
   const long = text.length > 60;
   return long ? (
-    <textarea rows={2} value={text} onChange={(e) => onChange(e.target.value)} className={inputClass()} />
+    <textarea rows={text.length > 80 ? 4 : 2} value={text} onChange={(e) => onChange(e.target.value)} className={inputClass()} />
   ) : (
     <input value={text} onChange={(e) => onChange(e.target.value)} className={inputClass()} />
   );
 }
 
-function expandShortHex(hex: string) {
-  const [, r, g, b] = hex;
-  return `#${r}${r}${g}${g}${b}${b}`;
-}
-
-function ObjectListEditor({
-  items,
+/** One level of a plain object's own key/value pairs, each recursing back
+ * into `AnyValueEditor` -- shared by both the "single nested object" case
+ * and each row of an "array of objects" case. */
+function NestedObjectFields({
+  obj,
   onChange,
-  mediaByRow,
-  onRowMediaChange,
-  mediaPathPrefix,
 }: {
-  items: Record<string, unknown>[];
-  onChange: (items: Record<string, unknown>[]) => void;
-  mediaByRow: Map<number, AttachedMedia[]>;
-  onRowMediaChange: (fieldIndex: number, value: unknown) => void;
-  mediaPathPrefix?: string;
+  obj: Record<string, unknown>;
+  onChange: (obj: Record<string, unknown>) => void;
 }) {
-  const templateKeys = items[0] ? Object.keys(items[0]) : [];
-
   return (
     <div className="space-y-3">
-      {items.map((item, i) => (
-        <div key={i} className="space-y-3 rounded-md border border-admin-border bg-admin-surface p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-medium tracking-[0.1em] text-admin-text-faint">
-              #{i + 1}
-            </span>
-            <button
-              type="button"
-              onClick={() => onChange(items.filter((_, idx) => idx !== i))}
-              className="shrink-0 rounded-md px-2 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
-              aria-label="Remove item"
-            >
-              <Trash size={16} weight="light" />
-            </button>
-          </div>
-
-          {Object.entries(item).map(([k, v]) => (
-            <div key={k} className="space-y-1">
-              <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">{humanizeItemKey(k)}</label>
-              <ObjectListValueEditor
-                itemKey={k}
-                value={v}
-                onChange={(nv) => {
-                  const next = [...items];
-                  next[i] = { ...next[i], [k]: nv };
-                  onChange(next);
-                }}
-              />
-            </div>
-          ))}
-
-          {(mediaByRow.get(i) ?? []).map((m) => (
-            <div key={m.field.key} className="space-y-1">
-              <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">{m.label}</label>
-              <AdminMediaDropzone
-                value={(m.field.value as string) ?? ""}
-                onChange={(v) => onRowMediaChange(m.index, v)}
-                mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${m.field.key}` : m.field.key}
-                compact
-              />
-            </div>
-          ))}
+      {Object.entries(obj).map(([k, v]) => (
+        <div key={k} className="space-y-1">
+          <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">{humanizeKey(k)}</label>
+          <AnyValueEditor
+            value={v}
+            onChange={(nv) => onChange({ ...obj, [k]: nv })}
+          />
         </div>
       ))}
-      <button
-        type="button"
-        onClick={() => onChange([...items, Object.fromEntries(templateKeys.map((k) => [k, ""]))])}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-muted transition-colors hover:text-admin-accent"
-      >
-        <Plus size={14} weight="bold" />
-        ADD ITEM
-      </button>
     </div>
   );
 }
@@ -412,95 +427,12 @@ function FieldEditor({
     );
   }
 
-  if (field.type === "string-list") {
-    const items = (field.value as string[]) ?? [];
-    return (
-      <div className="space-y-2">
-        {items.map((item, i) => (
-          <div key={i} className="flex gap-2">
-            <input
-              value={item}
-              onChange={(e) => {
-                const next = [...items];
-                next[i] = e.target.value;
-                onChange(next);
-              }}
-              className={inputClass()}
-            />
-            <button
-              type="button"
-              onClick={() => onChange(items.filter((_, idx) => idx !== i))}
-              className="shrink-0 rounded-md px-2 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
-              aria-label="Remove item"
-            >
-              <Trash size={16} weight="light" />
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => onChange([...items, ""])}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-muted transition-colors hover:text-admin-accent"
-        >
-          <Plus size={14} weight="bold" />
-          ADD ITEM
-        </button>
-      </div>
-    );
+  if (field.type === "structured") {
+    return <AnyValueEditor value={field.value} onChange={onChange} />;
   }
 
-  if (field.type === "title-desc-list") {
-    const items = (field.value as { title: string; desc: string }[]) ?? [];
-    return (
-      <div className="space-y-3">
-        {items.map((item, i) => (
-          <div key={i} className="space-y-2 rounded-md border border-admin-border bg-admin-surface p-3">
-            <div className="flex items-center gap-2">
-              <input
-                placeholder="Title"
-                value={item.title}
-                onChange={(e) => {
-                  const next = [...items];
-                  next[i] = { ...next[i], title: e.target.value };
-                  onChange(next);
-                }}
-                className={inputClass()}
-              />
-              <button
-                type="button"
-                onClick={() => onChange(items.filter((_, idx) => idx !== i))}
-                className="shrink-0 rounded-md px-2 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
-                aria-label="Remove item"
-              >
-                <Trash size={16} weight="light" />
-              </button>
-            </div>
-            <textarea
-              placeholder="Description"
-              rows={2}
-              value={item.desc}
-              onChange={(e) => {
-                const next = [...items];
-                next[i] = { ...next[i], desc: e.target.value };
-                onChange(next);
-              }}
-              className={inputClass()}
-            />
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => onChange([...items, { title: "", desc: "" }])}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-muted transition-colors hover:text-admin-accent"
-        >
-          <Plus size={14} weight="bold" />
-          ADD ITEM
-        </button>
-      </div>
-    );
-  }
-
-  // raw fallback for shapes the structured editor doesn't recognize
+  // raw fallback -- only for shapes even the recursive editor can't label
+  // (mixed-type arrays, arrays of arrays), which should be rare.
   return (
     <div>
       <textarea
@@ -562,16 +494,7 @@ export function ContentEditor({
 
   function addField() {
     if (!newFieldKey.trim()) return;
-    const defaultValue: unknown =
-      newFieldType === "text"
-        ? ""
-        : newFieldType === "media"
-          ? ""
-          : newFieldType === "string-list"
-            ? []
-            : newFieldType === "title-desc-list" || newFieldType === "object-list"
-              ? []
-              : {};
+    const defaultValue: unknown = newFieldType === "text" || newFieldType === "media" ? "" : [];
     setFields((prev) => [...prev, { key: newFieldKey.trim(), type: newFieldType, value: defaultValue }]);
     setNewFieldKey("");
   }
@@ -721,8 +644,9 @@ export function ContentEditor({
               );
             }
 
-            if (g.kind === "object-list") {
+            if (g.kind === "structured") {
               const { field, index, mediaByRow } = g;
+              const isArray = Array.isArray(field.value);
               return (
                 <div key={field.key + index}>
                   <div className="mb-2 flex items-center justify-between">
@@ -736,13 +660,17 @@ export function ContentEditor({
                       <Trash size={14} weight="light" />
                     </button>
                   </div>
-                  <ObjectListEditor
-                    items={(field.value as Record<string, unknown>[]) ?? []}
-                    onChange={(v) => updateField(index, v)}
-                    mediaByRow={mediaByRow}
-                    onRowMediaChange={updateField}
-                    mediaPathPrefix={mediaPathPrefix}
-                  />
+                  {isArray && mediaByRow.size > 0 ? (
+                    <ArrayWithRowMediaEditor
+                      items={field.value as Record<string, unknown>[]}
+                      onChange={(v) => updateField(index, v)}
+                      mediaByRow={mediaByRow}
+                      onRowMediaChange={updateField}
+                      mediaPathPrefix={mediaPathPrefix}
+                    />
+                  ) : (
+                    <AnyValueEditor value={field.value} onChange={(v) => updateField(index, v)} />
+                  )}
                 </div>
               );
             }
@@ -784,9 +712,7 @@ export function ContentEditor({
                 className={`${inputClass()} w-40`}
               >
                 <option value="text">Text</option>
-                <option value="string-list">List of text</option>
-                <option value="title-desc-list">List of title + description</option>
-                <option value="object-list">List of items</option>
+                <option value="structured">List / nested item</option>
                 <option value="media">Media (image/video)</option>
               </select>
             </div>
@@ -802,6 +728,75 @@ export function ContentEditor({
         </div>
       )}
 
+    </div>
+  );
+}
+
+/** Same repeatable-cards rendering as `AnyValueEditor`'s array-of-objects
+ * branch, plus each row's attached media dropzones (see `groupFields`) --
+ * kept separate because only a top-level array field can have row-matched
+ * media siblings pulled in from elsewhere in the flat field list. */
+function ArrayWithRowMediaEditor({
+  items,
+  onChange,
+  mediaByRow,
+  onRowMediaChange,
+  mediaPathPrefix,
+}: {
+  items: Record<string, unknown>[];
+  onChange: (items: Record<string, unknown>[]) => void;
+  mediaByRow: Map<number, AttachedMedia[]>;
+  onRowMediaChange: (fieldIndex: number, value: unknown) => void;
+  mediaPathPrefix?: string;
+}) {
+  const templateKeys = items[0] ? Object.keys(items[0]) : [];
+
+  return (
+    <div className="space-y-3">
+      {items.map((item, i) => (
+        <div key={i} className="space-y-3 rounded-md border border-admin-border bg-admin-surface p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-medium tracking-[0.1em] text-admin-text-faint">#{i + 1}</span>
+            <button
+              type="button"
+              onClick={() => onChange(items.filter((_, idx) => idx !== i))}
+              className="shrink-0 rounded-md px-2 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
+              aria-label="Remove item"
+            >
+              <Trash size={16} weight="light" />
+            </button>
+          </div>
+
+          <NestedObjectFields
+            obj={item}
+            onChange={(next) => {
+              const nextItems = [...items];
+              nextItems[i] = next;
+              onChange(nextItems);
+            }}
+          />
+
+          {(mediaByRow.get(i) ?? []).map((m) => (
+            <div key={m.field.key} className="space-y-1">
+              <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">{m.label}</label>
+              <AdminMediaDropzone
+                value={(m.field.value as string) ?? ""}
+                onChange={(v) => onRowMediaChange(m.index, v)}
+                mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${m.field.key}` : m.field.key}
+                compact
+              />
+            </div>
+          ))}
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...items, Object.fromEntries(templateKeys.map((k) => [k, ""]))])}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-muted transition-colors hover:text-admin-accent"
+      >
+        <Plus size={14} weight="bold" />
+        ADD ITEM
+      </button>
     </div>
   );
 }
