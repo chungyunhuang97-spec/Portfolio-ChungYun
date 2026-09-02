@@ -137,12 +137,15 @@ function UiKitHeading({ heading, intro }: { heading: string; intro?: string }) {
 
 /** Colored drop-shadow behind each swatch dot / brand button, matching
  * that element's own color at 20% alpha -- Figma's exact technique
- * (`shadow-[0px_4px_10px_rgba(<r,g,b>,0.2)]`), not a generic grey shadow. */
-function tintedShadow(hex: string, blur: string) {
+ * (`shadow-[0px_4px_10px_rgba(<r,g,b>,0.2)]`), not a generic grey shadow.
+ * Needs a real blur radius (the 3rd `box-shadow` value) to read as a soft
+ * floating shadow -- an earlier version collapsed offset-y and blur into
+ * one value, producing a hard-edged solid-color block instead. */
+function tintedShadow(hex: string, offsetY: string, blur: string) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
-  return { boxShadow: `0px ${blur} rgba(${r}, ${g}, ${b}, 0.2)` };
+  return { boxShadow: `0px ${offsetY} ${blur} rgba(${r}, ${g}, ${b}, 0.2)` };
 }
 
 function UiKitCard({
@@ -174,11 +177,16 @@ function CardHeader({ eyebrow, subtitle }: { eyebrow: string; subtitle: string }
   );
 }
 
-function ColorsCard({ colors, className = "" }: { colors: ColorSwatch[]; className?: string }) {
+function ColorsCard({ colors, border = "orange", className = "" }: { colors: ColorSwatch[]; border?: "grey" | "orange"; className?: string }) {
   return (
-    <UiKitCard border="orange" className={className}>
+    <UiKitCard border={border} className={className}>
       <CardHeader eyebrow="01. Colors" subtitle="品牌色彩與功能色定義" />
-      <div className="flex flex-1 flex-col gap-2.5">
+      {/* `justify-between` (not just `gap`) so the three rows spread across
+          the card's full height instead of bunching at the top with dead
+          space below -- only matters on mobile, where the card gets an
+          explicit fixed height; on desktop the card is its own natural
+          height so this is a no-op. */}
+      <div className="flex flex-1 flex-col justify-between gap-2.5">
         {colors.map((c, i) => (
           <div
             key={c.name}
@@ -186,7 +194,11 @@ function ColorsCard({ colors, className = "" }: { colors: ColorSwatch[]; classNa
               i === colors.length - 1 ? "md:border-b-0 md:pb-0" : ""
             } rounded-lg bg-grey-50 p-2 md:rounded-none md:bg-transparent md:p-0`}
           >
-            <span className="size-10 shrink-0 rounded-[20px]" style={{ backgroundColor: c.hex, ...tintedShadow(c.hex, "10px") }} aria-hidden />
+            <span
+              className="size-10 shrink-0 rounded-[20px]"
+              style={{ backgroundColor: c.hex, ...tintedShadow(c.hex, "4px", "10px") }}
+              aria-hidden
+            />
             <div className="flex flex-col">
               <span className="font-nunito text-[12px] font-extrabold text-primary-black">{c.name}</span>
               <span className="font-nunito text-[11px] font-bold text-grey-600 uppercase">{c.hex}</span>
@@ -198,9 +210,9 @@ function ColorsCard({ colors, className = "" }: { colors: ColorSwatch[]; classNa
   );
 }
 
-function IconsCard({ className = "" }: { className?: string }) {
+function IconsCard({ border = "grey", className = "" }: { border?: "grey" | "orange"; className?: string }) {
   return (
-    <UiKitCard className={`h-full ${className}`}>
+    <UiKitCard border={border} className={`h-full ${className}`}>
       <CardHeader eyebrow="02. Icons" subtitle="標準化圖標系統，涵蓋核心功能" />
       <div className="grid flex-1 grid-cols-3 content-center gap-3.5">
         {UI_KIT_ICON_FILES.map((file) => (
@@ -221,7 +233,7 @@ function ButtonSwatch({ btn }: { btn: ButtonVariant }) {
     return (
       <span
         className="font-nunito flex h-[42px] w-full items-center justify-center rounded-xl bg-primary-orange text-[13px] font-bold text-proj-white"
-        style={tintedShadow("#ff520d", "6px")}
+        style={tintedShadow("#ff520d", "4px", "6px")}
       >
         {btn.label}
       </span>
@@ -231,7 +243,7 @@ function ButtonSwatch({ btn }: { btn: ButtonVariant }) {
     return (
       <span
         className="font-nunito flex h-[42px] w-full items-center justify-center rounded-xl bg-secondary-blue text-[13px] font-bold text-proj-white"
-        style={tintedShadow("#0d21ff", "6px")}
+        style={tintedShadow("#0d21ff", "4px", "6px")}
       >
         {btn.label}
       </span>
@@ -273,9 +285,19 @@ function InputSwatch({ input }: { input: InputVariant }) {
   );
 }
 
-function ComponentsCard({ buttons, inputs, className = "" }: { buttons: ButtonVariant[]; inputs: InputVariant[]; className?: string }) {
+function ComponentsCard({
+  buttons,
+  inputs,
+  border = "grey",
+  className = "",
+}: {
+  buttons: ButtonVariant[];
+  inputs: InputVariant[];
+  border?: "grey" | "orange";
+  className?: string;
+}) {
   return (
-    <UiKitCard className={className}>
+    <UiKitCard border={border} className={className}>
       <div className="flex items-center justify-between gap-2">
         <span className="font-nunito text-[10px] font-extrabold tracking-[1px] text-grey-300 uppercase">03. Components</span>
         <span className="hidden shrink-0 items-center rounded-full border-[1.5px] border-primary-orange bg-proj-white px-3 py-1 font-nunito text-[10px] font-extrabold text-primary-orange md:inline-flex">
@@ -308,9 +330,21 @@ function ComponentsCard({ buttons, inputs, className = "" }: { buttons: ButtonVa
  * spot in piiluu's UI Kit System that intentionally breaks from the
  * page's blue-dominant accent and uses primary-orange instead (confirmed
  * against the approved Figma file, not a leftover/inconsistency). */
-function EfficiencyCard({ columns, className = "" }: { columns: EfficiencyColumn[]; className?: string }) {
+function EfficiencyCard({
+  columns,
+  border = "orange",
+  className = "",
+}: {
+  columns: EfficiencyColumn[];
+  border?: "grey" | "orange";
+  className?: string;
+}) {
   return (
-    <div className={`flex h-full w-full shrink-0 flex-col gap-6 rounded-2xl border border-primary-orange bg-proj-white p-6 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)] md:p-8 ${className}`}>
+    <div
+      className={`flex w-full shrink-0 flex-col gap-6 rounded-2xl border bg-proj-white p-6 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)] md:p-8 ${
+        border === "orange" ? "border-primary-orange" : "border-grey-100"
+      } ${className}`}
+    >
       <div className="flex flex-col gap-2">
         <span className="font-nunito text-[11px] font-extrabold tracking-[2px] text-grey-600 uppercase">Workflow Upgrade</span>
         <h5 className="font-nunito text-[20px] leading-[26px] font-bold text-primary-black md:text-[24px]">
@@ -417,11 +451,19 @@ export function DesignSystem({ process }: { process: Record<string, unknown> }) 
               onScroll={handleScroll}
               className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              <div className="flex w-[78vw] shrink-0 snap-center"><ColorsCard colors={colors} className="h-[460px]" /></div>
-              <div className="flex w-[78vw] shrink-0 snap-center"><IconsCard className="h-[460px]" /></div>
-              <div className="flex w-[78vw] shrink-0 snap-center"><ComponentsCard buttons={buttons} inputs={inputs} className="h-[460px]" /></div>
+              <div className="flex w-[78vw] shrink-0 snap-center">
+                <ColorsCard colors={colors} border={activeDot === 0 ? "orange" : "grey"} className="h-[460px]" />
+              </div>
+              <div className="flex w-[78vw] shrink-0 snap-center">
+                <IconsCard border={activeDot === 1 ? "orange" : "grey"} className="h-[460px]" />
+              </div>
+              <div className="flex w-[78vw] shrink-0 snap-center">
+                <ComponentsCard buttons={buttons} inputs={inputs} border={activeDot === 2 ? "orange" : "grey"} className="h-[460px]" />
+              </div>
               {efficiencyColumns.length > 0 && (
-                <div className="flex w-[78vw] shrink-0 snap-center"><EfficiencyCard columns={efficiencyColumns} className="h-[460px]" /></div>
+                <div className="flex w-[78vw] shrink-0 snap-center">
+                  <EfficiencyCard columns={efficiencyColumns} border={activeDot === 3 ? "orange" : "grey"} className="h-[460px]" />
+                </div>
               )}
             </div>
             <div className="flex items-center justify-center gap-2">
@@ -453,7 +495,7 @@ export function DesignSystem({ process }: { process: Record<string, unknown> }) 
               <div className="flex flex-col gap-6">
                 <ComponentsCard buttons={buttons} inputs={inputs} />
                 {efficiencyColumns.length > 0 && (
-                  <div className="flex flex-1 flex-col"><EfficiencyCard columns={efficiencyColumns} /></div>
+                  <div className="flex flex-1 flex-col"><EfficiencyCard columns={efficiencyColumns} className="h-full" /></div>
                 )}
               </div>
             </div>

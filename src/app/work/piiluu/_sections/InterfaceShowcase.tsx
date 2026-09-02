@@ -204,13 +204,20 @@ function FolderTabs({ afterActive, onChange }: { afterActive: boolean; onChange:
 }
 
 /** Every mobile row is capped at exactly one viewport tall (Joe: "一進入到
- * 數字之後，就應該高度控制在 100vh") instead of growing with its own content --
- * the phone mockup is sized down from its old `46vw` to leave enough room
- * for the heading + tabs + pain/solution copy to fit underneath without
- * pushing the row past 100dvh, and the pain/solution block gets its own
- * scroll fallback (`min-h-0 overflow-y-auto`) as a safety net so if any
- * row's copy still runs long, it scrolls internally instead of the row
- * silently exceeding the viewport again. */
+ * 數字之後，就應該高度控制在 100vh"). Rather than picking a fixed phone size
+ * that has to guess how much room the pain/solution copy needs, the phone
+ * is HEIGHT-driven: its wrapper is `flex-1 min-h-0` (fills whatever
+ * vertical space is left after the pain/solution block's own natural
+ * height) with `aspect-[375/812]` deriving its width from that available
+ * height, then `h-full` into `PhoneFrame` so it fills the wrapper instead
+ * of computing its own size from a bare width (PhoneFrame otherwise always
+ * derives height FROM width, never the reverse -- same "shaped wrapper"
+ * technique used everywhere else in this codebase). This makes the phone
+ * as large as each row's own copy allows -- consistently sized across all
+ * four rows since their copy lengths are similar -- while the
+ * pain/solution block keeps its natural height directly under it, which
+ * reads as "docked to the bottom" of the panel precisely because the
+ * phone above it is what expands to fill the remaining space. */
 function MobileRow({ row, process, rowIndex }: { row: ShowcaseRow; process: Record<string, unknown>; rowIndex: number }) {
   const [afterActive, setAfterActive] = useState(true);
   const [beforeUrl, afterUrl] = rowMedia(process, rowIndex);
@@ -226,19 +233,21 @@ function MobileRow({ row, process, rowIndex }: { row: ShowcaseRow; process: Reco
       <div className="flex min-h-0 flex-1 flex-col">
         <FolderTabs afterActive={afterActive} onChange={setAfterActive} />
         <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-3 overflow-hidden rounded-b-2xl border border-t-0 border-[#e5e0db] bg-proj-white px-4 py-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={afterActive ? "after" : "before"}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="w-[36vw] max-w-[155px] min-w-[125px] shrink-0"
-            >
-              <PhoneFrame screen={mediaScreen(activeUrl)} />
-            </motion.div>
-          </AnimatePresence>
-          <div className="min-h-0 w-full flex-1 overflow-y-auto">
+          <div className="flex min-h-0 w-full flex-1 items-center justify-center">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={afterActive ? "after" : "before"}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="aspect-[375/812] h-full"
+              >
+                <PhoneFrame screen={mediaScreen(activeUrl)} className="h-full" />
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          <div className="w-full shrink-0">
             <PainSolutionBlock pain={row.pain} solution={row.solution} />
           </div>
         </div>

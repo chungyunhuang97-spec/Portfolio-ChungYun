@@ -248,7 +248,7 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, mediaUr
       phoneControls.start({
         opacity: 1,
         scale: 1,
-        y: 28,
+        y: 10,
         transition: { duration: 0.75, delay: 0.35, ease: "easeOut" },
       });
     }
@@ -288,7 +288,19 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, mediaUr
           </div>
         )}
 
-        <div className="relative z-10 flex h-[190px] w-[310px] items-center justify-center md:h-[265px] md:w-[380px]">
+        {/* This box is sized for the LARGER of the two things it holds --
+            the phone mockup (230/340px), not the smaller card (190/265px)
+            that used to be its only occupant. The card is absolutely
+            positioned at its own fixed (smaller) size and just centers
+            within the taller box. Sizing the box for the card (as before)
+            meant the phone silently overflowed its declared layout space
+            by ~35-40px on each side once it was enlarged -- invisible to
+            the box's own flex sizing (absolutely positioned children don't
+            contribute to it) but exactly why the settled phone kept
+            reading as sitting too high with a mismatched gap below it: the
+            surrounding flex column never actually reserved room for the
+            phone's real size. */}
+        <div className="relative z-10 flex h-[230px] w-[310px] items-center justify-center md:h-[340px] md:w-[380px]">
           <DisintegratingCard topControls={cardTopControls} bottomControls={cardBottomControls} />
           <motion.div
             initial={{ opacity: 0, scale: 0.75, y: 0 }}
