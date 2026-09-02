@@ -48,85 +48,55 @@ function MetaPill({ role, timeframe }: { role: string; timeframe: string }) {
  * top of this exact rest state, not a redesign of it.
  */
 function DisintegratingCard({ progress }: { progress: MotionValue<number> }) {
-  /* Compressed into 0-0.35 to match the new tight phone crossfade window
-   * (was spread across 0-0.6, which combined with the phone only starting
-   * at 0.35 to leave a ~0.35-0.5 stretch where both were faint -- reported
-   * as a blank gap while scrolling). */
+  /* Simplified from ~20 independently scroll-linked shard transforms (one
+   * card body + 4 pieces each with their own x/y/rotate/opacity) down to
+   * 3 transforms on the card as one unit. The per-piece version recomputed
+   * ~20 motion values on every single scroll pixel via a live
+   * getBoundingClientRect-driven progress value -- expensive enough to
+   * visibly jank scrolling, which read as the reported "blank white
+   * screen" (dropped frames / a stalled paint), not a real missing-content
+   * bug. This keeps the "card dissolves, phone assembles" idea (opacity +
+   * scale + a slight downward drift + rotate) at a fraction of the cost. */
   const cardOpacity = useTransform(progress, [0.03, 0.32], [1, 0]);
-  const cardScale = useTransform(progress, [0, 0.32], [1, 0.9]);
-
-  const stripeX = useTransform(progress, [0.05, 0.3], [0, -70]);
-  const stripeY = useTransform(progress, [0.05, 0.3], [0, 50]);
-  const stripeRotate = useTransform(progress, [0.05, 0.3], [22, 48]);
-  const stripeOpacity = useTransform(progress, [0.05, 0.28], [1, 0]);
-
-  const chipX = useTransform(progress, [0.06, 0.32], [0, -50]);
-  const chipY = useTransform(progress, [0.06, 0.32], [0, -35]);
-  const chipRotate = useTransform(progress, [0.06, 0.32], [0, -35]);
-  const chipOpacity = useTransform(progress, [0.06, 0.3], [1, 0]);
-
-  const numberX = useTransform(progress, [0.07, 0.33], [0, 55]);
-  const numberY = useTransform(progress, [0.07, 0.33], [0, 25]);
-  const numberOpacity = useTransform(progress, [0.07, 0.31], [1, 0]);
-
-  const wordmarkX = useTransform(progress, [0.08, 0.34], [0, 40]);
-  const wordmarkY = useTransform(progress, [0.08, 0.34], [0, 65]);
-  const wordmarkOpacity = useTransform(progress, [0.08, 0.32], [1, 0]);
-
-  const chromeOpacity = useTransform(progress, [0.06, 0.25], [1, 0]);
+  const cardScale = useTransform(progress, [0, 0.32], [1, 0.85]);
+  const cardY = useTransform(progress, [0.03, 0.32], [0, 24]);
+  const cardRotate = useTransform(progress, [0.03, 0.32], [0, -6]);
 
   return (
     <motion.div
-      style={{ opacity: cardOpacity, scale: cardScale }}
+      style={{ opacity: cardOpacity, scale: cardScale, y: cardY, rotate: cardRotate }}
       className="relative h-[190px] w-[310px] overflow-hidden rounded-[16px] bg-secondary-blue shadow-[0px_2px_4px_0px_rgba(0,0,0,0.05),0px_8px_16px_0px_rgba(0,0,0,0.1)] md:h-[265px] md:w-[380px] md:rounded-[20px] md:shadow-[0px_1.5px_1.5px_0px_rgba(64,50,42,0.04),0px_8px_12px_0px_rgba(64,50,42,0.06)]"
     >
       {/* Diagonal stripe -- exact Figma technique: one large solid
           primary-orange rectangle, rotated, clipped by the card's rounded
-          overflow-hidden edge. */}
-      <motion.div
-        style={{ x: stripeX, y: stripeY, opacity: stripeOpacity }}
+          overflow-hidden edge. Static (no per-piece scroll animation). */}
+      <div
         className="absolute left-[-77.46px] top-[110px] flex h-[261.291px] w-[454.693px] items-center justify-center md:left-[-108.7px] md:top-[150px] md:h-[330.314px] md:w-[567.922px]"
         aria-hidden
       >
-        <motion.div style={{ rotate: stripeRotate }} className="flex-none">
+        <div className="flex-none rotate-[22deg]">
           <div className="h-[100px] w-[450px] bg-primary-orange md:h-[130px] md:w-[560px]" />
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
-      <motion.div
-        style={{ x: chipX, y: chipY, rotate: chipRotate, opacity: chipOpacity }}
-        className="absolute left-6 top-6 h-[26px] w-[38px] rounded-[4px] bg-white opacity-90 md:h-[30px] md:w-[42px] md:rounded-[5px]"
-        aria-hidden
-      />
+      <div className="absolute left-6 top-6 h-[26px] w-[38px] rounded-[4px] bg-white opacity-90 md:h-[30px] md:w-[42px] md:rounded-[5px]" aria-hidden />
 
-      <motion.span
-        style={{ opacity: chromeOpacity }}
-        className="absolute right-6 top-7 font-nunito text-[10px] font-extrabold tracking-[0.5px] text-white"
-      >
+      <span className="absolute right-6 top-7 font-nunito text-[10px] font-extrabold tracking-[0.5px] text-white">
         GEN Z USER
-      </motion.span>
+      </span>
 
-      <motion.p
-        style={{ x: numberX, y: numberY, opacity: numberOpacity }}
-        className="absolute left-6 top-[105px] font-nunito text-[16px] font-bold leading-6 whitespace-pre text-white md:top-[148px]"
-      >
+      <p className="absolute left-6 top-[105px] font-nunito text-[16px] font-bold leading-6 whitespace-pre text-white md:top-[148px]">
         {"••••  ••••  ••••  4821"}
-      </motion.p>
+      </p>
 
-      <motion.span
-        style={{ opacity: chromeOpacity }}
-        className="absolute left-6 top-[135px] font-nunito text-[13px] font-bold text-white/85 md:top-[186px]"
-      >
+      <span className="absolute left-6 top-[135px] font-nunito text-[13px] font-bold text-white/85 md:top-[186px]">
         VALID THRU 08/27
-      </motion.span>
+      </span>
 
-      <motion.div
-        style={{ x: wordmarkX, y: wordmarkY, opacity: wordmarkOpacity }}
-        className="absolute right-6 top-[135px] text-right md:top-[186px]"
-      >
+      <div className="absolute right-6 top-[135px] text-right md:top-[186px]">
         <p className="font-nunito text-[20px] font-extrabold text-white">Piiluu 皮路</p>
         <p className="mt-0.5 font-nunito text-[13px] font-bold text-white/85">BNPL PLATINUM</p>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -142,40 +112,49 @@ interface HeroContentProps {
 }
 
 /**
- * Scroll-jacked pinned "SCROLL TO UNLOCK" opener -- Piiluu's signature Hero
- * motion (docs/piiluu-motion-breakdown.md section 1), reworked per Joe's
- * newest instruction: instead of the card rotating/flying off-screen, it
- * DISINTEGRATES (see DisintegratingCard) while a PhoneFrame assembles in its
- * place, conceptually "physical card -> cardless-payment phone screen".
- * `useScroll` + `useTransform` drive every piece off a single 0-1 progress
- * value scoped to a tall pin container (`position: sticky` inner viewport).
+ * "SCROLL TO UNLOCK" opener -- Piiluu's signature Hero motion
+ * (docs/piiluu-motion-breakdown.md section 1), reworked per Joe's
+ * instruction: instead of the card rotating/flying off-screen, it
+ * DISINTEGRATES (see DisintegratingCard) while a PhoneFrame assembles in
+ * its place, conceptually "physical card -> cardless-payment phone screen".
+ *
+ * NOT a pinned/scroll-jacked layout (no `position:sticky`, no artificially
+ * tall container). Earlier versions pinned the scene inside a 200-300vh
+ * tall wrapper and drove the transition off scroll progress through THAT
+ * container -- this repeatedly produced a real dead zone: whenever the
+ * card had faded out further than the phone had faded in (or vice versa,
+ * depending on exact scroll speed/position), the user saw a blank white
+ * stretch for a meaningful chunk of scroll, and no amount of retuning the
+ * opacity curves fully eliminated it. Removing the pin removes the failure
+ * mode entirely: the Hero is normal `min-h-screen` content (no extra
+ * scroll distance), and the transition is driven by the section's own
+ * natural scroll-through position (`useScroll` with `target` = the Hero
+ * itself, progress 0 at the moment its top reaches the viewport top,
+ * progress 1 once it has fully scrolled past) -- there is no "extra" space
+ * for a blank gap to live in.
+ *
  * All static content/colors below match Figma nodes 542:191 (mobile) /
  * 476:185 (desktop) exactly -- see get_design_context output referenced in
  * commit history for the literal values.
  */
 function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, screen }: HeroContentProps) {
-  const pinRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: progress } = useScroll({
-    target: pinRef,
-    offset: ["start start", "end end"],
+    target: heroRef,
+    offset: ["start start", "end start"],
   });
 
   const watermarkOpacity = useTransform(progress, [0, 0.6, 1], [0, 0.07, 0.07]);
   const watermarkScale = useTransform(progress, [0, 1], [0.85, 1.15]);
   const hintOpacity = useTransform(progress, [0, 0.15], [1, 0]);
-  /* Tight, overlapping crossfade -- the card and phone ranges deliberately
-   * cover the SAME middle band (0.15-0.4) instead of two ranges separated
-   * by a gap, so their opacities sum to ~1 all the way through and there's
-   * never a moment where both are faint at once. The previous version had
-   * cardOpacity ending at 0.5 and phoneOpacity starting at 0.35 with each
-   * individually still <30% through 0.35-0.5 -- a real "everything's
-   * nearly invisible" dead zone reported as a blank gap on scroll. */
-  const phoneOpacity = useTransform(progress, [0.15, 0.4], [0, 1]);
-  const phoneScale = useTransform(progress, [0.15, 0.45], [0.75, 1]);
+  /* Tight, overlapping crossfade -- card and phone cover the SAME 0.1-0.35
+   * band so their opacities sum to ~1 throughout, never both faint at once. */
+  const phoneOpacity = useTransform(progress, [0.1, 0.35], [0, 1]);
+  const phoneScale = useTransform(progress, [0.1, 0.4], [0.75, 1]);
 
   return (
-    <div ref={pinRef} className="relative h-[200vh]">
-      <div className="sticky top-0 flex h-[100dvh] w-full flex-col items-center justify-center gap-6 overflow-hidden bg-white px-6 pt-6 pb-10 md:gap-10 md:px-[120px] md:pt-[180px] md:pb-[100px]">
+    <div ref={heroRef} className="relative">
+      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-6 overflow-hidden bg-white px-6 pt-6 pb-10 md:gap-10 md:px-[120px] md:pt-[180px] md:pb-[100px]">
         <motion.p
           aria-hidden
           style={{ opacity: watermarkOpacity, scale: watermarkScale }}
