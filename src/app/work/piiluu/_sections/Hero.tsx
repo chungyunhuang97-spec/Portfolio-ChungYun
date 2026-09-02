@@ -48,28 +48,32 @@ function MetaPill({ role, timeframe }: { role: string; timeframe: string }) {
  * top of this exact rest state, not a redesign of it.
  */
 function DisintegratingCard({ progress }: { progress: MotionValue<number> }) {
-  const cardOpacity = useTransform(progress, [0.05, 0.5], [1, 0]);
-  const cardScale = useTransform(progress, [0, 0.5], [1, 0.9]);
+  /* Compressed into 0-0.35 to match the new tight phone crossfade window
+   * (was spread across 0-0.6, which combined with the phone only starting
+   * at 0.35 to leave a ~0.35-0.5 stretch where both were faint -- reported
+   * as a blank gap while scrolling). */
+  const cardOpacity = useTransform(progress, [0.03, 0.32], [1, 0]);
+  const cardScale = useTransform(progress, [0, 0.32], [1, 0.9]);
 
-  const stripeX = useTransform(progress, [0.08, 0.5], [0, -70]);
-  const stripeY = useTransform(progress, [0.08, 0.5], [0, 50]);
-  const stripeRotate = useTransform(progress, [0.08, 0.5], [22, 48]);
-  const stripeOpacity = useTransform(progress, [0.08, 0.45], [1, 0]);
+  const stripeX = useTransform(progress, [0.05, 0.3], [0, -70]);
+  const stripeY = useTransform(progress, [0.05, 0.3], [0, 50]);
+  const stripeRotate = useTransform(progress, [0.05, 0.3], [22, 48]);
+  const stripeOpacity = useTransform(progress, [0.05, 0.28], [1, 0]);
 
-  const chipX = useTransform(progress, [0.1, 0.55], [0, -50]);
-  const chipY = useTransform(progress, [0.1, 0.55], [0, -35]);
-  const chipRotate = useTransform(progress, [0.1, 0.55], [0, -35]);
-  const chipOpacity = useTransform(progress, [0.1, 0.5], [1, 0]);
+  const chipX = useTransform(progress, [0.06, 0.32], [0, -50]);
+  const chipY = useTransform(progress, [0.06, 0.32], [0, -35]);
+  const chipRotate = useTransform(progress, [0.06, 0.32], [0, -35]);
+  const chipOpacity = useTransform(progress, [0.06, 0.3], [1, 0]);
 
-  const numberX = useTransform(progress, [0.12, 0.58], [0, 55]);
-  const numberY = useTransform(progress, [0.12, 0.58], [0, 25]);
-  const numberOpacity = useTransform(progress, [0.12, 0.52], [1, 0]);
+  const numberX = useTransform(progress, [0.07, 0.33], [0, 55]);
+  const numberY = useTransform(progress, [0.07, 0.33], [0, 25]);
+  const numberOpacity = useTransform(progress, [0.07, 0.31], [1, 0]);
 
-  const wordmarkX = useTransform(progress, [0.15, 0.6], [0, 40]);
-  const wordmarkY = useTransform(progress, [0.15, 0.6], [0, 65]);
-  const wordmarkOpacity = useTransform(progress, [0.15, 0.55], [1, 0]);
+  const wordmarkX = useTransform(progress, [0.08, 0.34], [0, 40]);
+  const wordmarkY = useTransform(progress, [0.08, 0.34], [0, 65]);
+  const wordmarkOpacity = useTransform(progress, [0.08, 0.32], [1, 0]);
 
-  const chromeOpacity = useTransform(progress, [0.1, 0.4], [1, 0]);
+  const chromeOpacity = useTransform(progress, [0.06, 0.25], [1, 0]);
 
   return (
     <motion.div
@@ -159,11 +163,18 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, screen 
   const watermarkOpacity = useTransform(progress, [0, 0.6, 1], [0, 0.07, 0.07]);
   const watermarkScale = useTransform(progress, [0, 1], [0.85, 1.15]);
   const hintOpacity = useTransform(progress, [0, 0.15], [1, 0]);
-  const phoneOpacity = useTransform(progress, [0.35, 0.75], [0, 1]);
-  const phoneScale = useTransform(progress, [0.35, 0.8], [0.7, 1]);
+  /* Tight, overlapping crossfade -- the card and phone ranges deliberately
+   * cover the SAME middle band (0.15-0.4) instead of two ranges separated
+   * by a gap, so their opacities sum to ~1 all the way through and there's
+   * never a moment where both are faint at once. The previous version had
+   * cardOpacity ending at 0.5 and phoneOpacity starting at 0.35 with each
+   * individually still <30% through 0.35-0.5 -- a real "everything's
+   * nearly invisible" dead zone reported as a blank gap on scroll. */
+  const phoneOpacity = useTransform(progress, [0.15, 0.4], [0, 1]);
+  const phoneScale = useTransform(progress, [0.15, 0.45], [0.75, 1]);
 
   return (
-    <div ref={pinRef} className="relative h-[300vh]">
+    <div ref={pinRef} className="relative h-[200vh]">
       <div className="sticky top-0 flex h-[100dvh] w-full flex-col items-center justify-center gap-6 overflow-hidden bg-white px-6 pt-6 pb-10 md:gap-10 md:px-[120px] md:pt-[180px] md:pb-[100px]">
         <motion.p
           aria-hidden
@@ -196,14 +207,18 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, screen 
           </div>
         )}
 
-        <div className="relative z-10 flex items-center justify-center">
+        <div className="relative z-10 flex h-[190px] w-[310px] items-center justify-center md:h-[265px] md:w-[380px]">
           <DisintegratingCard progress={progress} />
           <motion.div
             style={{ opacity: phoneOpacity, scale: phoneScale }}
             className="pointer-events-none absolute inset-0 flex items-center justify-center"
           >
-            <div className="pointer-events-auto w-[180px] md:w-[200px]">
-              <PhoneFrame screen={screen} />
+            {/* Shaped wrapper (real aspect ratio + explicit height) so
+                PhoneFrame fills it via h-full instead of deriving its own
+                (taller) height from aspect-[375/812] applied to a bare
+                width, which would overflow this small card-sized box. */}
+            <div className="pointer-events-auto aspect-[375/812] h-[170px] md:h-[240px]">
+              <PhoneFrame screen={screen} className="h-full" />
             </div>
           </motion.div>
         </div>
