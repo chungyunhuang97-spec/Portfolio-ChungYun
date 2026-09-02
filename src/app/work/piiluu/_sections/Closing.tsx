@@ -1,137 +1,71 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useReducedMotion, useInView } from "framer-motion";
-import { SlideIn } from "@/components/design-system/SlideIn";
-
-/** Fixed-ish node positions (percent of the backdrop box) forming a loose
- * "trust network" graph -- a financial/trust theme distinct from both Nest
- * Stay's diamond-drift grid and Metro's dot-grid+sheen+rings (per Joe's
- * explicit ask that Closing NOT resemble either prior project's treatment).
- * Edges connect a subset of node pairs so the graph reads as a connected
- * network, not a random scatter. */
-const NODES = [
-  { x: 12, y: 22 },
-  { x: 32, y: 12 },
-  { x: 55, y: 20 },
-  { x: 78, y: 10 },
-  { x: 88, y: 32 },
-  { x: 68, y: 42 },
-  { x: 40, y: 40 },
-  { x: 18, y: 55 },
-  { x: 50, y: 65 },
-  { x: 75, y: 70 },
-  { x: 25, y: 80 },
-  { x: 92, y: 85 },
-] as const;
-
-const EDGES: [number, number][] = [
-  [0, 1],
-  [1, 2],
-  [2, 3],
-  [3, 4],
-  [2, 5],
-  [1, 6],
-  [6, 7],
-  [5, 6],
-  [5, 8],
-  [8, 9],
-  [7, 10],
-  [8, 10],
-  [9, 11],
-];
+import Image from "next/image";
+import { motion, useInView, useReducedMotion } from "framer-motion";
+import { ArrowUp } from "@phosphor-icons/react/dist/ssr";
 
 /**
- * Piiluu's own Closing signature motion -- a slowly-drawing, gently-pulsing
- * "trust network" (nodes + connecting lines), fitting the "金融信任 /
- * 系統化設計" theme this case study is actually about. Three layered motions
- * (per Joe's "動態不要太呆板" note -- vary timing/phase across layers rather
- * than one flat linear loop):
- *  1. Edges draw in once via `pathLength` (spring-ish ease, staggered by
- *     index) when the section scrolls into view.
- *  2. Nodes pulse (scale + opacity, `easeInOut` + `repeatType: "mirror"`,
- *     each on its own phase/duration) after drawing in.
- *  3. The whole graph drifts very slightly (a slow, large-radius float) as
- *     one more layer of motion, distinct from the per-node pulses.
- * Disabled entirely under `prefers-reduced-motion` -- nodes/edges render at
- * full opacity, static, same convention as Nest Stay/Metro's own Closing
- * backdrops.
+ * Figma's own Closing background (node 539:2738 / 543:3512) is a static
+ * WebGPU shader: a diamond-grid pattern (white, ~40% opacity, rotated
+ * ~72deg) over solid `bg-secondary-blue`. The shader itself is NOT
+ * animated (`isAnimated: false` in its manifest) and requires WebGPU, which
+ * isn't reliably available -- but Joe separately asked, explicitly, for
+ * this backdrop's geometry to actually move ("希望它背後的幾何圖形是有在移動的"),
+ * distinct from Nest Stay's diamond-drift. So: same visual language as
+ * Figma (diamond grid, white-on-blue, similar rotation) reproduced as a
+ * CSS pattern instead of the shader, then animated -- drifting diagonally,
+ * matching this codebase's other `GeometricBackdrop` precedents
+ * (Nest Stay/Metro Closing.tsx) in technique (`useInView` +
+ * `useReducedMotion` gated, pauses off-screen).
  */
+const DIAMOND_PATTERN_URL =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Crect x='22' y='22' width='20' height='20' fill='none' stroke='%23ffffff' stroke-opacity='0.4' stroke-width='1.5' transform='rotate(72 32 32)'/%3E%3C/svg%3E";
+
 function GeometricBackdrop() {
   const reduceMotion = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { amount: 0.15 });
+  const inView = useInView(ref, { amount: 0.1 });
   const run = inView && !reduceMotion;
 
   return (
-    <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <motion.svg
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        className="absolute inset-0 h-full w-full"
-        animate={run ? { x: [0, 1.2, 0, -1.2, 0], y: [0, -0.8, 0, 0.8, 0] } : { x: 0, y: 0 }}
-        transition={{ duration: 22, repeat: run ? Infinity : 0, ease: "easeInOut" }}
-      >
-        {EDGES.map(([a, b], i) => {
-          const from = NODES[a];
-          const to = NODES[b];
-          return (
-            <motion.line
-              key={`${a}-${b}`}
-              x1={from.x}
-              y1={from.y}
-              x2={to.x}
-              y2={to.y}
-              stroke="rgba(255,255,255,0.22)"
-              strokeWidth={0.25}
-              initial={reduceMotion ? undefined : { pathLength: 0, opacity: 0 }}
-              animate={run ? { pathLength: 1, opacity: 1 } : reduceMotion ? { pathLength: 1, opacity: 1 } : undefined}
-              transition={{ duration: 1.4, delay: 0.4 + i * 0.06, ease: "easeOut" }}
-            />
-          );
-        })}
-        {NODES.map((node, i) => (
-          <motion.circle
-            key={i}
-            cx={node.x}
-            cy={node.y}
-            r={0.9}
-            fill="rgba(255,255,255,0.7)"
-            initial={reduceMotion ? undefined : { opacity: 0, scale: 0 }}
-            animate={
-              run
-                ? { opacity: [0.5, 1, 0.5], scale: [1, 1.6, 1] }
-                : reduceMotion
-                ? { opacity: 1, scale: 1 }
-                : undefined
-            }
-            transition={
-              run
-                ? {
-                    opacity: { duration: 2.6 + (i % 4) * 0.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.15 },
-                    scale: { duration: 2.6 + (i % 4) * 0.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.15 },
-                  }
-                : { duration: 0.6, delay: 0.4 + i * 0.06 }
-            }
-            style={{ transformOrigin: `${node.x}px ${node.y}px` }}
-          />
-        ))}
-      </motion.svg>
+    <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden bg-secondary-blue">
+      <motion.div
+        className="absolute -inset-16"
+        style={{ backgroundImage: `url("${DIAMOND_PATTERN_URL}")`, backgroundRepeat: "repeat" }}
+        animate={run ? { x: [0, -64], y: [0, 64] } : { x: 0, y: 0 }}
+        transition={{ duration: 30, repeat: run ? Infinity : 0, repeatType: "loop", ease: "linear" }}
+      />
     </div>
   );
 }
 
+/** "回到頂部" CTA -- Figma node 539:2744, white bg / secondary-blue border
+ * and text, distinct from Nest Stay/Metro's own Closing buttons. */
+function BackToTopButton() {
+  return (
+    <a
+      href="#hero"
+      className="inline-flex items-center gap-2 rounded-xl border-[1.5px] border-secondary-blue bg-white px-4 py-4 font-nunito text-[16px] font-bold text-secondary-blue transition-transform hover:scale-[1.03]"
+    >
+      回到頂部
+      <ArrowUp size={20} weight="bold" />
+    </a>
+  );
+}
+
 /**
- * 結論 (Closing), Figma fileKey 8qGUSDUJqOgJaSERffGXVc. Structural skeleton
- * (open/close quote glyphs, two staggered text lines, `bg-secondary-blue`
- * since blue is piiluu's dominant color, `id="closing"`, mobile/desktop dual
- * tree) copied from Nest Stay/Metro's `Closing - Proposal A 漸層引號`
- * component -- only `GeometricBackdrop` above is wholly new. No shared
- * `Button` component exists in this codebase and neither Nest Stay's nor
- * Metro's Closing renders a separate CTA button (both rely on the global
- * floating `<BackToTop />` instead) -- following that same precedent here
- * rather than inventing a one-off button, per the task's own ask to
- * pattern-match the two existing implementations' actual code.
+ * Closing section, Figma fileKey 8qGUSDUJqOgJaSERffGXVc, desktop node
+ * 539:2738 / mobile node 543:3512. `bg-secondary-blue` (piiluu's dominant
+ * color) at both breakpoints -- shared skeleton with Nest Stay/Metro's own
+ * Closing (open/close quote glyphs, two staggered text lines, `id="closing"`
+ * for `BackToTop`'s intersection trigger), but its own `GeometricBackdrop`
+ * per the structural convention that signature Closing motion is never
+ * reused cross-project.
+ *
+ * Desktop quote glyphs are literal "「"/"」" text at 120px; mobile uses
+ * Figma's small decorative SVG glyphs instead -- two different techniques
+ * kept as Figma has them, not unified.
  *
  * Content model: `reflection` row -- `closingQuote` / `closingBody`.
  */
@@ -139,42 +73,34 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
   const quote = reflection.closingQuote as string | undefined;
   const body = reflection.closingBody as string | undefined;
 
-  if (!quote || !body) return null;
+  if (!quote && !body) return null;
 
   return (
     <section id="closing" className="relative overflow-hidden bg-secondary-blue">
       <GeometricBackdrop />
 
-      {/* Mobile layout */}
-      <div className="relative flex w-full flex-col items-center justify-center px-6 py-20 md:hidden">
-        <SlideIn delay={0.1}>
-          <div className="relative flex w-full max-w-[326px] flex-col items-center gap-3 pt-12 pb-12 text-center text-proj-white">
-            <span aria-hidden className="pointer-events-none absolute left-0 top-0 font-nunito text-[40px] font-bold leading-[40px] text-proj-white">
-              「
-            </span>
-            <span aria-hidden className="pointer-events-none absolute bottom-0 right-0 font-nunito text-[40px] font-bold leading-[40px] text-proj-white">
-              」
-            </span>
-            <p className="w-full font-nunito text-[16px] font-bold leading-[24px]">{quote}</p>
-            <p className="w-full font-nunito text-[13px] font-normal leading-[20px] opacity-80">{body}</p>
-          </div>
-        </SlideIn>
+      {/* Mobile */}
+      <div className="relative z-10 flex flex-col items-center gap-2 px-6 py-20 text-center md:hidden">
+        <Image src="/work/piiluu/closing/quote-open.svg" alt="" width={11} height={21} className="mb-1" />
+        <div className="flex w-[326px] max-w-full flex-col items-center gap-1.5 text-white">
+          {quote && <p className="font-nunito text-[14px] leading-[21px] font-bold">{quote}</p>}
+          {body && <p className="font-nunito text-[10px] leading-[17px] font-normal opacity-80">{body}</p>}
+        </div>
+        <Image src="/work/piiluu/closing/quote-close.svg" alt="" width={11} height={21} className="mt-1" />
+        <div className="mt-4">
+          <BackToTopButton />
+        </div>
       </div>
 
-      {/* Desktop layout */}
-      <div className="relative hidden w-full flex-col items-center justify-center gap-8 p-[100px] md:flex">
-        <span aria-hidden className="absolute left-[120px] top-[80px] font-nunito text-[120px] font-bold leading-[120px] text-proj-white">
-          「
-        </span>
-        <span aria-hidden className="absolute bottom-[200px] right-[240px] translate-x-full translate-y-full font-nunito text-[120px] font-bold leading-[120px] text-proj-white">
-          」
-        </span>
-        <SlideIn delay={0.1}>
-          <div className="flex w-[800px] flex-col items-center gap-5 text-center text-proj-white">
-            <p className="w-full font-nunito text-[30px] font-bold leading-[40px]">{quote}</p>
-            <p className="w-[680px] font-nunito text-[18px] font-normal leading-[28px] opacity-80">{body}</p>
-          </div>
-        </SlideIn>
+      {/* Desktop */}
+      <div className="relative z-10 hidden flex-col items-center justify-center gap-8 p-[100px] md:flex">
+        <span className="absolute left-[120px] top-[80px] font-nunito text-[120px] leading-[120px] font-bold text-white">「</span>
+        <span className="absolute bottom-[80px] right-[120px] font-nunito text-[120px] leading-[120px] font-bold text-white">」</span>
+        <div className="flex w-[800px] max-w-full flex-col items-center gap-5 text-center text-white">
+          {quote && <p className="font-nunito text-[30px] leading-10 font-bold">{quote}</p>}
+          {body && <p className="font-nunito text-[18px] leading-7 font-normal opacity-80">{body}</p>}
+        </div>
+        <BackToTopButton />
       </div>
     </section>
   );

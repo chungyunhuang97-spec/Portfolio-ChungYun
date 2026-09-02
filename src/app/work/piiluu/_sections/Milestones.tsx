@@ -1,97 +1,169 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion, useScroll, useTransform, useMotionValueEvent, type MotionValue } from "framer-motion";
-import { SlideIn } from "@/components/design-system/SlideIn";
+import { useRef, useState } from "react";
+import Image from "next/image";
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useMotionValueEvent,
+  useReducedMotion,
+} from "framer-motion";
 
 interface Milestone {
+  /** "01".."04" -- rendered as "INSTALLMENT 0X • TYPE". */
   number: string;
-  type: "MILESTONE" | "LEARNING";
+  /** "MILESTONE" | "LEARNING" */
+  type: string;
   title: string;
   desc: string;
 }
 
-/** Card thresholds along the section's 0-1 scroll progress -- 4 cards evenly
- * spaced, per Joe's own suggested numbers ("0.125/0.375/0.625/0.875"). Both
- * the mobile vertical line-fill and the desktop snake-path line-fill use
- * these same thresholds so the two layouts feel scroll-synced identically
- * even though their line geometry differs. */
-const THRESHOLDS = [0.125, 0.375, 0.625, 0.875];
-
-function AchievedBadge({ achieved }: { achieved: boolean }) {
+/**
+ * Desktop card -- Figma node 526:2398, alternating left/right of a center
+ * timeline. `achieved` (driven by scroll progress) swaps the border color
+ * and reveals the rotated "ACHIEVED" stamp badge; dims to opacity-45 (and
+ * a plain white/[0.05] border) while not yet reached, matching the exact
+ * unachieved treatment Figma shows for its 4th/last card.
+ */
+function DesktopCard({ milestone, achieved, side }: { milestone: Milestone; achieved: boolean; side: "left" | "right" }) {
   return (
-    <motion.span
-      initial={false}
-      animate={achieved ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.7, y: 4 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="inline-flex w-fit items-center gap-1 rounded-full bg-secondary-blue px-2.5 py-1 font-nunito text-[10px] font-extrabold tracking-[0.5px] text-proj-white"
-    >
-      ACHIEVED
-    </motion.span>
+    <div className={`flex w-full ${side === "left" ? "justify-end pr-[43px]" : "justify-start pl-[43px]"}`}>
+      <motion.div
+        animate={{ opacity: achieved ? 1 : 0.45 }}
+        transition={{ duration: 0.4 }}
+        className={`relative w-[314px] max-w-[314px] rounded-[14px] border bg-white/[0.06] p-[23px] shadow-[0px_7px_21px_0px_rgba(0,0,0,0.04)] ${
+          achieved ? "border-[#eaeaea]" : "border-white/[0.05]"
+        }`}
+      >
+        <div className="flex h-7 items-center gap-2 pt-0.5">
+          <span className="font-nunito text-[11px] font-extrabold text-[#999]">
+            INSTALLMENT {milestone.number} • {milestone.type}
+          </span>
+        </div>
+        <h4 className="pt-3 font-nunito text-[20px] font-bold text-primary-orange">{milestone.title}</h4>
+        <p className="pt-2 font-nunito text-[14px] leading-[21px] font-normal text-white">{milestone.desc}</p>
+
+        {achieved && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 15 }}
+            className="absolute right-4 top-3 -rotate-[10deg] rounded-[6px] border-[1.4px] border-primary-orange bg-[#fff1e8] px-[9px] py-[3px]"
+          >
+            <span className="font-nunito text-[10px] font-black tracking-[0.7px] text-primary-orange">ACHIEVED</span>
+          </motion.div>
+        )}
+      </motion.div>
+    </div>
   );
 }
 
-function MilestoneCard({ milestone, achieved }: { milestone: Milestone; achieved: boolean }) {
-  const isLearning = milestone.type === "LEARNING";
+/** Timeline dot at each desktop card's vertical center -- white ring,
+ * orange core once achieved, grey core while pending. */
+function DesktopDot({ achieved }: { achieved: boolean }) {
   return (
     <motion.div
-      animate={{ opacity: achieved ? 1 : 0.55 }}
+      animate={{ borderColor: achieved ? "#ff520d" : "rgba(255,255,255,0.2)" }}
       transition={{ duration: 0.4 }}
-      className="flex w-full flex-col gap-2 rounded-2xl border border-grey-100 bg-proj-white p-5 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
+      className="absolute left-1/2 top-1/2 flex size-[17px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[3px] bg-[#1a1a1a]"
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className={`font-nunito text-[11px] font-extrabold tracking-[0.6px] uppercase ${isLearning ? "text-accent-pink" : "text-secondary-blue"}`}>
-          {milestone.number} · {milestone.type}
-        </span>
-        <AchievedBadge achieved={achieved} />
-      </div>
-      <h4 className="font-nunito text-[16px] font-bold text-primary-black md:text-[18px]">{milestone.title}</h4>
-      <p className="font-nunito text-[13px] leading-[20px] font-normal text-grey-600 md:text-[14px] md:leading-[22px]">
-        {milestone.desc}
-      </p>
+      <motion.span
+        animate={{ backgroundColor: achieved ? "#ff520d" : "rgba(255,255,255,0.3)" }}
+        transition={{ duration: 0.4 }}
+        className="size-[6px] rounded-full"
+      />
     </motion.div>
   );
 }
 
-/** Dot marker -- neutral grey until its threshold, then pops to
- * secondary-blue via spring (not a linear color transition, per Joe's "動態
- * 不要太呆板" note). */
-function TimelineDot({ achieved }: { achieved: boolean }) {
+function DesktopTimeline({ milestones, achievedCount, lineFill }: { milestones: Milestone[]; achievedCount: number; lineFill: ReturnType<typeof useTransform<number, number>> }) {
   return (
-    <motion.span
-      animate={{
-        scale: achieved ? 1 : 0.7,
-        backgroundColor: achieved ? "#0d21ff" : "#b3b3b3",
-      }}
-      transition={{ type: "spring", stiffness: 260, damping: 18 }}
-      className="relative z-10 block size-4 shrink-0 rounded-full ring-4 ring-proj-white"
+    <div className="relative mx-auto w-[714px] max-w-full">
+      <div className="absolute left-1/2 top-0 h-full w-[3px] -translate-x-1/2 rounded-full bg-[#333]" aria-hidden />
+      <motion.div
+        style={{ scaleY: lineFill }}
+        className="absolute left-1/2 top-0 h-full w-[3px] origin-top -translate-x-1/2 rounded-full bg-primary-orange"
+        aria-hidden
+      />
+      <div className="relative flex flex-col">
+        {milestones.map((m, i) => {
+          const achieved = i < achievedCount;
+          return (
+            <div key={m.number} className="relative flex min-h-[212px] items-center py-8">
+              <DesktopCard milestone={m} achieved={achieved} side={i % 2 === 0 ? "left" : "right"} />
+              <DesktopDot achieved={achieved} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Mobile card -- Figma node 552:4091. Solid-orange "ACHIEVED" pill (not
+ * the rotated stamp desktop uses), white title, grey-400 body. */
+function MobileCard({ milestone, achieved }: { milestone: Milestone; achieved: boolean }) {
+  return (
+    <motion.div
+      animate={{ opacity: achieved ? 1 : 0.45 }}
+      transition={{ duration: 0.4 }}
+      className={`flex min-h-[150px] w-full flex-col gap-1.5 rounded-xl border bg-white/[0.04] p-3 ${
+        achieved ? "border-primary-orange/[0.15]" : "border-white/[0.05]"
+      }`}
+    >
+      <div className="flex w-full items-start justify-between gap-2">
+        <span className="max-w-[180px] truncate font-nunito text-[10px] font-extrabold text-[#666]">
+          INSTALLMENT {milestone.number} • {milestone.type}
+        </span>
+        {achieved && (
+          <motion.span
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 15 }}
+            className="shrink-0 rounded bg-primary-orange px-2 py-[3px] font-nunito text-[9px] font-extrabold text-white"
+          >
+            ACHIEVED
+          </motion.span>
+        )}
+      </div>
+      <p className="font-nunito text-[16px] leading-6 font-bold text-white">{milestone.title}</p>
+      <p className="font-nunito text-[12px] leading-[17px] font-normal text-[#999]">{milestone.desc}</p>
+    </motion.div>
+  );
+}
+
+function MobileTimelineDot({ achieved }: { achieved: boolean }) {
+  return (
+    <Image
+      src={achieved ? "/work/piiluu/milestones/dot-filled.svg" : "/work/piiluu/milestones/dot-outline.svg"}
+      alt=""
+      width={12}
+      height={12}
+      className="size-3 shrink-0"
     />
   );
 }
 
-/** Mobile: single vertical column, dot+line on the left, cards on the
- * right -- matches Figma's "progress-bar-column" + "cards-column"
- * structure. Line fill is `scaleY` off the shared scroll progress. */
-function MobileTimeline({ milestones, progress, achieved }: { milestones: Milestone[]; progress: MotionValue<number>; achieved: boolean[] }) {
-  const lineScale = useTransform(progress, [0, 1], [0, 1]);
+function MobileTimeline({ milestones, achievedCount }: { milestones: Milestone[]; achievedCount: number }) {
   return (
-    <div className="flex w-full gap-4">
-      <div className="relative flex w-4 flex-col items-center pt-1">
-        <div className="absolute left-1/2 top-2 bottom-2 w-[3px] -translate-x-1/2 rounded-full bg-grey-100" aria-hidden />
-        <motion.div
-          style={{ scaleY: lineScale }}
-          className="absolute left-1/2 top-2 bottom-2 w-[3px] origin-top -translate-x-1/2 rounded-full bg-secondary-blue"
-          aria-hidden
-        />
-        <div className="relative flex h-full flex-col justify-between py-1">
-          {milestones.map((m, i) => (
-            <TimelineDot key={m.number} achieved={achieved[i]} />
-          ))}
-        </div>
+    <div className="flex w-full gap-3 px-4 py-2">
+      <div className="flex shrink-0 flex-col items-center">
+        {milestones.map((m, i) => {
+          const achieved = i < achievedCount;
+          const nextAchieved = i + 1 < achievedCount;
+          return (
+            <div key={m.number} className="flex flex-1 flex-col items-center">
+              <div className={`w-[2px] flex-1 ${i === 0 ? "invisible" : achieved ? "bg-primary-orange" : "bg-[#333]"}`} />
+              <MobileTimelineDot achieved={achieved} />
+              <div className={`w-[2px] flex-1 ${i === milestones.length - 1 ? "invisible" : nextAchieved ? "bg-primary-orange" : "bg-[#333]"}`} />
+            </div>
+          );
+        })}
       </div>
-      <div className="flex flex-1 flex-col gap-6">
+      <div className="flex flex-1 flex-col gap-3">
         {milestones.map((m, i) => (
-          <MilestoneCard key={m.number} milestone={m} achieved={achieved[i]} />
+          <MobileCard key={m.number} milestone={m} achieved={i < achievedCount} />
         ))}
       </div>
     </div>
@@ -99,143 +171,110 @@ function MobileTimeline({ milestones, progress, achieved }: { milestones: Milest
 }
 
 /**
- * Desktop: 2x2 grid arranged as a continuous "snake" path so a single
- * connecting line can visit cards 1->2->3->4 in numeric order --
- * top row left-to-right (1,2), then down the right edge (2->3), then
- * bottom row right-to-left (3->4, achieved via `flex-row-reverse` on the
- * DOM order so card 3 renders visually on the right, under card 2). This is
- * a judgment call reading Figma's 714x849 2-column auto-layout node into a
- * coherent, literally-connectable timeline shape rather than a pixel-exact
- * port of its internal spacing math.
+ * Scroll-linked progress: as the user scrolls through the timeline
+ * container, the connecting line fills (`scaleY`) and each milestone
+ * flips to its "achieved" state in turn -- Joe's explicit ask ("每一個目標被
+ * achieved 的 tag 標記，中間的 bar 也會慢慢增加"). `achievedCount` is derived from
+ * scroll progress via even thresholds (1/N, 2/N, ...), not a fixed timer.
  */
-function DesktopTimeline({ milestones, progress, achieved }: { milestones: Milestone[]; progress: MotionValue<number>; achieved: boolean[] }) {
-  const seg1 = useTransform(progress, [0, 0.33], [0, 1]); // top: 1 -> 2
-  const seg2 = useTransform(progress, [0.33, 0.66], [0, 1]); // right: 2 -> 3
-  const seg3 = useTransform(progress, [0.66, 1], [0, 1]); // bottom: 3 -> 4
+function ScrollTimeline({ milestones }: { milestones: Milestone[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 0.75", "end 0.4"] });
+  const lineFill = useTransform(scrollYProgress, [0, 1], [0, 1]);
+  const [achievedCount, setAchievedCount] = useState(0);
+
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    setAchievedCount(Math.min(milestones.length, Math.round(v * milestones.length)));
+  });
 
   return (
-    <div className="relative grid grid-cols-2 gap-x-10 gap-y-16">
-      {/* connecting path -- 3 absolutely positioned segments */}
-      <div className="pointer-events-none absolute inset-0" aria-hidden>
-        {/* top segment: card1 right edge -> card2 left edge */}
-        <div className="absolute left-[calc(50%-1px)] right-[8%] top-[38px] h-[3px] -translate-x-full rounded-full bg-grey-100" />
-        <motion.div
-          style={{ scaleX: seg1 }}
-          className="absolute left-[calc(50%-1px)] right-[8%] top-[38px] h-[3px] origin-left -translate-x-full rounded-full bg-secondary-blue"
-        />
-        {/* right segment: card2 bottom -> card3 top (right column) */}
-        <div className="absolute right-[8%] top-[38px] bottom-[calc(50%+38px)] w-[3px] translate-x-1/2 rounded-full bg-grey-100" />
-        <motion.div
-          style={{ scaleY: seg2 }}
-          className="absolute right-[8%] top-[38px] bottom-[calc(50%+38px)] w-[3px] origin-top translate-x-1/2 rounded-full bg-secondary-blue"
-        />
-        {/* bottom segment: card3 (right) -> card4 (left) */}
-        <div className="absolute left-[8%] right-[calc(50%-1px)] bottom-[38px] h-[3px] translate-x-full rounded-full bg-grey-100" />
-        <motion.div
-          style={{ scaleX: seg3 }}
-          className="absolute left-[8%] right-[calc(50%-1px)] bottom-[38px] h-[3px] origin-right translate-x-full rounded-full bg-secondary-blue"
-        />
+    <div ref={ref}>
+      <div className="hidden md:block">
+        <DesktopTimeline milestones={milestones} achievedCount={achievedCount} lineFill={lineFill} />
       </div>
-
-      <div className="relative z-10 flex items-start gap-3">
-        <TimelineDot achieved={achieved[0]} />
-        <MilestoneCard milestone={milestones[0]} achieved={achieved[0]} />
-      </div>
-      <div className="relative z-10 flex items-start gap-3">
-        <TimelineDot achieved={achieved[1]} />
-        <MilestoneCard milestone={milestones[1]} achieved={achieved[1]} />
-      </div>
-      {/* row 2 rendered in reverse visual order (card 4 left, card 3 right)
-          so the DOM/scroll-order 3 -> 4 still reads as a continuous path
-          into the right column above. */}
-      <div className="relative z-10 flex flex-row-reverse items-start gap-3">
-        <TimelineDot achieved={achieved[3]} />
-        <MilestoneCard milestone={milestones[3]} achieved={achieved[3]} />
-      </div>
-      <div className="relative z-10 flex flex-row-reverse items-start gap-3">
-        <TimelineDot achieved={achieved[2]} />
-        <MilestoneCard milestone={milestones[2]} achieved={achieved[2]} />
+      <div className="md:hidden">
+        <MobileTimeline milestones={milestones} achievedCount={achievedCount} />
       </div>
     </div>
   );
 }
 
+/** `prefers-reduced-motion` fallback -- every milestone renders already
+ * achieved, no scroll-linked reveal. */
+function StaticTimeline({ milestones }: { milestones: Milestone[] }) {
+  return (
+    <>
+      <div className="hidden md:block">
+        <div className="relative mx-auto w-[714px] max-w-full">
+          <div className="absolute left-1/2 top-0 h-full w-[3px] -translate-x-1/2 rounded-full bg-primary-orange" aria-hidden />
+          <div className="relative flex flex-col">
+            {milestones.map((m, i) => (
+              <div key={m.number} className="relative flex min-h-[212px] items-center py-8">
+                <DesktopCard milestone={m} achieved side={i % 2 === 0 ? "left" : "right"} />
+                <DesktopDot achieved />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="md:hidden">
+        <MobileTimeline milestones={milestones} achievedCount={milestones.length} />
+      </div>
+    </>
+  );
+}
+
 /**
- * 里程碑與學習 (Milestones), Figma fileKey 8qGUSDUJqOgJaSERffGXVc. Per Joe's
- * explicit new instruction: as the user scrolls this section, each
- * milestone's "ACHIEVED" badge pops in and the connecting progress bar
- * fills, both driven by actual scroll position (`useScroll` scoped to this
- * section's container), not a fixed timer or per-card `whileInView`.
+ * Milestones section ("里程碑與學習"), Figma fileKey 8qGUSDUJqOgJaSERffGXVc,
+ * desktop node 526:2386 / mobile node 552:4018. Section bg is `#1A1A1A`
+ * (dark) at both breakpoints -- not light. All accents are primary-orange,
+ * not piiluu's usual dominant blue (matched exactly per Figma, not
+ * simplified). Desktop: alternating left/right cards flanking a center
+ * timeline, orange card titles. Mobile: dark cards in a single column with
+ * an SVG-dot timeline on the left, white card titles.
  *
- * A single `useScroll({ target: containerRef, offset: ["start center", "end
- * center"] })` produces one 0-1 progress value shared by both the mobile
- * (true vertical column) and desktop (2x2 snake-path) layouts -- each just
- * visualizes it differently. `achieved[i]` flips to true once progress
- * crosses `THRESHOLDS[i]` (tracked via `useMotionValueEvent`, since the
- * badge pop/dot-color-change needs a discrete React boolean, not a
- * continuously-interpolated style).
- *
- * Content model: `process.milestonesHeading`, `milestonesIntro`,
- * `milestonesSubIntro`, `process.milestones` (4x {number, type, title,
- * desc}).
+ * Content model: `process.milestonesHeading`, `.milestonesIntro`
+ * (labelled "產品旅程與反思"), `.milestonesSubIntro`, `process.milestones` (4x
+ * {number, type, title, desc}).
  */
 export function Milestones({ process }: { process: Record<string, unknown> }) {
   const heading = (process.milestonesHeading as string) || "里程碑與學習";
-  const intro = process.milestonesIntro as string | undefined;
-  const subIntro = process.milestonesSubIntro as string | undefined;
+  const introTitle = (process.milestonesIntro as string) || "產品旅程與反思";
+  const introBody = process.milestonesSubIntro as string | undefined;
   const milestones = Array.isArray(process.milestones) ? (process.milestones as Milestone[]) : [];
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress: progress } = useScroll({
-    target: containerRef,
-    offset: ["start center", "end center"],
-  });
-
-  const [achieved, setAchieved] = useState<boolean[]>(() => THRESHOLDS.map(() => false));
-
-  useMotionValueEvent(progress, "change", (v) => {
-    setAchieved((prev) => {
-      const next = THRESHOLDS.map((t) => v >= t);
-      return prev.some((val, i) => val !== next[i]) ? next : prev;
-    });
-  });
-
-  // Initialize once mounted (covers the case where the section is already
-  // in its scrolled range on load, e.g. a deep-link / reload mid-page).
-  useEffect(() => {
-    setAchieved(THRESHOLDS.map((t) => progress.get() >= t));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const reduceMotion = useReducedMotion();
 
   if (milestones.length === 0) return null;
 
   return (
-    <section ref={containerRef} className="bg-proj-white px-6 py-12 md:px-[120px] md:py-[100px]">
-      <div className="flex flex-col gap-10 md:gap-16">
-        <SlideIn delay={0.1}>
-          <div className="flex flex-col gap-3">
-            <span className="font-nunito text-[13px] font-extrabold tracking-[0.78px] text-secondary-blue uppercase">
-              {heading}
-            </span>
-            {intro && (
-              <h3 className="font-nunito text-[24px] leading-[32px] font-bold text-primary-black md:text-[40px] md:leading-[52px]">
-                {intro}
-              </h3>
-            )}
-            {subIntro && (
-              <p className="font-nunito max-w-[720px] text-[14px] leading-[22px] font-normal text-grey-600 md:text-[16px] md:leading-[25px]">
-                {subIntro}
-              </p>
-            )}
+    <section className="bg-[#1a1a1a] px-6 py-12 md:px-[200px] md:py-20">
+      <div className="flex flex-col items-center gap-6 md:gap-9">
+        <div className="flex flex-col items-center gap-2 text-center md:gap-3">
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-primary-orange" aria-hidden />
+            <span className="font-nunito text-[14px] font-extrabold text-primary-orange">MILESTONES &amp; LEARNINGS</span>
           </div>
-        </SlideIn>
+          <h3 className="font-nunito text-[24px] leading-9 font-bold text-white md:text-[40px] md:leading-[56px]">{heading}</h3>
+        </div>
 
-        <div className="md:hidden">
-          <MobileTimeline milestones={milestones} progress={progress} achieved={achieved} />
-        </div>
-        <div className="hidden md:block">
-          <DesktopTimeline milestones={milestones} progress={progress} achieved={achieved} />
-        </div>
+        {/* Mobile -- bordered quote-mark card */}
+        {introBody && (
+          <div className="relative flex w-full items-center rounded-[8px] border border-[#e6e6e6] bg-white/[0.06] px-5 py-3 md:hidden">
+            <Image src="/work/piiluu/milestones/quote-open.svg" alt="" width={12} height={9} className="absolute left-[5px] top-[11px]" />
+            <p className="w-full text-center font-nunito text-[14px] leading-[21px] font-normal text-white">{introBody}</p>
+            <Image src="/work/piiluu/milestones/quote-close.svg" alt="" width={12} height={9} className="absolute right-[5px] top-[11px]" />
+          </div>
+        )}
+
+        {/* Desktop -- plain bordered panel, no quote glyphs */}
+        {introBody && (
+          <div className="hidden w-full flex-col items-center gap-3 rounded-2xl border border-[#f5f5f5]/20 bg-white/[0.06] py-4 text-center shadow-[0px_2px_12px_0px_rgba(0,0,0,0.13)] md:flex">
+            <p className="font-nunito text-[28px] leading-[39px] font-bold text-primary-orange">{introTitle}</p>
+            <p className="max-w-[660px] font-nunito text-[18px] leading-[25px] font-normal text-white">{introBody}</p>
+          </div>
+        )}
+
+        {reduceMotion ? <StaticTimeline milestones={milestones} /> : <ScrollTimeline milestones={milestones} />}
       </div>
     </section>
   );

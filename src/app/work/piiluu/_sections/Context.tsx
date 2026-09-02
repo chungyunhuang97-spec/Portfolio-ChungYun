@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Buildings, Users } from "@phosphor-icons/react/dist/ssr";
+import Image from "next/image";
 import { SlideIn } from "@/components/design-system/SlideIn";
 
 interface ContextCard {
   eyebrowLabel: string;
   title: string;
+  /** Colored pill subheading, e.g. "從 Photoshop 到 Figma 的轉型陣痛期". */
   subheading: string;
   painLabel: string;
   pain: string;
@@ -14,135 +15,182 @@ interface ContextCard {
   action: string;
 }
 
-const CARD_ICONS = [Buildings, Users];
+/** Card 1 (內部協作挑戰) is orange-themed, card 2 (市場與體驗挑戰) is
+ * blue-themed -- an intentional per-card split in Figma (not a uniform
+ * "one dominant color" rule), matched exactly rather than simplified. */
+const CARD_THEME = [
+  { eyebrowText: "text-primary-orange", pillBg: "bg-primary-orange", actionBorder: "border-primary-orange", actionLabel: "text-primary-orange", icon: "/work/piiluu/context/icon-collab.svg", actionIcon: "/work/piiluu/context/icon-action-orange.svg" },
+  { eyebrowText: "text-[#666]", pillBg: "bg-secondary-blue", actionBorder: "border-secondary-blue", actionLabel: "text-secondary-blue", icon: "/work/piiluu/context/icon-market.svg", actionIcon: "/work/piiluu/context/icon-action-blue.svg" },
+];
+const PAIN_ICONS = ["/work/piiluu/context/icon-pain.svg", "/work/piiluu/context/icon-background.svg"];
 
-/** Local eyebrow-with-icon label -- every section on this page hand-rolls
- * its own small kicker rather than reusing the unused `SectionKicker`
- * (neither Nest Stay nor Metro use it), matching the established
- * convention. */
-function CardEyebrow({ icon: Icon, label }: { icon: typeof Buildings; label: string }) {
+function CardEyebrow({ icon, label, colorClass }: { icon: string; label: string; colorClass: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-secondary-blue/10">
-        <Icon size={12} weight="bold" className="text-secondary-blue" />
-      </span>
-      <span className="font-nunito text-[11px] font-extrabold tracking-[0.66px] text-secondary-blue uppercase">
-        {label}
-      </span>
+    <div className="flex items-center gap-1 rounded-[6px] bg-grey-50 px-2 py-1">
+      <Image src={icon} alt="" width={10} height={10} className="size-[10px]" />
+      <span className={`font-nunito text-[12px] font-extrabold uppercase ${colorClass}`}>{label}</span>
     </div>
   );
 }
 
-function ContextCardView({ card, index }: { card: ContextCard; index: number }) {
-  const Icon = CARD_ICONS[index] ?? Buildings;
+/** Desktop shows both the pain and action boxes at once, side by side in
+ * one column. Mobile shows only one at a time, switched by the card's own
+ * pagination dots (see MobileCard below) -- matches Figma's two distinct
+ * layouts exactly rather than reusing one responsive tree. */
+function DesktopCard({ card, theme, painIcon }: { card: ContextCard; theme: (typeof CARD_THEME)[number]; painIcon: string }) {
   return (
-    <div className="flex w-full flex-col gap-4 rounded-2xl border border-grey-100 bg-proj-white p-6 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)] md:p-7">
-      <CardEyebrow icon={Icon} label={card.eyebrowLabel} />
-      <div className="flex flex-col gap-1">
-        <h4 className="font-nunito text-[18px] font-bold text-primary-black md:text-[22px]">{card.title}</h4>
-        <p className="font-nunito text-[13px] font-normal text-grey-600 md:text-[14px]">{card.subheading}</p>
+    <div className="flex flex-1 flex-col gap-3.5 rounded-[17px] border border-[#eaeaea] bg-white p-5 drop-shadow-[0px_7px_11px_rgba(0,0,0,0.04)]">
+      <div className="flex flex-col items-center gap-1 text-center">
+        <CardEyebrow icon={theme.icon} label={card.eyebrowLabel} colorClass={theme.eyebrowText} />
+        <h4 className="font-nunito pt-1.5 text-[22px] font-bold leading-[31px] text-[#1a1a1a]">{card.title}</h4>
       </div>
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1 rounded-xl bg-grey-50 p-3.5">
-          <span className="font-nunito text-[11px] font-extrabold tracking-[0.6px] text-grey-500 uppercase">
-            {card.painLabel}
-          </span>
-          <p className="font-nunito text-[13px] leading-[20px] font-normal text-grey-700 md:text-[14px] md:leading-[22px]">
-            {card.pain}
-          </p>
+      <div className={`flex w-full items-center justify-center rounded-[20px] px-4 py-1 ${theme.pillBg}`}>
+        <span className="font-nunito text-[13px] font-bold text-white">{card.subheading}</span>
+      </div>
+      <div className="flex flex-1 flex-col gap-2">
+        <div className="flex flex-1 flex-col justify-center gap-1 rounded-[11px] border border-[#f0f0f0] bg-grey-50 p-3">
+          <div className="flex items-center gap-1">
+            <Image src={painIcon} alt="" width={10} height={10} className="size-[10px]" />
+            <span className="font-nunito text-[12px] font-extrabold text-[#1a1a1a]">{card.painLabel}</span>
+          </div>
+          <p className="font-nunito text-[13px] leading-[20px] font-normal text-[#666]">{card.pain}</p>
         </div>
-        <div className="flex flex-col gap-1 rounded-xl bg-secondary-blue/[0.06] p-3.5">
-          <span className="font-nunito text-[11px] font-extrabold tracking-[0.6px] text-secondary-blue uppercase">
-            {card.actionLabel}
-          </span>
-          <p className="font-nunito text-[13px] leading-[20px] font-normal text-grey-800 md:text-[14px] md:leading-[22px]">
-            {card.action}
-          </p>
+        <div className={`flex flex-1 flex-col justify-center gap-1 rounded-[11px] border bg-white p-3 ${theme.actionBorder}`}>
+          <div className="flex items-center gap-1">
+            <Image src={theme.actionIcon} alt="" width={10} height={10} className="size-[10px]" />
+            <span className={`font-nunito text-[12px] font-extrabold ${theme.actionLabel}`}>{card.actionLabel}</span>
+          </div>
+          <p className="font-nunito text-[13px] leading-[18px] font-bold text-[#1a1a1a]">{card.action}</p>
         </div>
       </div>
     </div>
   );
 }
 
-/** Mobile pagination dots, copied verbatim from Nest Stay's
- * `CarouselMediaPair` pattern (UIFlow.tsx) but recolored to
- * `bg-secondary-blue` for the active dot, since blue is piiluu's own
- * dominant accent rather than Nest Stay's orange. */
-function PaginationDots({ count, active, onChange }: { count: number; active: number; onChange: (i: number) => void }) {
+function MobileCard({ card, theme, painIcon }: { card: ContextCard; theme: (typeof CARD_THEME)[number]; painIcon: string }) {
+  const [active, setActive] = useState(0);
+  const showPain = active === 0;
   return (
-    <div className="flex items-center justify-center gap-2" role="tablist" aria-label="切換挑戰卡片">
-      {Array.from({ length: count }).map((_, i) => (
-        <button
-          key={i}
-          type="button"
-          role="tab"
-          aria-selected={i === active}
-          onClick={() => onChange(i)}
-          className={`h-[10px] rounded-full transition-all duration-300 ${
-            i === active ? "w-7 bg-secondary-blue" : "w-[10px] bg-grey-300"
-          }`}
-        />
-      ))}
+    <div className="flex h-[273px] w-full flex-col items-center justify-center gap-3 rounded-[17px] border border-[#eaeaea] bg-white p-5 drop-shadow-[0px_7px_11px_rgba(0,0,0,0.04)]">
+      <div className="flex flex-col items-center gap-1">
+        <CardEyebrow icon={theme.icon} label={card.eyebrowLabel} colorClass={theme.eyebrowText} />
+        <h4 className="font-nunito text-[16px] font-semibold leading-6 text-[#1a1a1a]">{card.title}</h4>
+      </div>
+      <div className={`flex w-full items-center justify-center rounded-[20px] px-4 py-1 ${theme.pillBg}`}>
+        <span className="font-nunito text-[13px] font-bold text-white">{card.subheading}</span>
+      </div>
+      {showPain ? (
+        <div className="flex h-[86px] w-full flex-col items-center justify-center gap-1 rounded-[11px] border border-[#f0f0f0] bg-grey-50 px-3 py-2">
+          <div className="flex items-center gap-1">
+            <Image src={painIcon} alt="" width={10} height={10} className="size-[10px]" />
+            <span className="font-nunito text-[12px] font-extrabold text-[#1a1a1a]">{card.painLabel}</span>
+          </div>
+          <p className="font-nunito text-center text-[13px] leading-[20px] font-normal text-[#666]">{card.pain}</p>
+        </div>
+      ) : (
+        <div className="flex h-[86px] w-full flex-col items-center justify-center gap-1 rounded-[11px] bg-grey-50 px-3 py-2">
+          <div className="flex items-center gap-1">
+            <Image src={theme.actionIcon} alt="" width={10} height={10} className="size-[10px]" />
+            <span className={`font-nunito text-[12px] font-extrabold ${theme.actionLabel}`}>{card.actionLabel}</span>
+          </div>
+          <p className="font-nunito text-center text-[13px] leading-[20px] font-normal text-[#1a1a1a]">{card.action}</p>
+        </div>
+      )}
+      <div className="flex items-center gap-2 px-3 py-2" role="tablist" aria-label={`切換${card.title}內容`}>
+        {[0, 1].map((i) => (
+          <button
+            key={i}
+            type="button"
+            role="tab"
+            aria-selected={active === i}
+            onClick={() => setActive(i)}
+            className={`h-[10px] rounded-[5px] transition-all duration-300 ${
+              active === i ? "w-7 bg-primary-orange" : "w-[10px] bg-[#b3b3b3]"
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
 /**
  * Context section ("從落地到迭代" / "打造易於維護與優化的金融產品"), Figma fileKey
- * 8qGUSDUJqOgJaSERffGXVc, desktop 473:185 / mobile 542:190. Content model:
- * `process` row -- `contextHeadingLine1`, `contextHeadingLine2`,
- * `contextIntro`, `contextCards` (2x {eyebrowLabel, title, subheading,
- * painLabel, pain, actionLabel, action}). Desktop: two cards side by side.
- * Mobile: stacked with pagination dots (per Figma) -- only the active card
- * mounts on mobile, matching the dot-controlled single-card-at-a-time
- * pattern established by Nest Stay's CarouselMediaPair.
+ * 8qGUSDUJqOgJaSERffGXVc, desktop node 515:424 / mobile node 542:236.
+ * Section bg is grey-50 (#F5F5F5) at both breakpoints -- not white.
+ *
+ * Desktop: plain intro paragraph under the heading, both cards' pain+action
+ * boxes shown at once, side by side. Mobile: intro wrapped in a bordered
+ * quote-mark card instead, and each card shows only ONE of pain/action at a
+ * time, switched by that card's own pagination dots -- two genuinely
+ * different layouts per Figma, not one responsive tree.
+ *
+ * Content model: `process.contextHeadingLine1` (small, black), `.
+ * contextHeadingLine2` (large, blue), `contextIntro`, `contextCards` (2x
+ * {eyebrowLabel, title, subheading, painLabel, pain, actionLabel, action}).
  */
 export function Context({ process }: { process: Record<string, unknown> }) {
   const headingLine1 = process.contextHeadingLine1 as string | undefined;
   const headingLine2 = process.contextHeadingLine2 as string | undefined;
   const intro = process.contextIntro as string | undefined;
   const cards = Array.isArray(process.contextCards) ? (process.contextCards as ContextCard[]) : [];
-  const [active, setActive] = useState(0);
 
   if (cards.length === 0) return null;
 
   return (
-    <section className="bg-proj-white px-6 py-12 md:px-[120px] md:py-[100px]">
-      <div className="flex flex-col gap-8 md:gap-12">
-        <SlideIn delay={0.1}>
-          <div className="flex flex-col gap-3">
-            <span className="font-nunito text-[13px] font-extrabold tracking-[0.78px] text-secondary-blue uppercase">
-              Context
-            </span>
-            {(headingLine1 || headingLine2) && (
-              <h3 className="font-nunito text-[26px] leading-[34px] font-bold text-primary-black md:text-[44px] md:leading-[56px]">
-                {headingLine1}
-                {headingLine1 && headingLine2 && <br />}
-                {headingLine2}
-              </h3>
-            )}
+    <section className="bg-grey-50 px-6 py-12 md:px-[200px] md:py-[72px]">
+      <div className="flex flex-col items-center gap-6 md:gap-8">
+        <SlideIn delay={0.1} className="w-full">
+          <div className="flex flex-col items-center gap-3 text-center md:gap-4">
+            <span className="font-nunito text-[14px] font-extrabold text-primary-orange">CONTEXT</span>
+            <div className="flex flex-col items-center gap-2 md:gap-2">
+              {headingLine1 && (
+                <p className="font-nunito text-[16px] font-semibold leading-6 text-black md:text-[32px] md:font-bold md:leading-[48px]">
+                  {headingLine1}
+                </p>
+              )}
+              {headingLine2 && (
+                <p className="font-nunito text-[24px] font-bold leading-9 text-secondary-blue md:text-[48px] md:leading-[72px]">
+                  {headingLine2}
+                </p>
+              )}
+            </div>
+
+            {/* Desktop -- plain intro paragraph, then a divider line */}
             {intro && (
-              <p className="font-nunito max-w-[680px] text-[14px] leading-[22px] font-normal text-grey-600 md:max-w-[720px] md:text-[18px] md:leading-[25px]">
+              <p className="hidden font-nunito text-[18px] leading-[25px] font-normal text-[#666] md:block">
                 {intro}
               </p>
             )}
-            <div className="w-full border-t border-dashed border-[#e0e0e0]" />
+            <div className="h-px w-full bg-[#e6e6e6]" />
           </div>
         </SlideIn>
 
-        {/* Mobile -- one card at a time, dot pagination */}
-        <div className="flex flex-col gap-5 md:hidden">
-          <SlideIn delay={0.15}>
-            <ContextCardView card={cards[active]} index={active} />
+        {/* Mobile -- intro in a bordered quote card, below the divider */}
+        {intro && (
+          <SlideIn delay={0.12} className="w-full md:hidden">
+            <div className="relative flex w-full items-center rounded-[8px] border border-[#e6e6e6] bg-white px-5 py-3">
+              <Image src="/work/piiluu/context/quote-open.svg" alt="" width={12} height={9} className="absolute left-[5px] top-[11px]" />
+              <p className="w-full text-center font-nunito text-[16px] leading-6 font-normal text-[#666]">{intro}</p>
+              <Image src="/work/piiluu/context/quote-close.svg" alt="" width={12} height={9} className="absolute right-[5px] top-[11px]" />
+            </div>
           </SlideIn>
-          {cards.length > 1 && <PaginationDots count={cards.length} active={active} onChange={setActive} />}
+        )}
+
+        {/* Mobile -- both cards stacked, each with its own pain/action toggle */}
+        <div className="flex w-full flex-col gap-6 md:hidden">
+          {cards.map((card, i) => (
+            <SlideIn key={card.title} delay={0.15 + i * 0.08}>
+              <MobileCard card={card} theme={CARD_THEME[i] ?? CARD_THEME[0]} painIcon={PAIN_ICONS[i] ?? PAIN_ICONS[0]} />
+            </SlideIn>
+          ))}
         </div>
 
-        {/* Desktop -- side by side */}
-        <div className="hidden gap-6 md:flex">
+        {/* Desktop -- side by side, both pain+action boxes visible */}
+        <div className="hidden w-full gap-6 md:flex">
           {cards.map((card, i) => (
             <SlideIn key={card.title} direction={i === 0 ? "left" : "right"} delay={0.15 + i * 0.08} className="flex flex-1">
-              <ContextCardView card={card} index={i} />
+              <DesktopCard card={card} theme={CARD_THEME[i] ?? CARD_THEME[0]} painIcon={PAIN_ICONS[i] ?? PAIN_ICONS[0]} />
             </SlideIn>
           ))}
         </div>

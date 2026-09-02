@@ -83,13 +83,9 @@ function CountUpValue({ value, className }: { value: string; className?: string 
   );
 }
 
-function SectionEyebrow({ label }: { label: string }) {
-  return (
-    <span className="font-nunito text-[13px] font-extrabold tracking-[0.78px] text-secondary-blue uppercase">{label}</span>
-  );
-}
-
-/** "同步構建與迭代：雙軌並行的設計策略" intro block. */
+/** "同步構建與迭代：雙軌並行的設計策略" intro -- Figma node 488:251, a full-bleed
+ * solid primary-orange banner (not a plain text block on the section's own
+ * bg). */
 function DualTrackIntro({ process }: { process: Record<string, unknown> }) {
   const heading = process.dualTrackHeading as string | undefined;
   const body = process.dualTrackBody as string | undefined;
@@ -97,18 +93,37 @@ function DualTrackIntro({ process }: { process: Record<string, unknown> }) {
 
   return (
     <SlideIn delay={0.1}>
-      <div className="flex flex-col items-center gap-3 text-center">
-        <SectionEyebrow label="Design System" />
-        <h3 className="font-nunito max-w-[720px] text-[24px] leading-[32px] font-bold text-primary-black md:text-[40px] md:leading-[52px]">
+      <div className="-mx-6 flex flex-col items-center gap-4 bg-primary-orange px-6 py-12 text-center text-white md:-mx-[200px] md:py-[100px]">
+        <h3 className="font-nunito max-w-[900px] text-[22px] leading-[30px] font-bold md:text-[28px] md:leading-[39px]">
           {heading}
         </h3>
         {body && (
-          <p className="font-nunito max-w-[640px] text-[14px] leading-[22px] font-normal text-grey-600 md:text-[16px] md:leading-[25px]">
+          <p className="font-nunito max-w-[760px] text-[14px] leading-[22px] font-normal md:text-[18px] md:leading-[25px]">
             {body}
           </p>
         )}
       </div>
     </SlideIn>
+  );
+}
+
+/** UI Kit System section heading -- Figma node 528:193 (desktop, "layers"
+ * icon kicker) / 551:329 (mobile, dot kicker instead). */
+function UiKitHeading({ heading, intro }: { heading: string; intro?: string }) {
+  return (
+    <div className="flex flex-col items-center gap-3 text-center md:gap-4">
+      <div className="hidden items-center gap-2 md:flex">
+        <Image src="/work/piiluu/uikit/icon-layers.svg" alt="" width={16} height={16} />
+        <span className="font-nunito text-[14px] font-extrabold text-primary-orange">UI Kit System</span>
+      </div>
+      <div className="flex items-center gap-2 md:hidden">
+        <span className="size-2 rounded-full bg-primary-orange" aria-hidden />
+        <span className="font-nunito text-[13px] font-extrabold tracking-[0.66px] text-primary-orange">UI KIT SYSTEM</span>
+      </div>
+      <h4 className="font-nunito max-w-[900px] text-[20px] leading-7 font-bold text-black md:text-[40px] md:leading-[56px]">{heading}</h4>
+      {intro && <p className="font-nunito text-[13px] font-normal text-[#666] md:hidden">{intro}</p>}
+      <div className="h-px w-full bg-grey-300/60 opacity-60" />
+    </div>
   );
 }
 
@@ -330,12 +345,7 @@ export function DesignSystem({ process }: { process: Record<string, unknown> }) 
 
         <div className="flex flex-col gap-6">
           <SlideIn delay={0.15}>
-            <div className="flex flex-col items-center gap-2 text-center md:items-start md:text-left">
-              <h4 className="font-nunito text-[20px] leading-[28px] font-bold text-primary-black md:text-[28px]">{uiKitHeading}</h4>
-              {uiKitIntro && (
-                <p className="font-nunito text-[13px] font-normal text-grey-600 md:text-[15px]">{uiKitIntro}</p>
-              )}
-            </div>
+            <UiKitHeading heading={uiKitIntro || uiKitHeading} />
           </SlideIn>
 
           {/* Mobile -- horizontally scrollable with pagination dots, per
