@@ -1,13 +1,16 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   motion,
   useScroll,
   useTransform,
   useReducedMotion,
-  type MotionValue,
+  useAnimationControls,
+  useMotionValueEvent,
 } from "framer-motion";
+
+type AnimationControls = ReturnType<typeof useAnimationControls>;
 import { Tag } from "@/components/design-system/Tag";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 import type { Project } from "@/lib/types";
@@ -47,24 +50,26 @@ function MetaPill({ role, timeframe }: { role: string; timeframe: string }) {
  * 會被解體，並變成手機的 Mockup") -- the disintegration deltas are additive on
  * top of this exact rest state, not a redesign of it.
  */
-function DisintegratingCard({ progress }: { progress: MotionValue<number> }) {
-  /* Simplified from ~20 independently scroll-linked shard transforms (one
-   * card body + 4 pieces each with their own x/y/rotate/opacity) down to
-   * 3 transforms on the card as one unit. The per-piece version recomputed
-   * ~20 motion values on every single scroll pixel via a live
-   * getBoundingClientRect-driven progress value -- expensive enough to
-   * visibly jank scrolling, which read as the reported "blank white
-   * screen" (dropped frames / a stalled paint), not a real missing-content
-   * bug. This keeps the "card dissolves, phone assembles" idea (opacity +
-   * scale + a slight downward drift + rotate) at a fraction of the cost. */
-  const cardOpacity = useTransform(progress, [0.15, 0.55], [1, 0]);
-  const cardScale = useTransform(progress, [0.1, 0.55], [1, 0.85]);
-  const cardY = useTransform(progress, [0.15, 0.55], [0, 24]);
-  const cardRotate = useTransform(progress, [0.15, 0.55], [0, -6]);
-
+function DisintegratingCard({ controls }: { controls: AnimationControls }) {
+  /* Fixed-duration, trigger-once animation instead of continuous
+   * scroll-position-linked transforms. The scroll-linked version (opacity/
+   * scale/y/rotate all mapped directly off `useScroll` progress) depended
+   * on the card's fade-out and the phone's fade-in landing in precisely
+   * overlapping progress ranges -- reported to still leave a blank gap /
+   * a "card shrinks then nothing" outcome in real testing despite several
+   * rounds of retuning the ranges, and this codebase has essentially no
+   * other precedent for scroll-scrubbed motion values (the one prior
+   * example, HeroDoodleField, is a purely decorative parallax, not
+   * content the user needs to actually see appear). Switched to the
+   * pattern this codebase DOES rely on everywhere else (SlideIn, the
+   * imperative `animate()` calls in Nest Stay/Metro's CountUp-style
+   * cards): scroll only TRIGGERS the sequence once, then it plays out
+   * over a fixed duration via `animate` controls -- immune to scroll
+   * speed/position edge cases, always completes. */
   return (
     <motion.div
-      style={{ opacity: cardOpacity, scale: cardScale, y: cardY, rotate: cardRotate }}
+      initial={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+      animate={controls}
       className="relative h-[190px] w-[310px] overflow-hidden rounded-[16px] bg-secondary-blue shadow-[0px_2px_4px_0px_rgba(0,0,0,0.05),0px_8px_16px_0px_rgba(0,0,0,0.1)] md:h-[265px] md:w-[380px] md:rounded-[20px] md:shadow-[0px_1.5px_1.5px_0px_rgba(64,50,42,0.04),0px_8px_12px_0px_rgba(64,50,42,0.06)]"
     >
       {/* Diagonal stripe -- exact Figma technique: one large solid
@@ -118,20 +123,23 @@ interface HeroContentProps {
  * DISINTEGRATES (see DisintegratingCard) while a PhoneFrame assembles in
  * its place, conceptually "physical card -> cardless-payment phone screen".
  *
- * Pinned via `position: sticky` inside a `h-[170vh]` container -- a normal
- * (non-pinned) Hero was tried first to rule out a dead-zone bug in the
- * opacity math, but without extra scroll runway a normal scroll gesture
- * covers the whole `min-h-screen` Hero in one motion, so the transition
- * resolved faster than it could be perceived ("card just shrinks, then
- * jumps straight to the next section" -- reported after that version
- * shipped). Restored the pin with two changes from the version that
- * preceded it: (1) the card/phone opacity ranges now overlap heavily
- * (0.15-0.65 combined, ~75% total opacity throughout the overlap, never a
- * trough) and span most of the 170vh runway instead of resolving in the
- * first 30-40% and leaving a long static tail; (2) `DisintegratingCard`
- * itself is the simplified single-unit version (4 transforms, not ~20
- * independent shard transforms) so the pin doesn't reintroduce the
- * scroll-jank risk that motivated removing shard-level animation earlier.
+ * Pinned via `position: sticky` inside a `h-[140vh]` container purely to
+ * give the moment a "hold" while it plays out, and to make "you have to
+ * scroll to see this" legible -- but the transition itself is NOT
+ * scroll-position-linked. Three separate rounds of scroll-scrubbed
+ * `useTransform` timing (compressed ranges, then wider overlapping ranges,
+ * then a fully non-pinned version) all still reproduced a blank gap /
+ * "card shrinks then nothing appears" in real testing, and this codebase
+ * has no real precedent for scroll-scrubbed content (the one prior
+ * example, HeroDoodleField, is decorative parallax, not something the
+ * user needs to see resolve). This version instead uses the pattern the
+ * rest of the codebase actually relies on (SlideIn, Nest Stay/Metro's
+ * imperative CountUp-style `animate()` calls): scrolling only TRIGGERS
+ * the sequence once (`useMotionValueEvent` watching progress cross a
+ * small threshold), then `useAnimationControls` plays a fixed-duration
+ * animation on the card and phone -- once started, it always finishes
+ * regardless of how fast/slow/far the user keeps scrolling, so there is
+ * no scroll-position window for a gap to live in.
  *
  * All static content/colors below match Figma nodes 542:191 (mobile) /
  * 476:185 (desktop) exactly -- see get_design_context output referenced in
@@ -146,21 +154,31 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, screen 
 
   const watermarkOpacity = useTransform(progress, [0, 0.6, 1], [0, 0.07, 0.07]);
   const watermarkScale = useTransform(progress, [0, 1], [0.85, 1.15]);
-  const hintOpacity = useTransform(progress, [0, 0.15], [1, 0]);
-  /* Card and phone ranges overlap heavily (0.15-0.6) so their opacities sum
-   * to ~1 throughout (no dead/blank trough), and together they span most
-   * of the pin's scroll distance (not compressed into the first 30-40%) --
-   * a pin with no runway to spare feels instant/abrupt (reported: "just
-   * shrinks then jumps to the next section"); one where the transition
-   * finishes too early leaves a long static tail before it releases. This
-   * ends the transition around 0.75, leaving a short ~25% "arrived" pause
-   * before the pin lets go -- enough to register, not long enough to feel
-   * stuck. */
-  const phoneOpacity = useTransform(progress, [0.25, 0.65], [0, 1]);
-  const phoneScale = useTransform(progress, [0.25, 0.7], [0.75, 1]);
+
+  const [unlocked, setUnlocked] = useState(false);
+  const cardControls = useAnimationControls();
+  const phoneControls = useAnimationControls();
+
+  useMotionValueEvent(progress, "change", (v) => {
+    if (v > 0.1 && !unlocked) {
+      setUnlocked(true);
+      cardControls.start({
+        opacity: 0,
+        scale: 0.85,
+        y: 24,
+        rotate: -6,
+        transition: { duration: 0.75, ease: "easeInOut" },
+      });
+      phoneControls.start({
+        opacity: 1,
+        scale: 1,
+        transition: { duration: 0.75, delay: 0.3, ease: "easeOut" },
+      });
+    }
+  });
 
   return (
-    <div ref={pinRef} className="relative h-[170vh]">
+    <div ref={pinRef} className="relative h-[140vh]">
       <div className="sticky top-0 flex h-[100dvh] w-full flex-col items-center justify-center gap-6 overflow-hidden bg-white px-6 pt-6 pb-10 md:gap-10 md:px-[120px] md:pt-[180px] md:pb-[100px]">
         <motion.p
           aria-hidden
@@ -194,9 +212,10 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, screen 
         )}
 
         <div className="relative z-10 flex h-[190px] w-[310px] items-center justify-center md:h-[265px] md:w-[380px]">
-          <DisintegratingCard progress={progress} />
+          <DisintegratingCard controls={cardControls} />
           <motion.div
-            style={{ opacity: phoneOpacity, scale: phoneScale }}
+            initial={{ opacity: 0, scale: 0.75 }}
+            animate={phoneControls}
             className="pointer-events-none absolute inset-0 flex items-center justify-center"
           >
             {/* Shaped wrapper (real aspect ratio + explicit height) so
@@ -210,7 +229,8 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, screen 
         </div>
 
         <motion.p
-          style={{ opacity: hintOpacity }}
+          animate={{ opacity: unlocked ? 0 : 1 }}
+          transition={{ duration: 0.3 }}
           className="relative z-10 font-nunito text-[12px] font-extrabold tracking-[1px] text-secondary-blue"
         >
           SCROLL TO UNLOCK
