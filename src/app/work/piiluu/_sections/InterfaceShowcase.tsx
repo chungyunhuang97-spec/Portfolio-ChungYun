@@ -20,17 +20,23 @@ interface ShowcaseRow {
 
 /** Resolves to a real screenshot/video URL once admin-uploaded, else
  * undefined (PhoneFrame's own placeholder). Media lives in flat top-level
- * `process` keys ending in `MediaUrl` (`showcaseRow{N}BeforeMediaUrl` /
- * `...AfterMediaUrl`) rather than nested inside `showcaseRows[i]` --
- * required for the admin `ContentEditor`'s upload-dropzone auto-detection,
- * which only scans top-level `process` keys matching `/_media_url$/i` and
- * never recurses into arrays (confirmed in
- * `src/components/admin/ContentEditor.tsx`). Nesting them inside the array
- * (the original structure) made them invisible to the admin UI entirely --
- * this is the fix for "後台目前無法上傳ui flow s1-s4的媒體檔案". */
+ * `process` keys ending in `_media_url` (snake_case -- e.g.
+ * `showcase_row1_before_media_url`) rather than nested inside
+ * `showcaseRows[i]`, required for the admin `ContentEditor`'s
+ * upload-dropzone auto-detection: `MEDIA_KEY_PATTERN =
+ * /(_media_url|_image_url|_video_url)$/i` in
+ * `src/components/admin/ContentEditor.tsx` requires a LITERAL underscore
+ * before "media"/"url" -- camelCase keys like `showcaseRow1BeforeMediaUrl`
+ * (no underscores) never match it and silently render as a plain text
+ * field instead of an upload dropzone. (Metro's existing `*MediaUrl`
+ * fields are camelCase too and, per this same regex, don't actually get
+ * the dropzone treatment either -- that's a pre-existing latent mismatch
+ * in that page, not something to copy. Hero's own `mockup_media_url`,
+ * which Joe already successfully uploaded through, is the one real
+ * confirmed-working example: snake_case.) */
 function rowMedia(process: Record<string, unknown>, rowIndex: number): [string | undefined, string | undefined] {
-  const before = process[`showcaseRow${rowIndex + 1}BeforeMediaUrl`] as string | undefined;
-  const after = process[`showcaseRow${rowIndex + 1}AfterMediaUrl`] as string | undefined;
+  const before = process[`showcase_row${rowIndex + 1}_before_media_url`] as string | undefined;
+  const after = process[`showcase_row${rowIndex + 1}_after_media_url`] as string | undefined;
   return [before || undefined, after || undefined];
 }
 
@@ -243,7 +249,7 @@ function MobileRow({ row, process, rowIndex }: { row: ShowcaseRow; process: Reco
  *
  * Content model: `process.interfaceShowcaseHeading`, `.
  * interfaceShowcaseIntro`, `process.showcaseRows` (4x {number, title,
- * subtitle, pain, solution, mediaLabels?, beforeVariant?}); media URLs live in flat `process.showcaseRow{N}{Before,After}MediaUrl` keys.
+ * subtitle, pain, solution, mediaLabels?, beforeVariant?}); media URLs live in flat snake_case `process.showcase_row{N}_{before,after}_media_url` keys.
  */
 export function InterfaceShowcase({ process }: { process: Record<string, unknown> }) {
   const heading = (process.interfaceShowcaseHeading as string) || "關鍵介面優化與體驗重塑";

@@ -57,10 +57,10 @@ function DisintegratingCard({ progress }: { progress: MotionValue<number> }) {
    * screen" (dropped frames / a stalled paint), not a real missing-content
    * bug. This keeps the "card dissolves, phone assembles" idea (opacity +
    * scale + a slight downward drift + rotate) at a fraction of the cost. */
-  const cardOpacity = useTransform(progress, [0.03, 0.32], [1, 0]);
-  const cardScale = useTransform(progress, [0, 0.32], [1, 0.85]);
-  const cardY = useTransform(progress, [0.03, 0.32], [0, 24]);
-  const cardRotate = useTransform(progress, [0.03, 0.32], [0, -6]);
+  const cardOpacity = useTransform(progress, [0.15, 0.55], [1, 0]);
+  const cardScale = useTransform(progress, [0.1, 0.55], [1, 0.85]);
+  const cardY = useTransform(progress, [0.15, 0.55], [0, 24]);
+  const cardRotate = useTransform(progress, [0.15, 0.55], [0, -6]);
 
   return (
     <motion.div
@@ -118,43 +118,50 @@ interface HeroContentProps {
  * DISINTEGRATES (see DisintegratingCard) while a PhoneFrame assembles in
  * its place, conceptually "physical card -> cardless-payment phone screen".
  *
- * NOT a pinned/scroll-jacked layout (no `position:sticky`, no artificially
- * tall container). Earlier versions pinned the scene inside a 200-300vh
- * tall wrapper and drove the transition off scroll progress through THAT
- * container -- this repeatedly produced a real dead zone: whenever the
- * card had faded out further than the phone had faded in (or vice versa,
- * depending on exact scroll speed/position), the user saw a blank white
- * stretch for a meaningful chunk of scroll, and no amount of retuning the
- * opacity curves fully eliminated it. Removing the pin removes the failure
- * mode entirely: the Hero is normal `min-h-screen` content (no extra
- * scroll distance), and the transition is driven by the section's own
- * natural scroll-through position (`useScroll` with `target` = the Hero
- * itself, progress 0 at the moment its top reaches the viewport top,
- * progress 1 once it has fully scrolled past) -- there is no "extra" space
- * for a blank gap to live in.
+ * Pinned via `position: sticky` inside a `h-[170vh]` container -- a normal
+ * (non-pinned) Hero was tried first to rule out a dead-zone bug in the
+ * opacity math, but without extra scroll runway a normal scroll gesture
+ * covers the whole `min-h-screen` Hero in one motion, so the transition
+ * resolved faster than it could be perceived ("card just shrinks, then
+ * jumps straight to the next section" -- reported after that version
+ * shipped). Restored the pin with two changes from the version that
+ * preceded it: (1) the card/phone opacity ranges now overlap heavily
+ * (0.15-0.65 combined, ~75% total opacity throughout the overlap, never a
+ * trough) and span most of the 170vh runway instead of resolving in the
+ * first 30-40% and leaving a long static tail; (2) `DisintegratingCard`
+ * itself is the simplified single-unit version (4 transforms, not ~20
+ * independent shard transforms) so the pin doesn't reintroduce the
+ * scroll-jank risk that motivated removing shard-level animation earlier.
  *
  * All static content/colors below match Figma nodes 542:191 (mobile) /
  * 476:185 (desktop) exactly -- see get_design_context output referenced in
  * commit history for the literal values.
  */
 function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, screen }: HeroContentProps) {
-  const heroRef = useRef<HTMLDivElement>(null);
+  const pinRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: progress } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"],
+    target: pinRef,
+    offset: ["start start", "end end"],
   });
 
   const watermarkOpacity = useTransform(progress, [0, 0.6, 1], [0, 0.07, 0.07]);
   const watermarkScale = useTransform(progress, [0, 1], [0.85, 1.15]);
   const hintOpacity = useTransform(progress, [0, 0.15], [1, 0]);
-  /* Tight, overlapping crossfade -- card and phone cover the SAME 0.1-0.35
-   * band so their opacities sum to ~1 throughout, never both faint at once. */
-  const phoneOpacity = useTransform(progress, [0.1, 0.35], [0, 1]);
-  const phoneScale = useTransform(progress, [0.1, 0.4], [0.75, 1]);
+  /* Card and phone ranges overlap heavily (0.15-0.6) so their opacities sum
+   * to ~1 throughout (no dead/blank trough), and together they span most
+   * of the pin's scroll distance (not compressed into the first 30-40%) --
+   * a pin with no runway to spare feels instant/abrupt (reported: "just
+   * shrinks then jumps to the next section"); one where the transition
+   * finishes too early leaves a long static tail before it releases. This
+   * ends the transition around 0.75, leaving a short ~25% "arrived" pause
+   * before the pin lets go -- enough to register, not long enough to feel
+   * stuck. */
+  const phoneOpacity = useTransform(progress, [0.25, 0.65], [0, 1]);
+  const phoneScale = useTransform(progress, [0.25, 0.7], [0.75, 1]);
 
   return (
-    <div ref={heroRef} className="relative">
-      <div className="flex min-h-screen w-full flex-col items-center justify-center gap-6 overflow-hidden bg-white px-6 pt-6 pb-10 md:gap-10 md:px-[120px] md:pt-[180px] md:pb-[100px]">
+    <div ref={pinRef} className="relative h-[170vh]">
+      <div className="sticky top-0 flex h-[100dvh] w-full flex-col items-center justify-center gap-6 overflow-hidden bg-white px-6 pt-6 pb-10 md:gap-10 md:px-[120px] md:pt-[180px] md:pb-[100px]">
         <motion.p
           aria-hidden
           style={{ opacity: watermarkOpacity, scale: watermarkScale }}
