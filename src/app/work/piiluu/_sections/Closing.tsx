@@ -1,9 +1,8 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
 import { motion, useInView, useReducedMotion } from "framer-motion";
-import { ArrowUp } from "@phosphor-icons/react/dist/ssr";
+import { SlideIn } from "@/components/design-system/SlideIn";
 
 /**
  * Figma's own Closing background (node 539:2738 / 543:3512) is a static
@@ -40,32 +39,23 @@ function GeometricBackdrop() {
   );
 }
 
-/** "回到頂部" CTA -- Figma node 539:2744, white bg / secondary-blue border
- * and text, distinct from Nest Stay/Metro's own Closing buttons. */
-function BackToTopButton() {
-  return (
-    <a
-      href="#hero"
-      className="inline-flex items-center gap-2 rounded-xl border-[1.5px] border-secondary-blue bg-white px-4 py-4 font-nunito text-[16px] font-bold text-secondary-blue transition-transform hover:scale-[1.03]"
-    >
-      回到頂部
-      <ArrowUp size={20} weight="bold" />
-    </a>
-  );
-}
-
 /**
  * Closing section, Figma fileKey 8qGUSDUJqOgJaSERffGXVc, desktop node
  * 539:2738 / mobile node 543:3512. `bg-secondary-blue` (piiluu's dominant
  * color) at both breakpoints -- shared skeleton with Nest Stay/Metro's own
- * Closing (open/close quote glyphs, two staggered text lines, `id="closing"`
- * for `BackToTop`'s intersection trigger), but its own `GeometricBackdrop`
- * per the structural convention that signature Closing motion is never
- * reused cross-project.
+ * Closing, copied structurally from Metro's `Closing.tsx` (quote-glyph
+ * positioning technique, `id="closing"` for `BackToTop`'s intersection
+ * trigger, no separate CTA button here -- the existing global
+ * `<BackToTop />` already mounted once in page.tsx is the ONLY "回到頂部"
+ * control; this section must not render a second one), but its own
+ * `GeometricBackdrop` per the structural convention that signature Closing
+ * motion is never reused cross-project.
  *
- * Desktop quote glyphs are literal "「"/"」" text at 120px; mobile uses
- * Figma's small decorative SVG glyphs instead -- two different techniques
- * kept as Figma has them, not unified.
+ * Quote marks are positioned INSIDE the text column (absolute
+ * top-left/bottom-right against a wrapper with matching pt/pb reserved
+ * space), not pinned to the section's own corners -- this is what keeps
+ * them from ever overlapping the quote/body text regardless of how many
+ * lines it wraps to, exactly like Metro/Nest Stay's Closing.
  *
  * Content model: `reflection` row -- `closingQuote` / `closingBody`.
  */
@@ -80,27 +70,35 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
       <GeometricBackdrop />
 
       {/* Mobile */}
-      <div className="relative z-10 flex flex-col items-center gap-2 px-6 py-20 text-center md:hidden">
-        <Image src="/work/piiluu/closing/quote-open.svg" alt="" width={11} height={21} className="mb-1" />
-        <div className="flex w-[326px] max-w-full flex-col items-center gap-1.5 text-white">
-          {quote && <p className="font-nunito text-[14px] leading-[21px] font-bold">{quote}</p>}
-          {body && <p className="font-nunito text-[10px] leading-[17px] font-normal opacity-80">{body}</p>}
-        </div>
-        <Image src="/work/piiluu/closing/quote-close.svg" alt="" width={11} height={21} className="mt-1" />
-        <div className="mt-4">
-          <BackToTopButton />
-        </div>
+      <div className="relative flex w-full flex-col items-center justify-center px-6 py-20 md:hidden">
+        <SlideIn delay={0.1}>
+          <div className="relative flex w-full max-w-[326px] flex-col items-center gap-3 pt-12 pb-12 text-center text-white">
+            <span aria-hidden className="pointer-events-none absolute left-0 top-0 font-nunito text-[40px] font-bold leading-[40px] text-white">
+              「
+            </span>
+            <span aria-hidden className="pointer-events-none absolute bottom-0 right-0 font-nunito text-[40px] font-bold leading-[40px] text-white">
+              」
+            </span>
+            {quote && <p className="w-full font-nunito text-[16px] font-bold leading-[24px]">{quote}</p>}
+            {body && <p className="w-full font-nunito text-[13px] font-normal leading-[20px] opacity-80">{body}</p>}
+          </div>
+        </SlideIn>
       </div>
 
       {/* Desktop */}
-      <div className="relative z-10 hidden flex-col items-center justify-center gap-8 p-[100px] md:flex">
-        <span className="absolute left-[120px] top-[80px] font-nunito text-[120px] leading-[120px] font-bold text-white">「</span>
-        <span className="absolute bottom-[80px] right-[120px] font-nunito text-[120px] leading-[120px] font-bold text-white">」</span>
-        <div className="flex w-[800px] max-w-full flex-col items-center gap-5 text-center text-white">
-          {quote && <p className="font-nunito text-[30px] leading-10 font-bold">{quote}</p>}
-          {body && <p className="font-nunito text-[18px] leading-7 font-normal opacity-80">{body}</p>}
-        </div>
-        <BackToTopButton />
+      <div className="relative hidden w-full flex-col items-center justify-center gap-8 p-[100px] md:flex">
+        <span aria-hidden className="absolute left-[120px] top-[80px] font-nunito text-[120px] font-bold leading-[120px] text-white">
+          「
+        </span>
+        <span aria-hidden className="absolute bottom-[100px] right-[120px] translate-x-full translate-y-full font-nunito text-[120px] font-bold leading-[120px] text-white">
+          」
+        </span>
+        <SlideIn delay={0.1}>
+          <div className="flex w-[800px] flex-col items-center gap-5 text-center text-white">
+            {quote && <p className="w-full font-nunito text-[30px] font-bold leading-[40px]">{quote}</p>}
+            {body && <p className="w-[680px] font-nunito text-[18px] font-normal leading-[28px] opacity-80">{body}</p>}
+          </div>
+        </SlideIn>
       </div>
     </section>
   );

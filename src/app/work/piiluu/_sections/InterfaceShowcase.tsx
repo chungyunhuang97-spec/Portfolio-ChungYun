@@ -52,22 +52,39 @@ function PainSolutionBlock({ pain, solution }: { pain: string; solution: string 
   );
 }
 
-/** Desktop -- both Before/After phone images shown at once, side by side,
- * each with its own pill label below (Figma 526:1622). */
+/**
+ * Desktop -- both Before/After phone images shown at once, side by side,
+ * each with its own pill label below (Figma 526:1622).
+ *
+ * IMPORTANT sizing fix: `PhoneFrame` always derives its own height from
+ * `aspect-[375/812]` applied to whatever width it's given -- it never
+ * respects an externally-set height. The previous version wrapped it in a
+ * fixed `h-[416px] w-[215px]` box; at 215px wide, PhoneFrame's own ratio
+ * computes ~465px tall, ~49px TALLER than that box, so it visibly
+ * overflowed downward and covered the Before/After pill sitting right
+ * below it. Fix: give the OUTER wrapper the real height (tall, ~fills the
+ * row per Joe's "fill 100VH" ask) via `aspect-[375/812]` + an explicit
+ * height, then pass `h-full` into PhoneFrame so it fills that
+ * already-correctly-shaped box instead of computing its own.
+ */
 function DesktopMediaPair({ media, labels }: { media?: [string | undefined, string | undefined]; labels?: [string, string] }) {
   const [beforeUrl, afterUrl] = media ?? [undefined, undefined];
   const [beforeLabel, afterLabel] = labels ?? ["Before", "After"];
   return (
     <div className="flex shrink-0 items-center gap-6">
-      <div className="flex flex-col items-center justify-center gap-6">
-        <div className="h-[416px] w-[215px]"><PhoneFrame screen={mediaScreen(beforeUrl)} /></div>
-        <span className="inline-flex w-[70px] items-center justify-center rounded-full bg-grey-50 px-4 py-1.5 font-nunito text-[12px] font-bold text-primary-orange">
+      <div className="flex flex-col items-center gap-6">
+        <div className="aspect-[375/812] h-[62vh] max-h-[640px]">
+          <PhoneFrame screen={mediaScreen(beforeUrl)} className="h-full" />
+        </div>
+        <span className="inline-flex w-[70px] shrink-0 items-center justify-center rounded-full bg-grey-50 px-4 py-1.5 font-nunito text-[12px] font-bold text-primary-orange">
           {beforeLabel}
         </span>
       </div>
-      <div className="flex flex-col items-center justify-center gap-6">
-        <div className="h-[416px] w-[215px]"><PhoneFrame screen={mediaScreen(afterUrl)} /></div>
-        <span className="inline-flex w-[70px] items-center justify-center rounded-full bg-primary-orange px-4 py-1.5 font-nunito text-[12px] font-bold text-white">
+      <div className="flex flex-col items-center gap-6">
+        <div className="aspect-[375/812] h-[62vh] max-h-[640px]">
+          <PhoneFrame screen={mediaScreen(afterUrl)} className="h-full" />
+        </div>
+        <span className="inline-flex w-[70px] shrink-0 items-center justify-center rounded-full bg-primary-orange px-4 py-1.5 font-nunito text-[12px] font-bold text-white">
           {afterLabel}
         </span>
       </div>
@@ -76,7 +93,9 @@ function DesktopMediaPair({ media, labels }: { media?: [string | undefined, stri
 }
 
 /** Desktop row -- alternates text/image sides per index (Figma
- * ImprovementRow-01..04, 526:1426/1446/1466/1589). */
+ * ImprovementRow-01..04, 526:1426/1446/1466/1589). Every row shares one
+ * fixed `min-h-screen` height (per Joe: "後面區域的 Flow 也固定跟 Section One
+ * 的大小一樣，不要每個都不一樣") instead of each sizing to its own content. */
 function DesktopRow({ row, reversed }: { row: ShowcaseRow; reversed: boolean }) {
   const content = (
     <div className="flex flex-1 flex-col gap-5">
@@ -92,7 +111,7 @@ function DesktopRow({ row, reversed }: { row: ShowcaseRow; reversed: boolean }) 
   );
   const media = <DesktopMediaPair media={row.media} labels={row.mediaLabels} />;
   return (
-    <div className="flex items-center gap-16 py-12">
+    <div className="flex min-h-screen items-center gap-16 py-12">
       {reversed ? (
         <>
           {media}
@@ -109,10 +128,44 @@ function DesktopRow({ row, reversed }: { row: ShowcaseRow; reversed: boolean }) 
 }
 
 /** Mobile -- 2-tab FolderTabs switching one image between "調整後"/"調整前"
- * (Figma 550:3535..) -- fixed Chinese tab labels regardless of the stored
- * `mediaLabels` (those only drive desktop's Before/After pills). Sliding
- * active-tab pill copied from Metro's FolderTabs pattern
- * (InterfaceRouteSearch.tsx). */
+ * (Figma 550:3535..). Copied verbatim (structure + class strategy) from
+ * Metro's `FolderTabs` (`src/app/work/metro/_sections/InterfaceRouteSearch.tsx`)
+ * per Joe's explicit ask to reuse that exact component rather than a
+ * reimplementation -- the seamless tab-to-panel connection (no border/color
+ * gap) comes from: tab track drops its bottom border + rounds only its top
+ * corners, the panel drops its top border + rounds only its bottom corners,
+ * both share the same border color, and the active-tab pill's fill matches
+ * the panel's own background -- with zero gap between the two wrapper
+ * elements (a single `flex flex-col`, no `gap` class). */
+function FolderTabs({ afterActive, onChange }: { afterActive: boolean; onChange: (after: boolean) => void }) {
+  return (
+    <div className="flex w-full gap-1 rounded-t-2xl border border-b-0 border-[#e5e0db] bg-grey-100 p-1.5">
+      {[
+        { label: "調整後", isActive: afterActive, onClick: () => onChange(true) },
+        { label: "調整前", isActive: !afterActive, onClick: () => onChange(false) },
+      ].map((tab) => (
+        <button
+          key={tab.label}
+          type="button"
+          onClick={tab.onClick}
+          className="relative flex-1 rounded-xl px-2 py-2.5 text-center"
+        >
+          {tab.isActive && (
+            <motion.span
+              layoutId="piiluuFolderTabBg"
+              className="absolute inset-0 rounded-xl bg-proj-white shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+              transition={{ type: "spring", stiffness: 380, damping: 34 }}
+            />
+          )}
+          <span className={`font-nunito relative z-10 text-[15px] font-bold ${tab.isActive ? "text-primary-black" : "text-grey-600"}`}>
+            {tab.label}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function MobileRow({ row }: { row: ShowcaseRow }) {
   const [afterActive, setAfterActive] = useState(true);
   const [beforeUrl, afterUrl] = row.media ?? [undefined, undefined];
@@ -125,40 +178,23 @@ function MobileRow({ row }: { row: ShowcaseRow }) {
         <span className="flex-1 font-nunito text-[28px] leading-[39px] font-bold text-black">{row.title}</span>
       </div>
 
-      <div className="flex h-[44px] w-full items-end">
-        <button
-          type="button"
-          onClick={() => setAfterActive(true)}
-          className={`relative flex h-full flex-1 items-center justify-center rounded-tl-xl rounded-tr-2xl border-t border-l border-[#e5e0db] font-nunito text-[15px] font-bold transition-colors ${
-            afterActive ? "bg-white text-black" : "h-[34px] self-end bg-grey-100 text-[#666]"
-          }`}
-        >
-          調整後
-        </button>
-        <button
-          type="button"
-          onClick={() => setAfterActive(false)}
-          className={`relative flex h-full flex-1 items-center justify-center rounded-tr-xl border-t border-r border-[#e5e0db] font-nunito text-[15px] font-bold transition-colors ${
-            !afterActive ? "bg-white text-black" : "h-[34px] self-end bg-grey-100 text-[#666]"
-          }`}
-        >
-          調整前
-        </button>
-      </div>
-      <div className="flex w-full flex-col items-center gap-6 rounded-b-xl border-b border-l border-r border-[#e5e0db] px-4 py-6">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={afterActive ? "after" : "before"}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="aspect-[306/591.6] w-full max-w-[260px]"
-          >
-            <PhoneFrame screen={mediaScreen(activeUrl)} />
-          </motion.div>
-        </AnimatePresence>
-        <PainSolutionBlock pain={row.pain} solution={row.solution} />
+      <div className="flex flex-col">
+        <FolderTabs afterActive={afterActive} onChange={setAfterActive} />
+        <div className="flex w-full flex-col items-center gap-6 overflow-hidden rounded-b-2xl border border-t-0 border-[#e5e0db] bg-proj-white px-4 py-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={afterActive ? "after" : "before"}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="w-[46vw] max-w-[190px] min-w-[150px]"
+            >
+              <PhoneFrame screen={mediaScreen(activeUrl)} />
+            </motion.div>
+          </AnimatePresence>
+          <PainSolutionBlock pain={row.pain} solution={row.solution} />
+        </div>
       </div>
     </div>
   );
@@ -169,9 +205,10 @@ function MobileRow({ row }: { row: ShowcaseRow }) {
  * 8qGUSDUJqOgJaSERffGXVc, desktop nodes 526:1417 (intro) + 526:1426/1446/
  * 1466/1589 (4 rows) / mobile nodes 550:3564 (intro) + 550:3535 + 3 sibling
  * InterfaceDesign_0X frames. Desktop: one shared section heading, then 4
- * alternating-side rows with both Before/After images visible at once.
- * Mobile: per-row heading (no separate subtitle line, title in black not
- * blue) + a real 2-tab FolderTabs switcher toggling one image.
+ * alternating-side rows, each `min-h-screen` so all 4 share one consistent
+ * size regardless of copy length. Mobile: per-row heading (no separate
+ * subtitle line, title in black not blue) + Metro's exact FolderTabs
+ * switcher toggling one image.
  *
  * Content model: `process.interfaceShowcaseHeading`, `.
  * interfaceShowcaseIntro`, `process.showcaseRows` (4x {number, title,

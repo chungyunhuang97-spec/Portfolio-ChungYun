@@ -93,7 +93,7 @@ function DualTrackIntro({ process }: { process: Record<string, unknown> }) {
 
   return (
     <SlideIn delay={0.1}>
-      <div className="-mx-6 flex flex-col items-center gap-4 bg-primary-orange px-6 py-12 text-center text-white md:-mx-[200px] md:py-[100px]">
+      <div className="flex w-full flex-col items-center gap-4 bg-primary-orange px-6 py-12 text-center text-white md:py-[100px]">
         <h3 className="font-nunito max-w-[900px] text-[22px] leading-[30px] font-bold md:text-[28px] md:leading-[39px]">
           {heading}
         </h3>
@@ -151,10 +151,10 @@ function UiKitCard({
   );
 }
 
-function ColorsCard({ colors }: { colors: ColorSwatch[] }) {
+function ColorsCard({ colors, className = "" }: { colors: ColorSwatch[]; className?: string }) {
   return (
-    <UiKitCard label="01. Colors">
-      <div className="flex flex-col gap-3">
+    <UiKitCard label="01. Colors" className={className}>
+      <div className="flex flex-1 flex-col justify-around gap-3">
         {colors.map((c) => (
           <div key={c.name} className="flex items-center gap-3">
             <span className="size-8 shrink-0 rounded-lg border border-black/5" style={{ backgroundColor: c.hex }} aria-hidden />
@@ -169,10 +169,10 @@ function ColorsCard({ colors }: { colors: ColorSwatch[] }) {
   );
 }
 
-function IconsCard() {
+function IconsCard({ className = "" }: { className?: string }) {
   return (
-    <UiKitCard label="02. Icons">
-      <div className="grid grid-cols-3 gap-3">
+    <UiKitCard label="02. Icons" className={`h-full ${className}`}>
+      <div className="grid flex-1 grid-cols-3 content-center gap-3">
         {UI_KIT_ICON_FILES.map((file) => (
           <div key={file} className="flex aspect-square items-center justify-center rounded-2xl bg-grey-50">
             <Image src={`/work/piiluu/icons/${file}`} alt="" width={26} height={26} className="size-[26px] object-contain" />
@@ -229,17 +229,18 @@ function InputSwatch({ input }: { input: InputVariant }) {
   );
 }
 
-function ComponentsCard({ buttons, inputs }: { buttons: ButtonVariant[]; inputs: InputVariant[] }) {
+function ComponentsCard({ buttons, inputs, className = "" }: { buttons: ButtonVariant[]; inputs: InputVariant[]; className?: string }) {
   return (
     <UiKitCard
       label="03. Components"
+      className={className}
       headerRight={
         <span className="inline-flex w-fit items-center rounded-full bg-secondary-blue/10 px-2.5 py-1 font-nunito text-[10px] font-bold text-secondary-blue">
           Variants Defined
         </span>
       }
     >
-      <div className="flex flex-col gap-6 md:flex-row md:gap-6">
+      <div className="flex flex-1 flex-col justify-center gap-6 md:flex-row md:gap-6">
         <div className="flex flex-1 flex-col gap-3">
           <span className="font-nunito text-[10px] font-extrabold tracking-[1px] text-grey-500 uppercase">Buttons</span>
           <div className="flex flex-col gap-2">
@@ -265,9 +266,9 @@ function ComponentsCard({ buttons, inputs }: { buttons: ButtonVariant[]; inputs:
  * spot in piiluu's UI Kit System that intentionally breaks from the
  * page's blue-dominant accent and uses primary-orange instead (confirmed
  * against the approved Figma file, not a leftover/inconsistency). */
-function EfficiencyCard({ columns }: { columns: EfficiencyColumn[] }) {
+function EfficiencyCard({ columns, className = "" }: { columns: EfficiencyColumn[]; className?: string }) {
   return (
-    <div className="flex w-full shrink-0 flex-col gap-6 rounded-2xl border border-primary-orange bg-proj-white p-6 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)] md:p-8">
+    <div className={`flex h-full w-full shrink-0 flex-col gap-6 rounded-2xl border border-primary-orange bg-proj-white p-6 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)] md:p-8 ${className}`}>
       <div className="flex flex-col gap-2">
         <span className="font-nunito text-[11px] font-extrabold tracking-[2px] text-grey-600 uppercase">Workflow Upgrade</span>
         <h5 className="font-nunito text-[20px] leading-[26px] font-bold text-primary-black md:text-[24px]">
@@ -275,7 +276,7 @@ function EfficiencyCard({ columns }: { columns: EfficiencyColumn[] }) {
         </h5>
       </div>
       <div className="h-px w-full bg-grey-100" aria-hidden />
-      <div className="flex flex-col gap-5 md:flex-row md:gap-4">
+      <div className="flex flex-1 flex-col gap-5 md:flex-row md:items-center md:gap-4">
         {columns.map((col) => {
           const iconSrc = (col.icon && EFFICIENCY_ICON_FILES[col.icon]) || EFFICIENCY_ICON_FILES.Gear;
           const isMetric = /^[+-]?\d/.test(col.subtitle);
@@ -339,28 +340,35 @@ export function DesignSystem({ process }: { process: Record<string, unknown> }) 
   if (colors.length === 0) return null;
 
   return (
-    <section className="bg-grey-50 px-6 py-12 md:px-[120px] md:py-[100px]">
-      <div className="flex flex-col gap-10 md:gap-14">
-        <DualTrackIntro process={process} />
+    <section className="bg-grey-50">
+      {/* Full-bleed, flush against the section's top edge -- no padding
+          above it, so there's no grey-50 seam between InterfaceShowcase's
+          white and this orange banner. */}
+      <DualTrackIntro process={process} />
 
+      <div className="flex flex-col gap-10 px-6 py-12 md:gap-14 md:px-[120px] md:py-[100px]">
         <div className="flex flex-col gap-6">
           <SlideIn delay={0.15}>
             <UiKitHeading heading={uiKitIntro || uiKitHeading} />
           </SlideIn>
 
           {/* Mobile -- horizontally scrollable with pagination dots, per
-              Figma's explicit "carousel pagination" note on this section. */}
+              Figma's explicit "carousel pagination" note on this section.
+              `w-[78vw]` (not 85vw) deliberately leaves the next card
+              peeking in at the edge so the row reads as swipeable, and
+              every card shares one `min-h` so none of them look like a
+              single static filled block. */}
           <div className="flex flex-col gap-3 md:hidden">
             <div
               ref={scrollRef}
               onScroll={handleScroll}
               className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              <div className="w-[85vw] shrink-0 snap-center"><ColorsCard colors={colors} /></div>
-              <div className="w-[85vw] shrink-0 snap-center"><IconsCard /></div>
-              <div className="w-[85vw] shrink-0 snap-center"><ComponentsCard buttons={buttons} inputs={inputs} /></div>
+              <div className="flex w-[78vw] shrink-0 snap-center"><ColorsCard colors={colors} className="min-h-[440px] flex-1" /></div>
+              <div className="flex w-[78vw] shrink-0 snap-center"><IconsCard className="min-h-[440px] flex-1" /></div>
+              <div className="flex w-[78vw] shrink-0 snap-center"><ComponentsCard buttons={buttons} inputs={inputs} className="min-h-[440px] flex-1" /></div>
               {efficiencyColumns.length > 0 && (
-                <div className="w-[85vw] shrink-0 snap-center"><EfficiencyCard columns={efficiencyColumns} /></div>
+                <div className="flex w-[78vw] shrink-0 snap-center"><EfficiencyCard columns={efficiencyColumns} className="min-h-[440px] flex-1" /></div>
               )}
             </div>
             <div className="flex items-center justify-center gap-2" aria-hidden>
@@ -375,16 +383,22 @@ export function DesignSystem({ process }: { process: Record<string, unknown> }) 
 
           {/* Desktop -- two-column grid per Figma node 526:1832: a narrow
               left column (Colors stacked above Icons) beside a wider right
-              column (Components stacked above the Workflow Upgrade card). */}
+              column (Components stacked above the Workflow Upgrade card).
+              Each column's second card gets `flex-1` so both columns'
+              visible card boxes reach the same bottom edge, instead of the
+              naturally-shorter left column (Colors+Icons) leaving a gap
+              below the naturally-taller right column (Components+Workflow). */}
           <SlideIn delay={0.2}>
-            <div className="hidden gap-6 md:grid md:grid-cols-[360px_1fr]">
+            <div className="hidden items-stretch gap-6 md:grid md:grid-cols-[360px_1fr]">
               <div className="flex flex-col gap-6">
                 <ColorsCard colors={colors} />
-                <IconsCard />
+                <div className="flex flex-1 flex-col"><IconsCard /></div>
               </div>
               <div className="flex flex-col gap-6">
                 <ComponentsCard buttons={buttons} inputs={inputs} />
-                {efficiencyColumns.length > 0 && <EfficiencyCard columns={efficiencyColumns} />}
+                {efficiencyColumns.length > 0 && (
+                  <div className="flex flex-1 flex-col"><EfficiencyCard columns={efficiencyColumns} /></div>
+                )}
               </div>
             </div>
           </SlideIn>
