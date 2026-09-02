@@ -5,7 +5,7 @@ import { Plus, Trash, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { AdminMediaDropzone } from "@/components/admin/AdminMediaDropzone";
 import { useTrackChanges } from "@/components/admin/ChangesContext";
 
-type FieldType = "text" | "string-list" | "title-desc-list" | "media" | "raw";
+type FieldType = "text" | "string-list" | "title-desc-list" | "object-list" | "media" | "raw";
 
 interface Field {
   key: string;
@@ -19,6 +19,23 @@ interface Field {
 // key name is the only stable signal we have across reloads.
 const MEDIA_KEY_PATTERN = /(_media_url|_image_url|_video_url)$/i;
 const DESKTOP_MOBILE_PATTERN = /desktop|mobile/i;
+const HEX_COLOR_PATTERN = /^#[0-9a-f]{3}([0-9a-f]{3}([0-9a-f]{2})?)?$/i;
+
+function isSimpleValue(v: unknown): v is string | number | boolean {
+  return typeof v === "string" || typeof v === "number" || typeof v === "boolean";
+}
+
+// An "object-list" row: every value on the object is either a primitive
+// (rendered as a plain input, or a color swatch when it looks like a hex
+// value) or a short list of strings (rendered as a couple of compact
+// inline inputs, e.g. `mediaLabels: ["Before", "After"]`). Anything more
+// nested than that still falls through to the raw JSON editor.
+function isObjectListItem(v: unknown): v is Record<string, unknown> {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
+  return Object.values(v).every(
+    (val) => isSimpleValue(val) || val == null || (Array.isArray(val) && val.every((x) => typeof x === "string"))
+  );
+}
 
 function detectType(value: unknown, key?: string): FieldType {
   if (key && MEDIA_KEY_PATTERN.test(key) && (typeof value === "string" || value == null)) {
@@ -28,12 +45,10 @@ function detectType(value: unknown, key?: string): FieldType {
   if (Array.isArray(value)) {
     if (value.length === 0) return "string-list";
     if (value.every((v) => typeof v === "string")) return "string-list";
-    if (
-      value.every(
-        (v) => typeof v === "object" && v !== null && "title" in v && "desc" in v
-      )
-    )
+    if (value.every((v) => typeof v === "object" && v !== null && "title" in v && "desc" in v)) {
       return "title-desc-list";
+    }
+    if (value.every(isObjectListItem)) return "object-list";
   }
   return "raw";
 }
@@ -64,6 +79,38 @@ function humanizeKey(key: string) {
     .toUpperCase();
 }
 
+// Same idea as humanizeKey but for a bare object-list item key ("hex",
+// "painLabel", "mediaLabels") -- no media-suffix stripping needed here.
+function humanizeItemKey(key: string) {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
+/**
+ * Turns an array-field key into the stem used to find its per-row media
+ * siblings, e.g. "showcaseRows" -> "showcase_row". Naive pluralization
+ * (strip a trailing "s") is enough for every real case in this codebase
+ * (rows/cards/items/colors/inputs) -- it doesn't need to be linguistically
+ * correct, just consistent with however the array field itself was named.
+ */
+function arrayFieldStem(key: string): string {
+  const snake = key
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
+  const stripped = snake.endsWith("s") ? snake.slice(0, -1) : snake;
+  return stripped;
+}
+
+interface AttachedMedia {
+  label: string;
+  field: Field;
+  index: number;
+}
+
 type GroupedField =
   | { kind: "single"; field: Field; index: number }
   | {
@@ -71,22 +118,72 @@ type GroupedField =
       base: string;
       desktop: { field: Field; index: number };
       mobile: { field: Field; index: number };
+    }
+  | {
+      kind: "object-list";
+      field: Field;
+      index: number;
+      // 0-based row index -> media fields belonging to that row.
+      mediaByRow: Map<number, AttachedMedia[]>;
     };
 
 /**
- * Media fields that follow the desktopMediaUrl / mobileMediaUrl naming
- * convention render as one side-by-side pair instead of two identical,
- * unrelated-looking dropzones -- this is the convention already used
- * across the Metro page's fields (e.g. interfaceSearchDesktopMediaUrl /
- * interfaceSearchMobileMediaUrl).
+ * Groups the flat field list two ways:
+ * 1. `desktopMediaUrl` / `mobileMediaUrl` pairs render side by side instead
+ *    of as two identical-looking, seemingly-unrelated dropzones.
+ * 2. Any top-level media field whose key matches an object-list array
+ *    field's naming stem + row number (e.g. `showcaseRows` pairs with
+ *    `showcase_row1_before_media_url` / `showcase_row1_after_media_url` for
+ *    row index 0) is pulled OUT of the flat field list entirely and
+ *    rendered inline inside that row's own card instead -- otherwise
+ *    Postgres's jsonb key ordering (not insertion order) can scatter a
+ *    section's own media upload far away from the rest of that section's
+ *    content, which is confusing to edit against (reported: media fields
+ *    "都移到後面才上傳，這樣有點混亂").
  */
 function groupFields(fields: Field[]): GroupedField[] {
   const used = new Set<number>();
   const result: GroupedField[] = [];
 
+  // Pass 1: object-list fields claim their per-row media siblings first,
+  // so pass 2's desktop/mobile pairing never sees already-claimed fields.
+  const objectListStems = fields
+    .map((f, i) => ({ f, i }))
+    .filter(({ f }) => f.type === "object-list");
+
+  const mediaByRowByField = new Map<number, Map<number, AttachedMedia[]>>();
+
+  for (const { f: listField, i: listIndex } of objectListStems) {
+    const stem = arrayFieldStem(listField.key);
+    const items = Array.isArray(listField.value) ? listField.value : [];
+    const mediaByRow = new Map<number, AttachedMedia[]>();
+
+    items.forEach((_, rowIdx) => {
+      const rowPattern = new RegExp(`^${stem}_?${rowIdx + 1}_(.+)$`, "i");
+      fields.forEach((f, i) => {
+        if (used.has(i) || f.type !== "media" || i === listIndex) return;
+        const m = f.key.match(rowPattern);
+        if (!m) return;
+        used.add(i);
+        const label = humanizeItemKey(m[1].replace(MEDIA_KEY_PATTERN, ""));
+        const list = mediaByRow.get(rowIdx) ?? [];
+        list.push({ label, field: f, index: i });
+        mediaByRow.set(rowIdx, list);
+      });
+    });
+
+    if (mediaByRow.size > 0) mediaByRowByField.set(listIndex, mediaByRow);
+  }
+
   for (let i = 0; i < fields.length; i++) {
     if (used.has(i)) continue;
     const field = fields[i];
+
+    if (field.type === "object-list") {
+      used.add(i);
+      result.push({ kind: "object-list", field, index: i, mediaByRow: mediaByRowByField.get(i) ?? new Map() });
+      continue;
+    }
 
     if (field.type === "media" && DESKTOP_MOBILE_PATTERN.test(field.key)) {
       const isDesktop = /desktop/i.test(field.key);
@@ -98,7 +195,7 @@ function groupFields(fields: Field[]): GroupedField[] {
         return /desktop/i.test(f.key) !== isDesktop;
       });
 
-      if (partnerIndex !== -1) {
+      if (partnerIndex !== -1 && !used.has(partnerIndex)) {
         used.add(i);
         used.add(partnerIndex);
         const desktopEntry = isDesktop ? { field, index: i } : { field: fields[partnerIndex], index: partnerIndex };
@@ -121,6 +218,165 @@ function inputClass() {
 
 function fieldLabelClass() {
   return "text-[11px] font-medium tracking-[0.1em] text-admin-text-faint";
+}
+
+/** One value inside an object-list row: a hex-looking string gets a real
+ * color swatch (`<input type="color">`) synced with a text fallback (for
+ * values the color input can't represent, e.g. 8-digit hex with alpha);
+ * everything else is a plain, freely-editable text input -- never raw
+ * JSON. */
+function ObjectListValueEditor({
+  itemKey,
+  value,
+  onChange,
+}: {
+  itemKey: string;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  if (typeof value === "string" && HEX_COLOR_PATTERN.test(value)) {
+    const colorInputValue = value.length === 4 || value.length === 5 ? expandShortHex(value) : value.slice(0, 7);
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={colorInputValue}
+          onChange={(e) => onChange(e.target.value)}
+          className="size-9 shrink-0 cursor-pointer rounded-md border border-admin-border bg-admin-surface p-0.5"
+          aria-label={`${itemKey} color`}
+        />
+        <input value={value} onChange={(e) => onChange(e.target.value)} className={inputClass()} />
+      </div>
+    );
+  }
+
+  if (Array.isArray(value)) {
+    const items = value as string[];
+    return (
+      <div className="flex flex-wrap gap-2">
+        {items.map((item, i) => (
+          <input
+            key={i}
+            value={item}
+            onChange={(e) => {
+              const next = [...items];
+              next[i] = e.target.value;
+              onChange(next);
+            }}
+            className={`${inputClass()} w-auto flex-1 basis-32`}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (typeof value === "boolean") {
+    return (
+      <input
+        type="checkbox"
+        checked={value}
+        onChange={(e) => onChange(e.target.checked)}
+        className="size-4 rounded border-admin-border accent-admin-accent"
+      />
+    );
+  }
+
+  if (typeof value === "number") {
+    return (
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(e.target.valueAsNumber)}
+        className={inputClass()}
+      />
+    );
+  }
+
+  const text = (value as string) ?? "";
+  const long = text.length > 60;
+  return long ? (
+    <textarea rows={2} value={text} onChange={(e) => onChange(e.target.value)} className={inputClass()} />
+  ) : (
+    <input value={text} onChange={(e) => onChange(e.target.value)} className={inputClass()} />
+  );
+}
+
+function expandShortHex(hex: string) {
+  const [, r, g, b] = hex;
+  return `#${r}${r}${g}${g}${b}${b}`;
+}
+
+function ObjectListEditor({
+  items,
+  onChange,
+  mediaByRow,
+  onRowMediaChange,
+  mediaPathPrefix,
+}: {
+  items: Record<string, unknown>[];
+  onChange: (items: Record<string, unknown>[]) => void;
+  mediaByRow: Map<number, AttachedMedia[]>;
+  onRowMediaChange: (fieldIndex: number, value: unknown) => void;
+  mediaPathPrefix?: string;
+}) {
+  const templateKeys = items[0] ? Object.keys(items[0]) : [];
+
+  return (
+    <div className="space-y-3">
+      {items.map((item, i) => (
+        <div key={i} className="space-y-3 rounded-md border border-admin-border bg-admin-surface p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-medium tracking-[0.1em] text-admin-text-faint">
+              #{i + 1}
+            </span>
+            <button
+              type="button"
+              onClick={() => onChange(items.filter((_, idx) => idx !== i))}
+              className="shrink-0 rounded-md px-2 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
+              aria-label="Remove item"
+            >
+              <Trash size={16} weight="light" />
+            </button>
+          </div>
+
+          {Object.entries(item).map(([k, v]) => (
+            <div key={k} className="space-y-1">
+              <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">{humanizeItemKey(k)}</label>
+              <ObjectListValueEditor
+                itemKey={k}
+                value={v}
+                onChange={(nv) => {
+                  const next = [...items];
+                  next[i] = { ...next[i], [k]: nv };
+                  onChange(next);
+                }}
+              />
+            </div>
+          ))}
+
+          {(mediaByRow.get(i) ?? []).map((m) => (
+            <div key={m.field.key} className="space-y-1">
+              <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">{m.label}</label>
+              <AdminMediaDropzone
+                value={(m.field.value as string) ?? ""}
+                onChange={(v) => onRowMediaChange(m.index, v)}
+                mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${m.field.key}` : m.field.key}
+                compact
+              />
+            </div>
+          ))}
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...items, Object.fromEntries(templateKeys.map((k) => [k, ""]))])}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-muted transition-colors hover:text-admin-accent"
+      >
+        <Plus size={14} weight="bold" />
+        ADD ITEM
+      </button>
+    </div>
+  );
 }
 
 function FieldEditor({
@@ -313,7 +569,7 @@ export function ContentEditor({
           ? ""
           : newFieldType === "string-list"
             ? []
-            : newFieldType === "title-desc-list"
+            : newFieldType === "title-desc-list" || newFieldType === "object-list"
               ? []
               : {};
     setFields((prev) => [...prev, { key: newFieldKey.trim(), type: newFieldType, value: defaultValue }]);
@@ -465,6 +721,32 @@ export function ContentEditor({
               );
             }
 
+            if (g.kind === "object-list") {
+              const { field, index, mediaByRow } = g;
+              return (
+                <div key={field.key + index}>
+                  <div className="mb-2 flex items-center justify-between">
+                    <label className={fieldLabelClass()}>{field.key.toUpperCase()}</label>
+                    <button
+                      type="button"
+                      onClick={() => removeField(index)}
+                      className="rounded-md p-1 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
+                      aria-label={`Remove field ${field.key}`}
+                    >
+                      <Trash size={14} weight="light" />
+                    </button>
+                  </div>
+                  <ObjectListEditor
+                    items={(field.value as Record<string, unknown>[]) ?? []}
+                    onChange={(v) => updateField(index, v)}
+                    mediaByRow={mediaByRow}
+                    onRowMediaChange={updateField}
+                    mediaPathPrefix={mediaPathPrefix}
+                  />
+                </div>
+              );
+            }
+
             const { field, index } = g;
             return (
               <div key={field.key + index}>
@@ -504,6 +786,7 @@ export function ContentEditor({
                 <option value="text">Text</option>
                 <option value="string-list">List of text</option>
                 <option value="title-desc-list">List of title + description</option>
+                <option value="object-list">List of items</option>
                 <option value="media">Media (image/video)</option>
               </select>
             </div>
