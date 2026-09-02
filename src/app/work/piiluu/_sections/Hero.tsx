@@ -248,6 +248,7 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, mediaUr
       phoneControls.start({
         opacity: 1,
         scale: 1,
+        y: 28,
         transition: { duration: 0.75, delay: 0.35, ease: "easeOut" },
       });
     }
@@ -290,7 +291,7 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, mediaUr
         <div className="relative z-10 flex h-[190px] w-[310px] items-center justify-center md:h-[265px] md:w-[380px]">
           <DisintegratingCard topControls={cardTopControls} bottomControls={cardBottomControls} />
           <motion.div
-            initial={{ opacity: 0, scale: 0.75 }}
+            initial={{ opacity: 0, scale: 0.75, y: 0 }}
             animate={phoneControls}
             className="pointer-events-none absolute inset-0 flex items-center justify-center"
           >

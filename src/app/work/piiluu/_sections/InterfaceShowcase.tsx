@@ -203,21 +203,29 @@ function FolderTabs({ afterActive, onChange }: { afterActive: boolean; onChange:
   );
 }
 
+/** Every mobile row is capped at exactly one viewport tall (Joe: "一進入到
+ * 數字之後，就應該高度控制在 100vh") instead of growing with its own content --
+ * the phone mockup is sized down from its old `46vw` to leave enough room
+ * for the heading + tabs + pain/solution copy to fit underneath without
+ * pushing the row past 100dvh, and the pain/solution block gets its own
+ * scroll fallback (`min-h-0 overflow-y-auto`) as a safety net so if any
+ * row's copy still runs long, it scrolls internally instead of the row
+ * silently exceeding the viewport again. */
 function MobileRow({ row, process, rowIndex }: { row: ShowcaseRow; process: Record<string, unknown>; rowIndex: number }) {
   const [afterActive, setAfterActive] = useState(true);
   const [beforeUrl, afterUrl] = rowMedia(process, rowIndex);
   const activeUrl = afterActive ? afterUrl : beforeUrl;
 
   return (
-    <div className="flex w-full flex-col gap-4 bg-white px-6 pt-12 pb-6">
-      <div className="flex items-center gap-3">
+    <div className="flex h-[100dvh] w-full flex-col gap-3 bg-white px-6 pt-10 pb-5">
+      <div className="flex shrink-0 items-center gap-3">
         <span className="font-fredoka text-[32px] leading-none text-primary-orange">{row.number}</span>
         <span className="flex-1 font-nunito text-[28px] leading-[39px] font-bold text-black">{row.title}</span>
       </div>
 
-      <div className="flex flex-col">
+      <div className="flex min-h-0 flex-1 flex-col">
         <FolderTabs afterActive={afterActive} onChange={setAfterActive} />
-        <div className="flex w-full flex-col items-center gap-6 overflow-hidden rounded-b-2xl border border-t-0 border-[#e5e0db] bg-proj-white px-4 py-6">
+        <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-3 overflow-hidden rounded-b-2xl border border-t-0 border-[#e5e0db] bg-proj-white px-4 py-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={afterActive ? "after" : "before"}
@@ -225,12 +233,14 @@ function MobileRow({ row, process, rowIndex }: { row: ShowcaseRow; process: Reco
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
-              className="w-[46vw] max-w-[190px] min-w-[150px]"
+              className="w-[36vw] max-w-[155px] min-w-[125px] shrink-0"
             >
               <PhoneFrame screen={mediaScreen(activeUrl)} />
             </motion.div>
           </AnimatePresence>
-          <PainSolutionBlock pain={row.pain} solution={row.solution} />
+          <div className="min-h-0 w-full flex-1 overflow-y-auto">
+            <PainSolutionBlock pain={row.pain} solution={row.solution} />
+          </div>
         </div>
       </div>
     </div>

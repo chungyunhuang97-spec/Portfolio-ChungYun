@@ -85,25 +85,33 @@ function CountUpValue({ value, className }: { value: string; className?: string 
 
 /** "同步構建與迭代：雙軌並行的設計策略" intro -- Figma node 488:251, a full-bleed
  * solid primary-orange banner (not a plain text block on the section's own
- * bg). */
+ * bg). Enters with a split-flap/lottery-board flip (rotateX from -90deg
+ * about its top edge) instead of the plain slide-up every other section
+ * uses -- Joe's explicit ask for this one banner to stand out with its own
+ * entrance, "像 Lottery 一樣" (like a flip/lottery display). */
 function DualTrackIntro({ process }: { process: Record<string, unknown> }) {
   const heading = process.dualTrackHeading as string | undefined;
   const body = process.dualTrackBody as string | undefined;
   if (!heading) return null;
 
   return (
-    <SlideIn delay={0.1}>
-      <div className="flex w-full flex-col items-center gap-4 bg-primary-orange px-6 py-12 text-center text-white md:py-[100px]">
-        <h3 className="font-nunito max-w-[900px] text-[22px] leading-[30px] font-bold md:text-[28px] md:leading-[39px]">
-          {heading}
-        </h3>
-        {body && (
-          <p className="font-nunito max-w-[760px] text-[14px] leading-[22px] font-normal md:text-[18px] md:leading-[25px]">
-            {body}
-          </p>
-        )}
-      </div>
-    </SlideIn>
+    <motion.div
+      initial={{ rotateX: -100, opacity: 0 }}
+      whileInView={{ rotateX: 0, opacity: 1 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      style={{ transformPerspective: 1200, transformOrigin: "top center" }}
+      className="flex w-full flex-col items-center gap-4 bg-primary-orange px-6 py-12 text-center text-white md:py-[100px]"
+    >
+      <h3 className="font-nunito max-w-[900px] text-[22px] leading-[30px] font-bold md:text-[28px] md:leading-[39px]">
+        {heading}
+      </h3>
+      {body && (
+        <p className="font-nunito max-w-[760px] text-[14px] leading-[22px] font-normal md:text-[18px] md:leading-[25px]">
+          {body}
+        </p>
+      )}
+    </motion.div>
   );
 }
 
@@ -127,40 +135,61 @@ function UiKitHeading({ heading, intro }: { heading: string; intro?: string }) {
   );
 }
 
+/** Colored drop-shadow behind each swatch dot / brand button, matching
+ * that element's own color at 20% alpha -- Figma's exact technique
+ * (`shadow-[0px_4px_10px_rgba(<r,g,b>,0.2)]`), not a generic grey shadow. */
+function tintedShadow(hex: string, blur: string) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { boxShadow: `0px ${blur} rgba(${r}, ${g}, ${b}, 0.2)` };
+}
+
 function UiKitCard({
-  label,
-  headerRight,
+  border = "grey",
   className = "",
   children,
 }: {
-  label: string;
-  headerRight?: React.ReactNode;
+  border?: "grey" | "orange";
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div
-      className={`flex w-full shrink-0 flex-col gap-4 rounded-2xl border border-grey-100 bg-proj-white p-5 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)] md:p-6 ${className}`}
+      className={`relative flex w-full shrink-0 flex-col gap-4 rounded-2xl border bg-proj-white p-5 md:p-6 ${
+        border === "orange" ? "border-primary-orange" : "border-grey-100"
+      } ${className}`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-nunito text-[12px] font-extrabold tracking-[0.6px] text-secondary-blue uppercase">{label}</span>
-        {headerRight}
-      </div>
       {children}
+    </div>
+  );
+}
+
+function CardHeader({ eyebrow, subtitle }: { eyebrow: string; subtitle: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-nunito text-[10px] font-extrabold tracking-[1px] text-grey-300 uppercase">{eyebrow}</span>
+      <span className="font-nunito text-[13px] font-semibold text-[#555]">{subtitle}</span>
     </div>
   );
 }
 
 function ColorsCard({ colors, className = "" }: { colors: ColorSwatch[]; className?: string }) {
   return (
-    <UiKitCard label="01. Colors" className={className}>
-      <div className="flex flex-1 flex-col justify-around gap-3">
-        {colors.map((c) => (
-          <div key={c.name} className="flex items-center gap-3">
-            <span className="size-8 shrink-0 rounded-lg border border-black/5" style={{ backgroundColor: c.hex }} aria-hidden />
+    <UiKitCard border="orange" className={className}>
+      <CardHeader eyebrow="01. Colors" subtitle="品牌色彩與功能色定義" />
+      <div className="flex flex-1 flex-col gap-2.5">
+        {colors.map((c, i) => (
+          <div
+            key={c.name}
+            className={`flex items-center gap-2.5 md:border-b md:border-grey-50 md:pb-2 ${
+              i === colors.length - 1 ? "md:border-b-0 md:pb-0" : ""
+            } rounded-lg bg-grey-50 p-2 md:rounded-none md:bg-transparent md:p-0`}
+          >
+            <span className="size-10 shrink-0 rounded-[20px]" style={{ backgroundColor: c.hex, ...tintedShadow(c.hex, "10px") }} aria-hidden />
             <div className="flex flex-col">
-              <span className="font-nunito text-[13px] font-bold text-primary-black">{c.name}</span>
-              <span className="font-nunito text-[11px] font-normal text-grey-500 uppercase">{c.hex}</span>
+              <span className="font-nunito text-[12px] font-extrabold text-primary-black">{c.name}</span>
+              <span className="font-nunito text-[11px] font-bold text-grey-600 uppercase">{c.hex}</span>
             </div>
           </div>
         ))}
@@ -171,11 +200,12 @@ function ColorsCard({ colors, className = "" }: { colors: ColorSwatch[]; classNa
 
 function IconsCard({ className = "" }: { className?: string }) {
   return (
-    <UiKitCard label="02. Icons" className={`h-full ${className}`}>
-      <div className="grid flex-1 grid-cols-3 content-center gap-3">
+    <UiKitCard className={`h-full ${className}`}>
+      <CardHeader eyebrow="02. Icons" subtitle="標準化圖標系統，涵蓋核心功能" />
+      <div className="grid flex-1 grid-cols-3 content-center gap-3.5">
         {UI_KIT_ICON_FILES.map((file) => (
           <div key={file} className="flex aspect-square items-center justify-center rounded-2xl bg-grey-50">
-            <Image src={`/work/piiluu/icons/${file}`} alt="" width={26} height={26} className="size-[26px] object-contain" />
+            <Image src={`/work/piiluu/icons/${file}`} alt="" width={30} height={30} className="size-[30px] object-contain" />
           </div>
         ))}
       </div>
@@ -183,15 +213,32 @@ function IconsCard({ className = "" }: { className?: string }) {
   );
 }
 
+/** Matches Figma's exact per-variant treatment (node 528:248): Submit is
+ * solid primary-orange, Action is solid secondary-blue, Cancel is a white
+ * pill with a red (#ee3f3f) border/text -- not a generic ghost button. */
 function ButtonSwatch({ btn }: { btn: ButtonVariant }) {
-  const classes =
-    btn.variant === "primary"
-      ? "bg-secondary-blue text-proj-white"
-      : btn.variant === "secondary"
-      ? "border border-secondary-blue text-secondary-blue bg-transparent"
-      : "text-grey-500 bg-transparent";
+  if (btn.variant === "primary") {
+    return (
+      <span
+        className="font-nunito flex h-[42px] w-full items-center justify-center rounded-xl bg-primary-orange text-[13px] font-bold text-proj-white"
+        style={tintedShadow("#ff520d", "6px")}
+      >
+        {btn.label}
+      </span>
+    );
+  }
+  if (btn.variant === "secondary") {
+    return (
+      <span
+        className="font-nunito flex h-[42px] w-full items-center justify-center rounded-xl bg-secondary-blue text-[13px] font-bold text-proj-white"
+        style={tintedShadow("#0d21ff", "6px")}
+      >
+        {btn.label}
+      </span>
+    );
+  }
   return (
-    <span className={`font-nunito flex h-[42px] w-full items-center justify-center rounded-full text-[13px] font-bold ${classes}`}>
+    <span className="font-nunito flex h-[42px] w-full items-center justify-center rounded-xl border border-[#ee3f3f] bg-proj-white text-[13px] font-bold text-[#ee3f3f]">
       {btn.label}
     </span>
   );
@@ -201,57 +248,52 @@ function InputSwatch({ input }: { input: InputVariant }) {
   const disabled = input.state.toLowerCase().includes("disabled");
   const focused = input.state.toLowerCase().includes("focus");
   return (
-    <div className="flex flex-col gap-1">
-      <span className="font-nunito text-[10px] font-bold text-grey-500">{input.state}</span>
-      <div
-        className={`flex h-9 items-center rounded-lg border px-3 font-nunito text-[12px] ${
-          disabled
-            ? "border-grey-100 bg-grey-50 text-grey-300"
-            : focused
-            ? "border-secondary-blue bg-proj-white text-primary-black"
-            : "border-grey-100 bg-proj-white text-grey-500"
-        }`}
-      >
-        {focused ? (
-          <span className="flex items-center gap-0.5">
-            {input.text}
-            <motion.span
-              className="inline-block h-3.5 w-[1.5px] bg-secondary-blue"
-              animate={{ opacity: [1, 0] }}
-              transition={{ duration: 0.9, repeat: Infinity, repeatType: "mirror" }}
-            />
-          </span>
-        ) : (
-          input.text
-        )}
-      </div>
+    <div
+      className={`flex h-[42px] items-center rounded-[20px] px-4 font-nunito text-[13px] ${
+        disabled
+          ? "bg-[#f1f5f9] text-[#94a3b8]"
+          : focused
+          ? "border-2 border-primary-orange bg-proj-white text-[#333]"
+          : "border border-[#e2e8f0] bg-proj-white text-[#aaa]"
+      }`}
+    >
+      {focused ? (
+        <span className="flex items-center gap-0.5">
+          {input.text}
+          <motion.span
+            className="inline-block h-3.5 w-[1.5px] bg-primary-orange"
+            animate={{ opacity: [1, 0] }}
+            transition={{ duration: 0.9, repeat: Infinity, repeatType: "mirror" }}
+          />
+        </span>
+      ) : (
+        input.text
+      )}
     </div>
   );
 }
 
 function ComponentsCard({ buttons, inputs, className = "" }: { buttons: ButtonVariant[]; inputs: InputVariant[]; className?: string }) {
   return (
-    <UiKitCard
-      label="03. Components"
-      className={className}
-      headerRight={
-        <span className="inline-flex w-fit items-center rounded-full bg-secondary-blue/10 px-2.5 py-1 font-nunito text-[10px] font-bold text-secondary-blue">
+    <UiKitCard className={className}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-nunito text-[10px] font-extrabold tracking-[1px] text-grey-300 uppercase">03. Components</span>
+        <span className="hidden shrink-0 items-center rounded-full border-[1.5px] border-primary-orange bg-proj-white px-3 py-1 font-nunito text-[10px] font-extrabold text-primary-orange md:inline-flex">
           Variants Defined
         </span>
-      }
-    >
+      </div>
       <div className="flex flex-1 flex-col justify-center gap-6 md:flex-row md:gap-6">
         <div className="flex flex-1 flex-col gap-3">
-          <span className="font-nunito text-[10px] font-extrabold tracking-[1px] text-grey-500 uppercase">Buttons</span>
-          <div className="flex flex-col gap-2">
+          <span className="font-nunito text-[10px] font-extrabold tracking-[1px] text-grey-600 uppercase">Buttons</span>
+          <div className="flex flex-col gap-3">
             {buttons.map((b) => (
               <ButtonSwatch key={b.label} btn={b} />
             ))}
           </div>
         </div>
         <div className="flex flex-1 flex-col gap-3">
-          <span className="font-nunito text-[10px] font-extrabold tracking-[1px] text-grey-500 uppercase">Input Fields</span>
-          <div className="flex flex-col gap-2">
+          <span className="font-nunito text-[10px] font-extrabold tracking-[1px] text-grey-600 uppercase">Input Fields</span>
+          <div className="flex flex-col gap-3">
             {inputs.map((inp) => (
               <InputSwatch key={inp.state} input={inp} />
             ))}
@@ -276,12 +318,12 @@ function EfficiencyCard({ columns, className = "" }: { columns: EfficiencyColumn
         </h5>
       </div>
       <div className="h-px w-full bg-grey-100" aria-hidden />
-      <div className="flex flex-1 flex-col gap-5 md:flex-row md:items-center md:gap-4">
+      <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-stretch md:gap-6">
         {columns.map((col) => {
           const iconSrc = (col.icon && EFFICIENCY_ICON_FILES[col.icon]) || EFFICIENCY_ICON_FILES.Gear;
           const isMetric = /^[+-]?\d/.test(col.subtitle);
           return (
-            <div key={col.title} className="flex flex-1 flex-col gap-4">
+            <div key={col.title} className="flex flex-1 flex-col justify-center gap-4 rounded-lg bg-grey-50 p-4">
               <span className="flex size-11 items-center justify-center rounded-[22px] bg-primary-orange/[0.12]">
                 <Image src={iconSrc} alt="" width={22} height={22} className="size-[22px]" />
               </span>
@@ -337,6 +379,17 @@ export function DesignSystem({ process }: { process: Record<string, unknown> }) 
     setActiveDot(Math.min(cardCount - 1, Math.round(ratio * (cardCount - 1))));
   }
 
+  /** Lets the page-control dots drive the carousel too, on top of native
+   * swipe/scroll (both should work, per Joe's ask) -- jumps to the i-th
+   * card's snap position. */
+  function goToCard(i: number) {
+    const el = scrollRef.current;
+    if (!el) return;
+    const card = el.children[i] as HTMLElement | undefined;
+    if (!card) return;
+    el.scrollTo({ left: card.offsetLeft, behavior: "smooth" });
+  }
+
   if (colors.length === 0) return null;
 
   return (
@@ -364,17 +417,20 @@ export function DesignSystem({ process }: { process: Record<string, unknown> }) 
               onScroll={handleScroll}
               className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              <div className="flex w-[78vw] shrink-0 snap-center"><ColorsCard colors={colors} className="min-h-[440px] flex-1" /></div>
-              <div className="flex w-[78vw] shrink-0 snap-center"><IconsCard className="min-h-[440px] flex-1" /></div>
-              <div className="flex w-[78vw] shrink-0 snap-center"><ComponentsCard buttons={buttons} inputs={inputs} className="min-h-[440px] flex-1" /></div>
+              <div className="flex w-[78vw] shrink-0 snap-center"><ColorsCard colors={colors} className="h-[460px]" /></div>
+              <div className="flex w-[78vw] shrink-0 snap-center"><IconsCard className="h-[460px]" /></div>
+              <div className="flex w-[78vw] shrink-0 snap-center"><ComponentsCard buttons={buttons} inputs={inputs} className="h-[460px]" /></div>
               {efficiencyColumns.length > 0 && (
-                <div className="flex w-[78vw] shrink-0 snap-center"><EfficiencyCard columns={efficiencyColumns} className="min-h-[440px] flex-1" /></div>
+                <div className="flex w-[78vw] shrink-0 snap-center"><EfficiencyCard columns={efficiencyColumns} className="h-[460px]" /></div>
               )}
             </div>
-            <div className="flex items-center justify-center gap-2" aria-hidden>
+            <div className="flex items-center justify-center gap-2">
               {Array.from({ length: cardCount }).map((_, i) => (
-                <span
+                <button
                   key={i}
+                  type="button"
+                  aria-label={`Go to card ${i + 1}`}
+                  onClick={() => goToCard(i)}
                   className={`h-[8px] rounded-full transition-all duration-300 ${i === activeDot ? "w-6 bg-secondary-blue" : "w-[8px] bg-grey-300"}`}
                 />
               ))}
