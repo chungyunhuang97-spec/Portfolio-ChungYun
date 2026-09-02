@@ -39,42 +39,23 @@ function MetaPill({ role, timeframe }: { role: string; timeframe: string }) {
 }
 
 /**
- * The BNPL Platinum card, matching Figma nodes 543:2798 (mobile, 310×190)
- * and 477:194 (desktop, 380×265) pixel-for-pixel at rest (progress 0):
- * bg-secondary-blue, solid primary-orange diagonal stripe (a single large
+ * The BNPL Platinum card face, matching Figma nodes 543:2798 (mobile,
+ * 310×190) and 477:194 (desktop, 380×265) pixel-for-pixel at rest: bg-
+ * secondary-blue, solid primary-orange diagonal stripe (a single large
  * rotated rectangle clipped by overflow-hidden, exactly Figma's technique
  * -- not a gradient), white chip, masked number, "GEN Z USER" / "VALID
  * THRU 08/27" / "Piiluu 皮路" / "BNPL PLATINUM" labels at Figma's exact
- * positions. Split into independently-animated pieces so it can visibly
- * "disintegrate" as scroll progress advances (Joe's explicit ask: "這張信用卡
- * 會被解體，並變成手機的 Mockup") -- the disintegration deltas are additive on
- * top of this exact rest state, not a redesign of it.
+ * positions. Rendered twice by `DisintegratingCard` (see below) so each
+ * copy can be clipped to one triangular half -- kept as one shared
+ * component so both halves' content stays pixel-identical/aligned instead
+ * of two hand-duplicated copies drifting apart over edits.
  */
-function DisintegratingCard({ controls }: { controls: AnimationControls }) {
-  /* Fixed-duration, trigger-once animation instead of continuous
-   * scroll-position-linked transforms. The scroll-linked version (opacity/
-   * scale/y/rotate all mapped directly off `useScroll` progress) depended
-   * on the card's fade-out and the phone's fade-in landing in precisely
-   * overlapping progress ranges -- reported to still leave a blank gap /
-   * a "card shrinks then nothing" outcome in real testing despite several
-   * rounds of retuning the ranges, and this codebase has essentially no
-   * other precedent for scroll-scrubbed motion values (the one prior
-   * example, HeroDoodleField, is a purely decorative parallax, not
-   * content the user needs to actually see appear). Switched to the
-   * pattern this codebase DOES rely on everywhere else (SlideIn, the
-   * imperative `animate()` calls in Nest Stay/Metro's CountUp-style
-   * cards): scroll only TRIGGERS the sequence once, then it plays out
-   * over a fixed duration via `animate` controls -- immune to scroll
-   * speed/position edge cases, always completes. */
+function CardFace() {
   return (
-    <motion.div
-      initial={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
-      animate={controls}
-      className="relative h-[190px] w-[310px] overflow-hidden rounded-[16px] bg-secondary-blue shadow-[0px_2px_4px_0px_rgba(0,0,0,0.05),0px_8px_16px_0px_rgba(0,0,0,0.1)] md:h-[265px] md:w-[380px] md:rounded-[20px] md:shadow-[0px_1.5px_1.5px_0px_rgba(64,50,42,0.04),0px_8px_12px_0px_rgba(64,50,42,0.06)]"
-    >
+    <div className="absolute inset-0 h-full w-full overflow-hidden rounded-[16px] bg-secondary-blue md:rounded-[20px]">
       {/* Diagonal stripe -- exact Figma technique: one large solid
           primary-orange rectangle, rotated, clipped by the card's rounded
-          overflow-hidden edge. Static (no per-piece scroll animation). */}
+          overflow-hidden edge. */}
       <div
         className="absolute left-[-77.46px] top-[110px] flex h-[261.291px] w-[454.693px] items-center justify-center md:left-[-108.7px] md:top-[150px] md:h-[330.314px] md:w-[567.922px]"
         aria-hidden
@@ -102,7 +83,52 @@ function DisintegratingCard({ controls }: { controls: AnimationControls }) {
         <p className="font-nunito text-[20px] font-extrabold text-white">Piiluu 皮路</p>
         <p className="mt-0.5 font-nunito text-[13px] font-bold text-white/85">BNPL PLATINUM</p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * One torn-off half of the card: the full `CardFace` cropped by a
+ * diagonal `clip-path` to a triangle, matching the reference recording of
+ * the original Framer piiluu site (Joe's 2026-09-02 screen recording) --
+ * the card visibly tears into two triangular fragments along its own
+ * diagonal that fly apart and fade, rather than the whole card shrinking
+ * as one unit. `variant` picks which half: "top-left" keeps the top-left
+ * corner (logo/chip side), "bottom-right" keeps the opposite corner
+ * (number/expiry side) -- together the two clip-paths cover the full
+ * rectangle with a shared diagonal seam from the top-right corner to the
+ * bottom-left corner.
+ */
+function CardHalf({ variant, controls }: { variant: "top-left" | "bottom-right"; controls: AnimationControls }) {
+  const clipPath =
+    variant === "top-left" ? "polygon(0 0, 100% 0, 0 100%)" : "polygon(100% 0, 100% 100%, 0 100%)";
+  return (
+    <motion.div
+      initial={{ opacity: 1, x: 0, y: 0, rotate: 0 }}
+      animate={controls}
+      style={{ clipPath }}
+      className="absolute inset-0 h-full w-full shadow-[0px_2px_4px_0px_rgba(0,0,0,0.05),0px_8px_16px_0px_rgba(0,0,0,0.1)] md:shadow-[0px_1.5px_1.5px_0px_rgba(64,50,42,0.04),0px_8px_12px_0px_rgba(64,50,42,0.06)]"
+    >
+      <CardFace />
     </motion.div>
+  );
+}
+
+/** The two-piece card, torn along its diagonal -- see `CardHalf`. Each
+ * half is driven by its own `AnimationControls` so they can fly apart in
+ * opposite directions. */
+function DisintegratingCard({
+  topControls,
+  bottomControls,
+}: {
+  topControls: AnimationControls;
+  bottomControls: AnimationControls;
+}) {
+  return (
+    <div className="relative h-[190px] w-[310px] md:h-[265px] md:w-[380px]">
+      <CardHalf variant="top-left" controls={topControls} />
+      <CardHalf variant="bottom-right" controls={bottomControls} />
+    </div>
   );
 }
 
@@ -113,7 +139,33 @@ interface HeroContentProps {
   role: string;
   timeframe: string;
   badges: string[];
-  screen: React.ReactNode;
+  mediaUrl?: string;
+}
+
+/**
+ * The App mockup slot. Unlike every other PhoneFrame usage in this
+ * codebase, the uploaded Hero mockup asset is a pre-composed device mockup
+ * image (it already has its own phone body/bezel baked in) -- wrapping it
+ * in PhoneFrame's chrome again would double-frame it. So once a real
+ * mockup is uploaded, render the image/video directly at its own
+ * proportions (`object-contain`, no cropping); only fall back to
+ * PhoneFrame's built-in placeholder chrome when nothing has been uploaded
+ * yet, so the empty state still looks intentional.
+ */
+function HeroMockup({ mediaUrl, title, className = "" }: { mediaUrl?: string; title: string; className?: string }) {
+  if (!mediaUrl) {
+    return (
+      <div className={`aspect-[375/812] ${className}`}>
+        <PhoneFrame className="h-full" />
+      </div>
+    );
+  }
+  return isVideoUrl(mediaUrl) ? (
+    <video src={mediaUrl} autoPlay loop muted playsInline className={`w-auto object-contain ${className}`} />
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={mediaUrl} alt={title} className={`w-auto object-contain ${className}`} />
+  );
 }
 
 /**
@@ -123,9 +175,9 @@ interface HeroContentProps {
  * DISINTEGRATES (see DisintegratingCard) while a PhoneFrame assembles in
  * its place, conceptually "physical card -> cardless-payment phone screen".
  *
- * Pinned via `position: sticky` inside a `h-[140vh]` container purely to
- * give the moment a "hold" while it plays out, and to make "you have to
- * scroll to see this" legible -- but the transition itself is NOT
+ * Pinned via `position: sticky` inside a short `h-[112vh]` container purely
+ * to give the moment a brief "hold" while it plays out, and to make "you
+ * have to scroll to see this" legible -- but the transition itself is NOT
  * scroll-position-linked. Three separate rounds of scroll-scrubbed
  * `useTransform` timing (compressed ranges, then wider overlapping ranges,
  * then a fully non-pinned version) all still reproduced a blank gap /
@@ -138,14 +190,26 @@ interface HeroContentProps {
  * the sequence once (`useMotionValueEvent` watching progress cross a
  * small threshold), then `useAnimationControls` plays a fixed-duration
  * animation on the card and phone -- once started, it always finishes
- * regardless of how fast/slow/far the user keeps scrolling, so there is
- * no scroll-position window for a gap to live in.
+ * regardless of how fast/slow/far the user keeps scrolling.
+ *
+ * The pin height is deliberately short (just 12vh of "extra" scroll beyond
+ * one viewport, not the 40vh an earlier version used). A `position:sticky`
+ * container this tall can only release once the user has scrolled through
+ * its *entire* extra height -- with 40vh of that, most of it was consumed
+ * AFTER the ~1s trigger-once animation had already finished, which is
+ * exactly the "an unnatural blank area appears below the phone" gap Joe
+ * reported: the sticky frame stays held (fully resolved, nothing left to
+ * animate) while its own top content scrolls out of view first, leaving
+ * a tall stretch of plain white before the next section is finally
+ * allowed to appear. Shrinking the extra scroll distance to ~12vh keeps
+ * just enough runway for the animation to read as an intentional "hold,"
+ * without a long dead tail once it's done.
  *
  * All static content/colors below match Figma nodes 542:191 (mobile) /
  * 476:185 (desktop) exactly -- see get_design_context output referenced in
  * commit history for the literal values.
  */
-function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, screen }: HeroContentProps) {
+function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, mediaUrl }: HeroContentProps) {
   const pinRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: progress } = useScroll({
     target: pinRef,
@@ -156,29 +220,41 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, screen 
   const watermarkScale = useTransform(progress, [0, 1], [0.85, 1.15]);
 
   const [unlocked, setUnlocked] = useState(false);
-  const cardControls = useAnimationControls();
+  const cardTopControls = useAnimationControls();
+  const cardBottomControls = useAnimationControls();
   const phoneControls = useAnimationControls();
 
   useMotionValueEvent(progress, "change", (v) => {
     if (v > 0.1 && !unlocked) {
       setUnlocked(true);
-      cardControls.start({
+      // Top-left fragment (logo/chip) tears up and to the left; the
+      // bottom-right fragment (number/expiry) tears down and to the
+      // right -- opposite directions and rotations so the two pieces
+      // read as torn apart, not just one card shrinking in place.
+      cardTopControls.start({
+        x: -64,
+        y: -56,
+        rotate: -20,
         opacity: 0,
-        scale: 0.85,
-        y: 24,
-        rotate: -6,
-        transition: { duration: 0.75, ease: "easeInOut" },
+        transition: { duration: 0.8, ease: "easeInOut" },
+      });
+      cardBottomControls.start({
+        x: 64,
+        y: 56,
+        rotate: 20,
+        opacity: 0,
+        transition: { duration: 0.8, ease: "easeInOut" },
       });
       phoneControls.start({
         opacity: 1,
         scale: 1,
-        transition: { duration: 0.75, delay: 0.3, ease: "easeOut" },
+        transition: { duration: 0.75, delay: 0.35, ease: "easeOut" },
       });
     }
   });
 
   return (
-    <div ref={pinRef} className="relative h-[140vh]">
+    <div ref={pinRef} className="relative h-[112vh]">
       <div className="sticky top-0 flex h-[100dvh] w-full flex-col items-center justify-center gap-6 overflow-hidden bg-white px-6 pt-6 pb-10 md:gap-10 md:px-[120px] md:pt-[180px] md:pb-[100px]">
         <motion.p
           aria-hidden
@@ -212,18 +288,14 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, screen 
         )}
 
         <div className="relative z-10 flex h-[190px] w-[310px] items-center justify-center md:h-[265px] md:w-[380px]">
-          <DisintegratingCard controls={cardControls} />
+          <DisintegratingCard topControls={cardTopControls} bottomControls={cardBottomControls} />
           <motion.div
             initial={{ opacity: 0, scale: 0.75 }}
             animate={phoneControls}
             className="pointer-events-none absolute inset-0 flex items-center justify-center"
           >
-            {/* Shaped wrapper (real aspect ratio + explicit height) so
-                PhoneFrame fills it via h-full instead of deriving its own
-                (taller) height from aspect-[375/812] applied to a bare
-                width, which would overflow this small card-sized box. */}
-            <div className="pointer-events-auto aspect-[375/812] h-[170px] md:h-[240px]">
-              <PhoneFrame screen={screen} className="h-full" />
+            <div className="pointer-events-auto">
+              <HeroMockup mediaUrl={mediaUrl} title={title} className="h-[230px] md:h-[340px]" />
             </div>
           </motion.div>
         </div>
@@ -245,7 +317,7 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, screen 
  * with a plain content fade-in, per every other custom motion piece's
  * reduced-motion handling in this codebase. Static colors still match
  * Figma exactly. */
-function HeroStatic({ kicker, title, body, role, timeframe, badges, screen }: HeroContentProps) {
+function HeroStatic({ kicker, title, body, role, timeframe, badges, mediaUrl }: HeroContentProps) {
   return (
     <div className="flex flex-col items-center gap-6 px-6 pt-6 pb-10 text-center md:gap-10 md:px-[120px] md:pt-[180px] md:pb-[100px]">
       <div className="flex flex-col items-center gap-3">
@@ -269,9 +341,7 @@ function HeroStatic({ kicker, title, body, role, timeframe, badges, screen }: He
           ))}
         </div>
       )}
-      <div className="w-[180px] md:w-[200px]">
-        <PhoneFrame screen={screen} />
-      </div>
+      <HeroMockup mediaUrl={mediaUrl} title={title} className="h-[280px] md:h-[380px]" />
     </div>
   );
 }
@@ -304,16 +374,7 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
   const badges = Array.isArray(hero.badges) ? (hero.badges as string[]) : [];
   const mediaUrl = (hero.mockup_media_url as string) || undefined;
 
-  const screen = mediaUrl ? (
-    isVideoUrl(mediaUrl) ? (
-      <video src={mediaUrl} autoPlay loop muted playsInline className="h-full w-full object-cover" />
-    ) : (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={mediaUrl} alt={title} className="h-full w-full object-cover" />
-    )
-  ) : undefined;
-
-  const contentProps: HeroContentProps = { kicker, title, body, role, timeframe, badges, screen };
+  const contentProps: HeroContentProps = { kicker, title, body, role, timeframe, badges, mediaUrl };
 
   return (
     <section id="hero" className="relative overflow-hidden bg-white">
