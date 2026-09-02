@@ -86,7 +86,7 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
       </div>
 
       {/* Desktop */}
-      <div className="relative hidden w-full flex-col items-center justify-center gap-8 p-[100px] md:flex">
+      <div className="relative hidden w-full flex-col items-center justify-center gap-8 p-[100px] md:flex md:h-[500px]">
         <span aria-hidden className="absolute left-[120px] top-[80px] font-nunito text-[120px] font-bold leading-[120px] text-white">
           「
         </span>

@@ -104,7 +104,7 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
       </div>
 
       {/* Desktop layout */}
-      <div className="relative hidden w-full flex-col items-center justify-center gap-8 p-[100px] md:flex">
+      <div className="relative hidden w-full flex-col items-center justify-center gap-8 p-[100px] md:flex md:h-[500px]">
         {/* Figma has a static "回到頂部" instance inside this section (390:481, desktop only), but
             since it's functionally identical to the global floating <BackToTop /> that's already
             present on every page, Joe asked to keep just the one (the floating component) rather
