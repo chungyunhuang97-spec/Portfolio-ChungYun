@@ -181,16 +181,16 @@ function ColorsCard({ colors, border = "orange", className = "" }: { colors: Col
   return (
     <UiKitCard border={border} className={className}>
       <CardHeader eyebrow="01. Colors" subtitle="品牌色彩與功能色定義" />
-      {/* `justify-between` (not just `gap`) so the three rows spread across
-          the card's full height instead of bunching at the top with dead
-          space below -- only matters on mobile, where the card gets an
-          explicit fixed height; on desktop the card is its own natural
-          height so this is a no-op. */}
-      <div className="flex flex-1 flex-col justify-between gap-2.5">
+      {/* Fixed 16px gap between rows -- the rows themselves grow to fill
+          the card's full height (`flex-1` on mobile, where the card gets
+          an explicit fixed height), not the gaps between them. Desktop
+          rows stay their natural (unstretched) size since the card there
+          has no forced height. */}
+      <div className="flex flex-1 flex-col gap-4 md:gap-2.5">
         {colors.map((c, i) => (
           <div
             key={c.name}
-            className={`flex items-center gap-2.5 md:border-b md:border-grey-50 md:pb-2 ${
+            className={`flex flex-1 items-center gap-2.5 md:flex-none md:border-b md:border-grey-50 md:pb-2 ${
               i === colors.length - 1 ? "md:border-b-0 md:pb-0" : ""
             } rounded-lg bg-grey-50 p-2 md:rounded-none md:bg-transparent md:p-0`}
           >
@@ -352,7 +352,10 @@ function EfficiencyCard({
         </h5>
       </div>
       <div className="h-px w-full bg-grey-100" aria-hidden />
-      <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-stretch md:gap-6">
+
+      {/* Desktop -- 3 columns side by side, each a bg-grey-50 chip with
+          icon + title/subtitle + description, per Figma node 526:2672. */}
+      <div className="hidden flex-1 md:flex md:items-stretch md:gap-6">
         {columns.map((col) => {
           const iconSrc = (col.icon && EFFICIENCY_ICON_FILES[col.icon]) || EFFICIENCY_ICON_FILES.Gear;
           const isMetric = /^[+-]?\d/.test(col.subtitle);
@@ -370,6 +373,35 @@ function EfficiencyCard({
                 )}
               </div>
               <p className="font-nunito text-[12px] leading-[1.6] font-normal text-grey-900">{col.description}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Mobile -- a genuinely different, more compact layout per Figma
+          node 555:4203, not just a re-flowed version of the desktop one:
+          one bg-grey-50 wrapper holding 3 white rows, each a horizontal
+          icon+title/subtitle pill with NO description text. Both the
+          wrapper and each row are `flex-1` so they fill the card's full
+          remaining height instead of stacking at their natural (much
+          shorter) content height. */}
+      <div className="flex flex-1 flex-col gap-2 rounded-lg bg-grey-50 p-2 md:hidden">
+        {columns.map((col) => {
+          const iconSrc = (col.icon && EFFICIENCY_ICON_FILES[col.icon]) || EFFICIENCY_ICON_FILES.Gear;
+          const isMetric = /^[+-]?\d/.test(col.subtitle);
+          return (
+            <div key={col.title} className="flex flex-1 items-center gap-2 rounded-lg bg-proj-white p-2">
+              <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[15px] bg-primary-orange/[0.12]">
+                <Image src={iconSrc} alt="" width={15} height={15} className="size-[15px]" />
+              </span>
+              <div className="flex flex-col gap-0.5">
+                <p className="font-nunito text-[15px] font-bold text-grey-600">{col.title}</p>
+                {isMetric ? (
+                  <CountUpValue value={col.subtitle} className="font-fredoka text-[16px] leading-none text-primary-orange" />
+                ) : (
+                  <p className="font-nunito text-[11px] font-extrabold tracking-[1px] text-primary-orange uppercase">{col.subtitle}</p>
+                )}
+              </div>
             </div>
           );
         })}
@@ -449,7 +481,8 @@ export function DesignSystem({ process }: { process: Record<string, unknown> }) 
             <div
               ref={scrollRef}
               onScroll={handleScroll}
-              className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="flex snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              style={{ touchAction: "pan-x" }}
             >
               <div className="flex w-[78vw] shrink-0 snap-center">
                 <ColorsCard colors={colors} border={activeDot === 0 ? "orange" : "grey"} className="h-[460px]" />

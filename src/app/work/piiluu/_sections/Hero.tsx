@@ -245,10 +245,17 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, mediaUr
         opacity: 0,
         transition: { duration: 0.8, ease: "easeInOut" },
       });
+      // The box itself is already sized to the phone's full dimensions
+      // (see below), so it naturally sits lower/bigger than the old
+      // card-sized box just by being taller within the vertically-centered
+      // column -- this extra `y` is a smaller top-up on top of that, not
+      // the whole effect. Joe: settling a bit past the box's own bottom
+      // edge (potentially the tiniest bit past the section boundary) reads
+      // better than being conservative about strict containment here.
       phoneControls.start({
         opacity: 1,
         scale: 1,
-        y: 10,
+        y: 16,
         transition: { duration: 0.75, delay: 0.35, ease: "easeOut" },
       });
     }
@@ -289,18 +296,21 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, mediaUr
         )}
 
         {/* This box is sized for the LARGER of the two things it holds --
-            the phone mockup (230/340px), not the smaller card (190/265px)
-            that used to be its only occupant. The card is absolutely
-            positioned at its own fixed (smaller) size and just centers
-            within the taller box. Sizing the box for the card (as before)
-            meant the phone silently overflowed its declared layout space
-            by ~35-40px on each side once it was enlarged -- invisible to
+            the phone mockup, not the smaller card (190/265px) that used to
+            be its only occupant. The card is absolutely positioned at its
+            own fixed (smaller) size and just centers within the taller
+            box. Sizing the box for the card (as before) meant the phone
+            silently overflowed its declared layout space -- invisible to
             the box's own flex sizing (absolutely positioned children don't
             contribute to it) but exactly why the settled phone kept
             reading as sitting too high with a mismatched gap below it: the
             surrounding flex column never actually reserved room for the
-            phone's real size. */}
-        <div className="relative z-10 flex h-[230px] w-[310px] items-center justify-center md:h-[340px] md:w-[380px]">
+            phone's real size. The phone's `y: 44` settle (above) then
+            lands it deliberately a bit below this box's own center --
+            Joe's explicit ask to prioritize a well-centered, generously
+            sized mockup over strictly containing it within the box's
+            original (card-sized) bounds. */}
+        <div className="relative z-10 flex h-[300px] w-[310px] items-center justify-center md:h-[440px] md:w-[380px]">
           <DisintegratingCard topControls={cardTopControls} bottomControls={cardBottomControls} />
           <motion.div
             initial={{ opacity: 0, scale: 0.75, y: 0 }}
@@ -308,7 +318,7 @@ function HeroUnlockScene({ kicker, title, body, role, timeframe, badges, mediaUr
             className="pointer-events-none absolute inset-0 flex items-center justify-center"
           >
             <div className="pointer-events-auto">
-              <HeroMockup mediaUrl={mediaUrl} title={title} className="h-[230px] md:h-[340px]" />
+              <HeroMockup mediaUrl={mediaUrl} title={title} className="h-[300px] md:h-[440px]" />
             </div>
           </motion.div>
         </div>
@@ -354,7 +364,7 @@ function HeroStatic({ kicker, title, body, role, timeframe, badges, mediaUrl }: 
           ))}
         </div>
       )}
-      <HeroMockup mediaUrl={mediaUrl} title={title} className="h-[280px] md:h-[380px]" />
+      <HeroMockup mediaUrl={mediaUrl} title={title} className="h-[300px] md:h-[420px]" />
     </div>
   );
 }
