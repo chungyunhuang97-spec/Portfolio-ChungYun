@@ -12,9 +12,26 @@ interface ShowcaseRow {
   subtitle: string;
   pain: string;
   solution: string;
-  /** [before, after] screenshot URLs -- admin-uploadable, empty for now. */
-  media?: [string | undefined, string | undefined];
   mediaLabels?: [string, string];
+  /** Row 3 ("支付密碼設定優化") uniquely uses a blue "before" pill instead of
+   * the usual grey/orange -- matched exactly from Figma, not a general rule. */
+  beforeVariant?: "blue";
+}
+
+/** Resolves to a real screenshot/video URL once admin-uploaded, else
+ * undefined (PhoneFrame's own placeholder). Media lives in flat top-level
+ * `process` keys ending in `MediaUrl` (`showcaseRow{N}BeforeMediaUrl` /
+ * `...AfterMediaUrl`) rather than nested inside `showcaseRows[i]` --
+ * required for the admin `ContentEditor`'s upload-dropzone auto-detection,
+ * which only scans top-level `process` keys matching `/_media_url$/i` and
+ * never recurses into arrays (confirmed in
+ * `src/components/admin/ContentEditor.tsx`). Nesting them inside the array
+ * (the original structure) made them invisible to the admin UI entirely --
+ * this is the fix for "後台目前無法上傳ui flow s1-s4的媒體檔案". */
+function rowMedia(process: Record<string, unknown>, rowIndex: number): [string | undefined, string | undefined] {
+  const before = process[`showcaseRow${rowIndex + 1}BeforeMediaUrl`] as string | undefined;
+  const after = process[`showcaseRow${rowIndex + 1}AfterMediaUrl`] as string | undefined;
+  return [before || undefined, after || undefined];
 }
 
 function isVideoUrl(url: string) {
@@ -67,16 +84,27 @@ function PainSolutionBlock({ pain, solution }: { pain: string; solution: string 
  * height, then pass `h-full` into PhoneFrame so it fills that
  * already-correctly-shaped box instead of computing its own.
  */
-function DesktopMediaPair({ media, labels }: { media?: [string | undefined, string | undefined]; labels?: [string, string] }) {
-  const [beforeUrl, afterUrl] = media ?? [undefined, undefined];
+function DesktopMediaPair({
+  beforeUrl,
+  afterUrl,
+  labels,
+  beforeVariant,
+}: {
+  beforeUrl?: string;
+  afterUrl?: string;
+  labels?: [string, string];
+  beforeVariant?: "blue";
+}) {
   const [beforeLabel, afterLabel] = labels ?? ["Before", "After"];
+  const beforePillClass =
+    beforeVariant === "blue" ? "bg-secondary-blue text-white" : "bg-grey-50 text-primary-orange";
   return (
     <div className="flex shrink-0 items-center gap-6">
       <div className="flex flex-col items-center gap-6">
         <div className="aspect-[375/812] h-[62vh] max-h-[640px]">
           <PhoneFrame screen={mediaScreen(beforeUrl)} className="h-full" />
         </div>
-        <span className="inline-flex w-[70px] shrink-0 items-center justify-center rounded-full bg-grey-50 px-4 py-1.5 font-nunito text-[12px] font-bold text-primary-orange">
+        <span className={`inline-flex w-fit shrink-0 items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 font-nunito text-[12px] font-bold ${beforePillClass}`}>
           {beforeLabel}
         </span>
       </div>
@@ -84,7 +112,7 @@ function DesktopMediaPair({ media, labels }: { media?: [string | undefined, stri
         <div className="aspect-[375/812] h-[62vh] max-h-[640px]">
           <PhoneFrame screen={mediaScreen(afterUrl)} className="h-full" />
         </div>
-        <span className="inline-flex w-[70px] shrink-0 items-center justify-center rounded-full bg-primary-orange px-4 py-1.5 font-nunito text-[12px] font-bold text-white">
+        <span className="inline-flex w-fit shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-primary-orange px-4 py-1.5 font-nunito text-[12px] font-bold text-white">
           {afterLabel}
         </span>
       </div>
@@ -96,7 +124,8 @@ function DesktopMediaPair({ media, labels }: { media?: [string | undefined, stri
  * ImprovementRow-01..04, 526:1426/1446/1466/1589). Every row shares one
  * fixed `min-h-screen` height (per Joe: "後面區域的 Flow 也固定跟 Section One
  * 的大小一樣，不要每個都不一樣") instead of each sizing to its own content. */
-function DesktopRow({ row, reversed }: { row: ShowcaseRow; reversed: boolean }) {
+function DesktopRow({ row, process, rowIndex, reversed }: { row: ShowcaseRow; process: Record<string, unknown>; rowIndex: number; reversed: boolean }) {
+  const [beforeUrl, afterUrl] = rowMedia(process, rowIndex);
   const content = (
     <div className="flex flex-1 flex-col gap-5">
       <div className="flex flex-col gap-2">
@@ -109,7 +138,9 @@ function DesktopRow({ row, reversed }: { row: ShowcaseRow; reversed: boolean }) 
       <PainSolutionBlock pain={row.pain} solution={row.solution} />
     </div>
   );
-  const media = <DesktopMediaPair media={row.media} labels={row.mediaLabels} />;
+  const media = (
+    <DesktopMediaPair beforeUrl={beforeUrl} afterUrl={afterUrl} labels={row.mediaLabels} beforeVariant={row.beforeVariant} />
+  );
   return (
     <div className="flex min-h-screen items-center gap-16 py-12">
       {reversed ? (
@@ -166,9 +197,9 @@ function FolderTabs({ afterActive, onChange }: { afterActive: boolean; onChange:
   );
 }
 
-function MobileRow({ row }: { row: ShowcaseRow }) {
+function MobileRow({ row, process, rowIndex }: { row: ShowcaseRow; process: Record<string, unknown>; rowIndex: number }) {
   const [afterActive, setAfterActive] = useState(true);
-  const [beforeUrl, afterUrl] = row.media ?? [undefined, undefined];
+  const [beforeUrl, afterUrl] = rowMedia(process, rowIndex);
   const activeUrl = afterActive ? afterUrl : beforeUrl;
 
   return (
@@ -212,7 +243,7 @@ function MobileRow({ row }: { row: ShowcaseRow }) {
  *
  * Content model: `process.interfaceShowcaseHeading`, `.
  * interfaceShowcaseIntro`, `process.showcaseRows` (4x {number, title,
- * subtitle, pain, solution, media?, mediaLabels?}).
+ * subtitle, pain, solution, mediaLabels?, beforeVariant?}); media URLs live in flat `process.showcaseRow{N}{Before,After}MediaUrl` keys.
  */
 export function InterfaceShowcase({ process }: { process: Record<string, unknown> }) {
   const heading = (process.interfaceShowcaseHeading as string) || "關鍵介面優化與體驗重塑";
@@ -249,7 +280,7 @@ export function InterfaceShowcase({ process }: { process: Record<string, unknown
       <div className="hidden divide-y divide-grey-100 md:block">
         {rows.map((row, i) => (
           <SlideIn key={row.number} delay={0.1 + i * 0.05}>
-            <DesktopRow row={row} reversed={i % 2 === 1} />
+            <DesktopRow row={row} process={process} rowIndex={i} reversed={i % 2 === 1} />
           </SlideIn>
         ))}
       </div>
@@ -257,7 +288,7 @@ export function InterfaceShowcase({ process }: { process: Record<string, unknown
       <div className="flex flex-col md:hidden">
         {rows.map((row, i) => (
           <SlideIn key={row.number} delay={0.1 + i * 0.05}>
-            <MobileRow row={row} />
+            <MobileRow row={row} process={process} rowIndex={i} />
           </SlideIn>
         ))}
       </div>
