@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Outfit, Nunito } from "next/font/google";
+import { Geist, Geist_Mono, Outfit, Nunito, Noto_Sans_TC } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { ClickEffects } from "@/components/design-system/ClickEffects";
 import "./globals.css";
@@ -30,6 +30,23 @@ const nunito = Nunito({
   weight: ["400", "600", "700", "800"],
 });
 
+// Every Latin webfont above (Geist, Outfit, Nunito) has no Chinese glyphs,
+// so any Chinese text set in them was silently falling back to whatever
+// CJK font the visitor's OS/browser defaults to -- on many zh-TW Windows
+// setups that's 標楷體 (DFKai-SB), a calligraphy-style font that never
+// matches the Figma spec. Loading a real CJK webfont and chaining it into
+// --font-sans/--font-display/--font-nunito (see globals.css) fixes that
+// for every page, not just the ones touched so far.
+const notoSansTC = Noto_Sans_TC({
+  variable: "--font-noto-tc",
+  // "chinese-traditional" isn't a selectable subset for this family in
+  // next/font/google (its glyph set -- the actual Traditional Chinese
+  // characters -- ships in full regardless of the `subsets` option; that
+  // option only toggles supplementary ranges like cyrillic/vietnamese).
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "900"],
+});
+
 export const metadata: Metadata = {
   title: "Chung Yun Huang — Product Designer",
   description:
@@ -44,7 +61,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${nunito.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${nunito.variable} ${notoSansTC.variable} h-full antialiased`}
     >
       <head>
         {/*

@@ -77,8 +77,11 @@
   --color-accent: var(--color-accent);
   --color-accent-soft: var(--color-accent-soft);
   --color-line: var(--color-line);
-  --font-sans: var(--font-geist-sans);
-  --font-display: var(--font-outfit);
+  /* Each Latin family is chained with --font-noto-tc so Chinese text set
+     in these utilities renders with a real CJK webfont instead of
+     falling back to the visitor's OS default (e.g. 標楷體 on Windows). */
+  --font-sans: var(--font-geist-sans), var(--font-noto-tc), sans-serif;
+  --font-display: var(--font-outfit), var(--font-noto-tc), sans-serif;
   --font-mono: var(--font-geist-mono);
 
   /* Project design system */
@@ -96,7 +99,7 @@
   --color-grey-100: var(--color-grey-100);
   --color-grey-50: var(--color-grey-50);
   --color-proj-white: var(--color-proj-white);
-  --font-nunito: var(--font-nunito);
+  --font-nunito: var(--font-nunito), var(--font-noto-tc), sans-serif;
   --font-fredoka: var(--font-fredoka);
 
   /* Admin token aliases -> Tailwind utilities (bg-admin-*, text-admin-*, border-admin-*) */
