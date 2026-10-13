@@ -1,13 +1,39 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { RefObject, SVGProps } from "react";
 import { motion, useScroll, useReducedMotion } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
 
+interface ZoneStep {
+  label: string;
+  desc?: string;
+}
+
+interface GalleryItem {
+  title: string;
+  titleEn?: string;
+  date?: string;
+}
+
+interface Spotlight {
+  title: string;
+  titleEn?: string;
+  tag?: string;
+  textZh?: string;
+  textEn?: string;
+}
+
 interface Zone {
   title: string;
   desc: string;
+  steps?: ZoneStep[];
+  designImage?: string;
+  designCaption?: string;
+  liveImage?: string;
+  liveCaption?: string;
+  gallery?: GalleryItem[];
+  spotlight?: Spotlight;
 }
 
 /** Zone 1 -- 世界地圖導覽: a hierarchical drill-down (world → continent →
@@ -50,9 +76,9 @@ const ZONE_ICONS = [DoodleDrillDown, DoodleMasonry, DoodlePlayTarget];
 
 /**
  * Scroll-linked wayfinding line -- this section's signature motion. A
- * dotted guide line runs behind the three zone numbers; as the visitor
- * scrolls through the section, a solid pink line fills in behind it,
- * same idea as walking a numbered exhibition route. `prefers-reduced-
+ * dotted guide line runs behind the three zone number badges; as the
+ * visitor scrolls through the section, a solid pink line fills in behind
+ * it, same idea as walking a numbered exhibition route. `prefers-reduced-
  * motion` just shows the line fully drawn (no fill, no sudden jump).
  */
 function WayfindingLine({ containerRef }: { containerRef: RefObject<HTMLDivElement | null> }) {
@@ -73,14 +99,184 @@ function WayfindingLine({ containerRef }: { containerRef: RefObject<HTMLDivEleme
   );
 }
 
-function ZoneRow({ zone, index }: { zone: Zone; index: number }) {
+/** Zone 1's own left-rail step list (世界全覽 → 洲際聚焦 → 場次選擇 →
+ * 演出詳情), ported from the original site's interactive stepper. Only one
+ * step (洲際聚焦) has a matching reference screenshot, so clicking a step
+ * updates the highlighted state and description text here but does not
+ * swap the device-frame image on the right -- see `designCaption`, which
+ * stays zone-level rather than per-step until per-step media exists. */
+function StepList({
+  steps,
+  active,
+  onSelect,
+}: {
+  steps: ZoneStep[];
+  active: number;
+  onSelect: (i: number) => void;
+}) {
+  return (
+    <div>
+      <p className="font-nunito mb-3 text-[11px] font-bold uppercase tracking-[0.1em] text-grey-400">
+        ↓ scroll or click
+      </p>
+      <ol className="space-y-0">
+        {steps.map((step, i) => {
+          const isActive = i === active;
+          return (
+            <li key={step.label} className="relative flex gap-3 border-l-2 border-grey-100 pl-4 pb-4 last:pb-0">
+              <button
+                type="button"
+                onClick={() => onSelect(i)}
+                aria-pressed={isActive}
+                className="absolute -left-[7px] top-0.5 flex size-3 items-center justify-center rounded-full"
+              >
+                <span
+                  className={`size-3 rounded-full border-2 transition-colors ${
+                    isActive ? "border-accent-pink bg-accent-pink" : "border-grey-300 bg-proj-white"
+                  }`}
+                />
+              </button>
+              <button type="button" onClick={() => onSelect(i)} className="text-left">
+                <p className={`font-nunito text-[11px] font-extrabold tracking-[0.1em] ${isActive ? "text-accent-pink" : "text-grey-400"}`}>
+                  STEP {String(i + 1).padStart(2, "0")}
+                </p>
+                <p className={`font-nunito text-[15px] font-bold ${isActive ? "text-grey-800" : "text-grey-500"}`}>
+                  {step.label}
+                </p>
+                {isActive && step.desc && (
+                  <p className="font-nunito mt-1 max-w-[40ch] text-[13px] leading-[20px] font-normal text-grey-600">
+                    {step.desc}
+                  </p>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+/** macOS-style window chrome around a zone's Design/Live screenshot --
+ * this project's own device frame for showing a kiosk screen mockup,
+ * matching the traffic-light window treatment the original site used for
+ * every zone. Kept local like Hero's `KioskFrame`, same shape family but a
+ * flatter "browser window" rather than a bezeled touchscreen, since this
+ * is for a 16:10-ish screenshot rather than the Hero's portrait kiosk. */
+function DeviceFrame({ image, alt }: { image?: string; alt: string }) {
+  return (
+    <div className="overflow-hidden rounded-[14px] border border-grey-100 bg-proj-white shadow-[0_20px_60px_rgba(0,0,0,0.1)]">
+      <div className="flex items-center gap-1.5 border-b border-grey-100 bg-grey-50 px-4 py-2.5">
+        <span className="size-2.5 rounded-full bg-[#ff5f57]" />
+        <span className="size-2.5 rounded-full bg-[#febc2e]" />
+        <span className="size-2.5 rounded-full bg-[#28c840]" />
+      </div>
+      <div className="aspect-[2000/1255] w-full bg-grey-50">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt={alt} className="h-full w-full object-cover object-top" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center px-6 text-center">
+            <p className="font-nunito text-[12px] font-bold leading-relaxed text-grey-400">
+              實機畫面待上傳
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** DESIGN / LIVE segmented toggle, only rendered when a zone actually has
+ * both states -- some zones (e.g. 展區三) only have a Live recording. */
+function ModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: "design" | "live";
+  onChange: (m: "design" | "live") => void;
+}) {
+  return (
+    <div className="inline-flex items-center gap-1 rounded-full border border-grey-100 bg-proj-white p-1 shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+      {(["design", "live"] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => onChange(m)}
+          className={`font-nunito rounded-full px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
+            mode === m ? "bg-accent-pink text-proj-white" : "text-grey-500 hover:text-grey-700"
+          }`}
+        >
+          {m === "design" ? "Design" : "Live"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Zone 2/3's "幕後花絮" footer: a spotlight (the original site's modal
+ * popup content, e.g. 娜魯灣劇場演出) plus a compact list of the other
+ * archive/video entries from the same gallery -- the original masonry
+ * grid's individual photos aren't available as separate asset files, so
+ * this represents the same real archive entries as a reading list rather
+ * than reproducing the masonry layout itself. */
+function SpotlightBlock({ spotlight, gallery }: { spotlight?: Spotlight; gallery?: GalleryItem[] }) {
+  if (!spotlight && (!gallery || gallery.length === 0)) return null;
+
+  return (
+    <div className="mt-6 grid gap-4 md:grid-cols-[1.2fr_1fr] md:gap-6">
+      {spotlight && (
+        <div className="rounded-[16px] border border-accent-pink/20 bg-accent-pink/5 p-5 md:p-6">
+          {spotlight.tag && (
+            <p className="font-nunito text-[11px] font-extrabold uppercase tracking-[0.1em] text-accent-pink">
+              {spotlight.tag}
+            </p>
+          )}
+          <h5 className="font-nunito mt-1 text-[16px] font-bold leading-6 text-grey-800">{spotlight.title}</h5>
+          {spotlight.titleEn && (
+            <p className="font-nunito text-[12px] font-semibold text-grey-500">{spotlight.titleEn}</p>
+          )}
+          {spotlight.textZh && (
+            <p className="font-nunito mt-3 text-[13px] leading-[21px] font-normal text-grey-700">
+              {spotlight.textZh}
+            </p>
+          )}
+        </div>
+      )}
+      {gallery && gallery.length > 0 && (
+        <div className="rounded-[16px] border border-grey-100 bg-grey-50 p-5 md:p-6">
+          <p className="font-nunito text-[11px] font-extrabold uppercase tracking-[0.1em] text-grey-400">
+            更多花絮
+          </p>
+          <ul className="mt-2 divide-y divide-grey-100">
+            {gallery.map((item) => (
+              <li key={item.title} className="py-2 first:pt-0">
+                <p className="font-nunito text-[13px] font-bold leading-5 text-grey-800">{item.title}</p>
+                {item.date && <p className="font-nunito text-[11px] font-semibold text-grey-400">{item.date}</p>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
   const Icon = ZONE_ICONS[index] ?? ZONE_ICONS[0];
+  const hasToggle = Boolean(zone.designImage && zone.liveImage);
+  const [mode, setMode] = useState<"design" | "live">(zone.designImage ? "design" : "live");
+  const [activeStep, setActiveStep] = useState(() => Math.min(1, (zone.steps?.length ?? 1) - 1));
+
+  const image = mode === "design" ? zone.designImage : zone.liveImage;
+  const caption = mode === "design" ? zone.designCaption : zone.liveCaption;
+
   return (
     <SlideIn delay={0.08 + index * 0.1} className="relative flex gap-5 pl-0 md:gap-8">
       <div className="relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-accent-pink bg-proj-white text-accent-pink md:size-16">
         <Icon className="size-6 md:size-8" />
       </div>
-      <div className="flex-1 pb-10 pt-1 last:pb-0">
+      <div className="flex-1 pb-14 pt-1 last:pb-0">
         <p className="font-nunito text-[12px] font-extrabold tracking-[0.1em] text-grey-400">
           展區 {String(index + 1).padStart(2, "0")}
         </p>
@@ -90,6 +286,24 @@ function ZoneRow({ zone, index }: { zone: Zone; index: number }) {
         <p className="font-nunito mt-2 max-w-[60ch] text-[14px] leading-[22px] font-normal text-grey-600 md:text-[15px]">
           {zone.desc}
         </p>
+
+        <div className="mt-6 grid gap-6 md:grid-cols-[0.8fr_1.2fr] md:gap-8">
+          <div className="flex flex-col gap-5">
+            {zone.steps && zone.steps.length > 0 && (
+              <StepList steps={zone.steps} active={activeStep} onSelect={setActiveStep} />
+            )}
+            {hasToggle && <ModeToggle mode={mode} onChange={setMode} />}
+          </div>
+
+          <div>
+            <DeviceFrame image={image} alt={caption ?? zone.title} />
+            {caption && (
+              <p className="font-nunito mt-2 text-[12px] leading-[18px] font-semibold text-grey-500">{caption}</p>
+            )}
+          </div>
+        </div>
+
+        <SpotlightBlock spotlight={zone.spotlight} gallery={zone.gallery} />
       </div>
     </SlideIn>
   );
@@ -109,7 +323,7 @@ export function ExhibitionZones({ process }: { process: Record<string, unknown> 
 
   return (
     <section className="bg-grey-50 px-6 py-16 md:px-[120px] md:py-24">
-      <div className="mx-auto flex max-w-[800px] flex-col gap-10 md:gap-14">
+      <div className="mx-auto flex max-w-[1000px] flex-col gap-10 md:gap-14">
         <SlideIn className="flex flex-col items-center gap-3 text-center">
           <span className="font-nunito text-[14px] font-extrabold text-accent-pink">PROCESS</span>
           {note && (
@@ -123,7 +337,7 @@ export function ExhibitionZones({ process }: { process: Record<string, unknown> 
           <WayfindingLine containerRef={containerRef} />
           <div className="flex flex-col">
             {zones.map((zone, i) => (
-              <ZoneRow key={zone.title} zone={zone} index={i} />
+              <ZoneCard key={zone.title} zone={zone} index={i} />
             ))}
           </div>
         </div>
