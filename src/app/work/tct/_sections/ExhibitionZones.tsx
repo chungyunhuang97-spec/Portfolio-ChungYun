@@ -11,8 +11,11 @@ interface ZoneStep {
   /** Design-mode screenshot for this specific step. Only one step tends to
    * have a matching reference screenshot at a time -- steps without one
    * fall back to DeviceFrame's own empty state rather than reusing another
-   * step's image, since the screens genuinely differ step to step. */
-  designImage?: string;
+   * step's image, since the screens genuinely differ step to step. Key
+   * ends in `ImageUrl` so the admin's generic ContentEditor recognizes it
+   * as a media field (see MEDIA_KEY_PATTERN) and renders an upload
+   * dropzone for it instead of a plain text input. */
+  designImageUrl?: string;
 }
 
 interface GalleryItem {
@@ -34,13 +37,13 @@ interface Zone {
   desc: string;
   steps?: ZoneStep[];
   /** Fallback Design-mode image for zones with no per-step stepper
-   * (Zone 2/3). Zone 1 instead uses each step's own `designImage`. */
-  designImage?: string;
+   * (Zone 2/3). Zone 1 instead uses each step's own `designImageUrl`. */
+  designImageUrl?: string;
   designCaption?: string;
   /** One real recording per zone, shown in Live mode regardless of which
    * step is selected -- the footage demonstrates the zone as a whole, it
    * isn't cut per step. */
-  liveImage?: string;
+  liveImageUrl?: string;
   liveCaption?: string;
   gallery?: GalleryItem[];
   spotlight?: Spotlight;
@@ -112,8 +115,8 @@ function WayfindingLine({ containerRef }: { containerRef: RefObject<HTMLDivEleme
 /** Zone 1's own left-rail step list (世界全覽 → 洲際聚焦 → 場次選擇 →
  * 演出詳情), ported from the original site's interactive stepper. Clicking
  * a step swaps the Design-mode screenshot on the right to that step's own
- * `designImage` (when one exists); Live mode is unaffected, since it's one
- * continuous recording of the zone rather than per-step footage. */
+ * `designImageUrl` (when one exists); Live mode is unaffected, since it's
+ * one continuous recording of the zone rather than per-step footage. */
 function StepList({
   steps,
   active,
@@ -278,12 +281,12 @@ function GalleryCarousel({ spotlight, gallery }: { spotlight?: Spotlight; galler
 function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
   const Icon = ZONE_ICONS[index] ?? ZONE_ICONS[0];
   const hasSteps = Boolean(zone.steps && zone.steps.length > 0);
-  const hasToggle = Boolean((hasSteps || zone.designImage) && zone.liveImage);
-  const [mode, setMode] = useState<"design" | "live">(hasSteps || zone.designImage ? "design" : "live");
+  const hasToggle = Boolean((hasSteps || zone.designImageUrl) && zone.liveImageUrl);
+  const [mode, setMode] = useState<"design" | "live">(hasSteps || zone.designImageUrl ? "design" : "live");
   const [activeStep, setActiveStep] = useState(() => Math.min(1, (zone.steps?.length ?? 1) - 1));
 
-  const designImage = hasSteps ? zone.steps?.[activeStep]?.designImage : zone.designImage;
-  const image = mode === "design" ? designImage : zone.liveImage;
+  const designImage = hasSteps ? zone.steps?.[activeStep]?.designImageUrl : zone.designImageUrl;
+  const image = mode === "design" ? designImage : zone.liveImageUrl;
   const caption = mode === "design" ? zone.designCaption : zone.liveCaption;
 
   return (

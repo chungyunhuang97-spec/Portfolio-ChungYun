@@ -16,11 +16,15 @@ import { SlideIn } from "@/components/design-system/SlideIn";
  * Content model: reuses the `outcome` row's `items[0]` (the run-summary
  * sentence, e.g. "展覽期間...透過大螢幕觸控與沉浸式體驗...") as this
  * section's intro -- the same line the original site used here -- so
- * `Outcome.tsx` doesn't repeat it.
+ * `Outcome.tsx` doesn't repeat it. The collage itself is `onsiteImageUrl`,
+ * a real top-level field on the same row (not hardcoded), so it has the
+ * admin's full upload dropzone like any other top-level media field --
+ * swap it from the admin UI once a higher-resolution export exists.
  */
 export function OnSite({ outcome }: { outcome: Record<string, unknown> }) {
   const items = Array.isArray(outcome.items) ? (outcome.items as string[]) : [];
   const intro = items[0];
+  const collageUrl = (outcome.onsiteImageUrl as string | undefined) || "/work/tct/onsite/collage.webp";
 
   return (
     <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-24">
@@ -39,7 +43,7 @@ export function OnSite({ outcome }: { outcome: Record<string, unknown> }) {
           <div className="overflow-hidden rounded-[20px] border border-grey-100 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/work/tct/onsite/collage.webp"
+              src={collageUrl}
               alt="展覽現場實況：觀眾操作觸控螢幕與展區實景照片"
               className="w-full object-cover"
             />
