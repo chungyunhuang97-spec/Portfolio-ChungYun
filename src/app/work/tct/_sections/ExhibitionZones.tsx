@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RefObject, SVGProps } from "react";
 import { motion, useScroll, useMotionValueEvent, useReducedMotion } from "framer-motion";
 import { ImageSquare } from "@phosphor-icons/react/dist/ssr";
@@ -83,26 +83,105 @@ const ZONE_ICONS = [DoodleDrillDown, DoodleMasonry, DoodlePlayTarget];
 
 /**
  * Scroll-linked wayfinding line -- this section's signature motion. A
- * dotted guide line runs behind the three zone number badges; as the
- * visitor scrolls through the section, a solid pink line fills in behind
- * it, same idea as walking a numbered exhibition route. `prefers-reduced-
- * motion` just shows the line fully drawn (no fill, no sudden jump).
+ * dotted guide line runs behind the zone number badges; as the visitor
+ * scrolls through the section, a solid pink line fills in behind it, same
+ * idea as walking a numbered exhibition route.
+ *
+ * Draws an actual bent path (not a straight vertical) through each zone's
+ * icon-badge center -- Joe's "折线" ask: 展區二 mirrors to the opposite
+ * side on desktop, so the line has to tilt right then tilt back left
+ * instead of running straight down. The path is built from real measured
+ * icon positions (via `iconRefs`) rather than assumed fractions, since
+ * zone heights differ a lot (Zone 1's scroll track alone can be several
+ * viewport-heights tall) -- a fixed-fraction guess would put the bends in
+ * the wrong place. This same measured path also still works unmodified on
+ * mobile: `ZoneCard` only mirrors at `md:`, so on narrow screens every icon
+ * measures out to the same left-side x and the "bent" path is just
+ * straight again, with no separate mobile code path needed.
+ *
+ * `prefers-reduced-motion` keeps the bend (it's layout, not motion) but
+ * skips the scroll-driven draw-in, showing the pink line fully drawn.
  */
-function WayfindingLine({ containerRef }: { containerRef: RefObject<HTMLDivElement | null> }) {
+function WayfindingLine({
+  containerRef,
+  iconRefs,
+  zoneCount,
+}: {
+  containerRef: RefObject<HTMLDivElement | null>;
+  iconRefs: RefObject<(HTMLDivElement | null)[]>;
+  zoneCount: number;
+}) {
   const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start center", "end center"],
   });
+  const [path, setPath] = useState("");
+  const [height, setHeight] = useState(0);
+
+  useEffect(() => {
+    function measure() {
+      const container = containerRef.current;
+      const icons = iconRefs.current;
+      if (!container || icons.length < zoneCount || icons.slice(0, zoneCount).some((el) => !el)) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const points = icons.slice(0, zoneCount).map((el) => {
+        const r = el!.getBoundingClientRect();
+        return { x: r.left + r.width / 2 - containerRect.left, y: r.top + r.height / 2 - containerRect.top };
+      });
+
+      let d = `M ${points[0].x} ${points[0].y}`;
+      for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const cur = points[i];
+        const midY = (prev.y + cur.y) / 2;
+        d += ` C ${prev.x} ${midY}, ${cur.x} ${midY}, ${cur.x} ${cur.y}`;
+      }
+      setPath(d);
+      setHeight(containerRect.height);
+    }
+
+    measure();
+    // A second pass shortly after mount catches any late reflow (web font
+    // swap, image aspect boxes settling) that would otherwise leave the
+    // line's bends slightly off from the icons they're meant to connect.
+    const t = setTimeout(measure, 300);
+    const ro = new ResizeObserver(measure);
+    if (containerRef.current) ro.observe(containerRef.current);
+    window.addEventListener("resize", measure);
+    return () => {
+      clearTimeout(t);
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [containerRef, iconRefs, zoneCount]);
+
+  if (!path) return null;
 
   return (
-    <div className="absolute left-[23px] top-6 bottom-6 w-[2px] md:left-[31px]" aria-hidden>
-      <div className="h-full w-full bg-grey-100" style={{ backgroundImage: "repeating-linear-gradient(to bottom, var(--color-grey-300) 0 4px, transparent 4px 10px)" }} />
-      <motion.div
-        className="absolute inset-x-0 top-0 w-full origin-top bg-accent-pink"
-        style={reduceMotion ? { scaleY: 1 } : { scaleY: scrollYProgress }}
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute left-0 top-0 w-full overflow-visible"
+      style={{ height }}
+    >
+      <path
+        d={path}
+        fill="none"
+        stroke="var(--color-grey-300)"
+        strokeWidth={2}
+        strokeDasharray="2 6"
+        strokeLinecap="round"
       />
-    </div>
+      <motion.path
+        d={path}
+        fill="none"
+        stroke="var(--color-accent-pink)"
+        strokeWidth={2}
+        strokeLinecap="round"
+        style={reduceMotion ? { pathLength: 1 } : { pathLength: scrollYProgress }}
+      />
+    </svg>
   );
 }
 
@@ -294,12 +373,26 @@ function ZoneHeader({ zone, index }: { zone: Zone; index: number }) {
  * click-only regardless (the footage doesn't change per step), matching
  * Joe's explicit "live 則是用點選" call.
  *
+ * Zone 1 is always the "normal" (non-mirrored) side of the zigzag, so its
+ * text column stays first/left here unconditionally -- only `StaticZoneBody`
+ * (used by Zone 2/3) needs the mirrored column order.
+ *
  * `prefers-reduced-motion` skips the tall/sticky track altogether and
  * falls back to the same plain click-to-select layout mobile uses --
  * auto-advancing the screen around a visitor while they scroll is exactly
  * the kind of motion that preference exists to opt out of, same
  * precedent as Piiluu's Hero jumping straight to its settled state. */
-function ScrollySteps({ zone, mode, onModeChange }: { zone: Zone; mode: "design" | "live"; onModeChange: (m: "design" | "live") => void }) {
+function ScrollySteps({
+  zone,
+  index,
+  mode,
+  onModeChange,
+}: {
+  zone: Zone;
+  index: number;
+  mode: "design" | "live";
+  onModeChange: (m: "design" | "live") => void;
+}) {
   const steps = zone.steps!;
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeStep, setActiveStep] = useState(() => Math.min(1, steps.length - 1));
@@ -316,20 +409,34 @@ function ScrollySteps({ zone, mode, onModeChange }: { zone: Zone; mode: "design"
   return (
     <div ref={trackRef} className="relative hidden md:block" style={{ height: `${steps.length * 70}vh` }}>
       <div className="sticky top-28 grid grid-cols-[0.8fr_1.2fr] gap-8 pb-16">
-        <StepList steps={steps} active={activeStep} onSelect={setActiveStep} hint="↓ 繼續往下捲動" />
+        <div>
+          <ZoneHeader zone={zone} index={index} />
+          <div className="mt-6">
+            <StepList steps={steps} active={activeStep} onSelect={setActiveStep} hint="↓ 繼續往下捲動" />
+          </div>
+        </div>
         <FrameWithToggle image={image} alt={alt} mode={mode} onModeChange={onModeChange} />
       </div>
     </div>
   );
 }
 
-/** The plain click-to-select layout -- used for Zone 1 on mobile and
- * under `prefers-reduced-motion` (wrapped by the caller in whatever
- * visibility class that context needs), and unconditionally for Zone 2/3
- * (no step list, no scroll-driven variant at all). Manages its own
- * Design/Live + step state locally rather than sharing `ZoneCard`'s,
- * since this and `ScrollySteps` are never visible at the same time. */
-function StaticZoneBody({ zone }: { zone: Zone }) {
+/** The plain click-to-select layout -- used for Zone 1 on mobile and under
+ * `prefers-reduced-motion`, and unconditionally for Zone 2/3 (no step
+ * list, no scroll-driven variant at all). Manages its own Design/Live +
+ * step state locally rather than sharing `ZoneCard`'s, since this and
+ * `ScrollySteps` are never visible at the same time.
+ *
+ * Text and frame share one responsive grid (`grid-cols-1` → single stacked
+ * column on mobile, `md:grid-cols-[0.8fr_1.2fr]` side by side on desktop)
+ * instead of the frame rendering full-width below the header -- that
+ * stacked arrangement is exactly what made Zone 2/3 read as cramped (the
+ * frame was squeezed into the same narrow column as the text, rather than
+ * getting its own column). `mirrored` swaps which column each side lands
+ * in via `order-*`, for the zigzag's one flipped zone; it only takes
+ * effect at `md:`, so mobile (already a single stacked column with no
+ * "narrow" problem to fix) never mirrors. */
+function StaticZoneBody({ zone, index, mirrored }: { zone: Zone; index: number; mirrored: boolean }) {
   const hasSteps = Boolean(zone.steps && zone.steps.length > 0);
   const [mode, setMode] = useState<"design" | "live">(hasSteps || zone.designImageUrl ? "design" : "live");
   const [activeStep, setActiveStep] = useState(() => Math.min(1, (zone.steps?.length ?? 1) - 1));
@@ -339,14 +446,31 @@ function StaticZoneBody({ zone }: { zone: Zone }) {
   const alt = (mode === "design" ? zone.designCaption : zone.liveCaption) ?? zone.title;
 
   return (
-    <div className="mt-6 grid gap-4 md:gap-8">
-      {hasSteps && zone.steps && <StepList steps={zone.steps} active={activeStep} onSelect={setActiveStep} />}
-      <FrameWithToggle image={image} alt={alt} mode={mode} onModeChange={setMode} />
+    <div className="grid gap-4 md:grid-cols-[0.8fr_1.2fr] md:items-start md:gap-8">
+      <div className={mirrored ? "md:order-2" : ""}>
+        <ZoneHeader zone={zone} index={index} />
+        {hasSteps && zone.steps && (
+          <div className="mt-6">
+            <StepList steps={zone.steps} active={activeStep} onSelect={setActiveStep} />
+          </div>
+        )}
+      </div>
+      <div className={mirrored ? "md:order-1" : ""}>
+        <FrameWithToggle image={image} alt={alt} mode={mode} onModeChange={setMode} />
+      </div>
     </div>
   );
 }
 
-function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
+function ZoneCard({
+  zone,
+  index,
+  iconRef,
+}: {
+  zone: Zone;
+  index: number;
+  iconRef: (el: HTMLDivElement | null) => void;
+}) {
   const Icon = ZONE_ICONS[index] ?? ZONE_ICONS[0];
   const hasSteps = Boolean(zone.steps && zone.steps.length > 0);
   const reduceMotion = useReducedMotion();
@@ -354,23 +478,35 @@ function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
   // other path renders `StaticZoneBody`, which manages its own mode state.
   const [mode, setMode] = useState<"design" | "live">(zone.designImageUrl ? "design" : "live");
 
+  // Zigzag wayfinding: the middle zone mirrors to the opposite side on
+  // desktop (icon badge, title, and frame all flip across), then the next
+  // zone flips back -- Joe's "折線" ask. Both icon and content flip
+  // together via `flex-row-reverse` here, while `StaticZoneBody` flips its
+  // own internal text/frame columns to match. Mobile never mirrors (see
+  // `StaticZoneBody`'s comment).
+  const mirrored = index % 2 === 1;
+
   return (
-    <SlideIn delay={0.08 + index * 0.1} className="relative flex gap-5 pl-0 md:gap-8">
-      <div className="relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-accent-pink bg-proj-white text-accent-pink md:size-16">
+    <SlideIn
+      delay={0.08 + index * 0.1}
+      className={`relative flex gap-5 pl-0 md:gap-8 ${mirrored ? "md:flex-row-reverse" : ""}`}
+    >
+      <div
+        ref={iconRef}
+        className="relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-accent-pink bg-proj-white text-accent-pink md:size-16"
+      >
         <Icon className="size-6 md:size-8" />
       </div>
       <div className="flex-1 pb-24 pt-1 last:pb-0 md:pb-32">
-        <ZoneHeader zone={zone} index={index} />
-
         {hasSteps && !reduceMotion ? (
           <>
             <div className="md:hidden">
-              <StaticZoneBody zone={zone} />
+              <StaticZoneBody zone={zone} index={index} mirrored={false} />
             </div>
-            <ScrollySteps zone={zone} mode={mode} onModeChange={setMode} />
+            <ScrollySteps zone={zone} index={index} mode={mode} onModeChange={setMode} />
           </>
         ) : (
-          <StaticZoneBody zone={zone} />
+          <StaticZoneBody zone={zone} index={index} mirrored={mirrored} />
         )}
       </div>
     </SlideIn>
@@ -384,6 +520,7 @@ function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
  */
 export function ExhibitionZones({ process }: { process: Record<string, unknown> }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const iconRefs = useRef<(HTMLDivElement | null)[]>([]);
   const note = process.note as string | undefined;
   const zones = Array.isArray(process.zones) ? (process.zones as Zone[]) : [];
 
@@ -402,10 +539,17 @@ export function ExhibitionZones({ process }: { process: Record<string, unknown> 
         </SlideIn>
 
         <div ref={containerRef} className="relative">
-          <WayfindingLine containerRef={containerRef} />
+          <WayfindingLine containerRef={containerRef} iconRefs={iconRefs} zoneCount={zones.length} />
           <div className="flex flex-col">
             {zones.map((zone, i) => (
-              <ZoneCard key={zone.title} zone={zone} index={i} />
+              <ZoneCard
+                key={zone.title}
+                zone={zone}
+                index={i}
+                iconRef={(el) => {
+                  iconRefs.current[i] = el;
+                }}
+              />
             ))}
           </div>
         </div>
