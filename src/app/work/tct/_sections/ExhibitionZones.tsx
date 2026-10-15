@@ -497,7 +497,7 @@ function ZoneCard({
       >
         <Icon className="size-6 md:size-8" />
       </div>
-      <div className="flex-1 pb-24 pt-1 last:pb-0 md:pb-32">
+      <div className="flex-1 pt-1">
         {hasSteps && !reduceMotion ? (
           <>
             <div className="md:hidden">
@@ -540,7 +540,15 @@ export function ExhibitionZones({ process }: { process: Record<string, unknown> 
 
         <div ref={containerRef} className="relative">
           <WayfindingLine containerRef={containerRef} iconRefs={iconRefs} zoneCount={zones.length} />
-          <div className="flex flex-col">
+          {/* Spacing between zones lives here as a `gap`, not as a
+           * `pb-*`/`last:pb-0` pair on each card -- that previous approach
+           * never actually worked: `last:pb-0` resolves to `:last-child`,
+           * which is scoped to the card's OWN two-item row (icon + content),
+           * so the content div was always that row's last child and the
+           * padding was zeroed on every zone, not just the final one. A
+           * `gap` on this shared flex column spaces every card evenly and
+           * skips the trailing gap after the last one for free. */}
+          <div className="flex flex-col gap-24 md:gap-40">
             {zones.map((zone, i) => (
               <ZoneCard
                 key={zone.title}
