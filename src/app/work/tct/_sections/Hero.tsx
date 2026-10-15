@@ -80,20 +80,34 @@ function KioskFrame() {
 interface HeroContentProps {
   kicker: string;
   title: string;
+  titleLine2?: string;
   body: string;
   role: string;
   timeframe: string;
   badges: string[];
 }
 
-function HeroBody({ kicker, title, body, role, timeframe, badges }: HeroContentProps) {
+function HeroBody({ kicker, title, titleLine2, body, role, timeframe, badges }: HeroContentProps) {
   return (
     <div className="flex flex-col items-center gap-6 px-6 pt-6 pb-10 text-center md:gap-10 md:px-[120px] md:pt-[180px] md:pb-[100px]">
       <div className="flex flex-col items-center gap-3 md:gap-4">
         <span className="font-nunito text-[14px] font-extrabold text-accent-pink">{kicker}</span>
+        {/* Split into two tiers -- the project's full name ("NTSO 80週年
+         * 特展 互動展區體驗設計") read as one run-on h1 wrapped awkwardly
+         * across lines and was hard to parse. `title` (NTSO 80週年特展)
+         * is the main headline; `titleLine2` (互動展區體驗設計) follows
+         * immediately after as a smaller, lighter second line -- same
+         * "big headline + supporting line" shape as Nest Stay/Metro's own
+         * Hero titles, just split into two DB fields instead of one here
+         * since this project's name itself has that two-part structure. */}
         <h1 className="font-nunito max-w-[22ch] text-[32px] leading-[42px] font-bold text-grey-800 md:text-[64px] md:leading-[80px] md:font-extrabold md:text-primary-black">
           {title}
         </h1>
+        {titleLine2 && (
+          <p className="font-nunito max-w-[24ch] text-[18px] font-bold leading-[26px] text-grey-600 md:text-[28px] md:leading-[38px]">
+            {titleLine2}
+          </p>
+        )}
         {body && (
           <p className="max-w-[320px] font-nunito text-[14px] leading-[21px] font-normal text-grey-600 md:max-w-[640px] md:text-[18px] md:leading-[28px]">
             {body}
@@ -128,6 +142,7 @@ function HeroBody({ kicker, title, body, role, timeframe, badges }: HeroContentP
 export function Hero({ project, hero }: { project: Project; hero: Record<string, unknown> }) {
   const kicker = project.category || "INTERACTIVE EXHIBITION";
   const title = (hero.title as string) ?? project.title;
+  const titleLine2 = hero.titleLine2 as string | undefined;
   const body = (hero.subtitle as string) ?? project.subtitle ?? "";
   const role = project.role || "UI Designer";
   const timeframe = project.timeframe || "";
@@ -135,7 +150,15 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
 
   return (
     <section id="hero" className="relative overflow-hidden bg-proj-white">
-      <HeroBody kicker={kicker} title={title} body={body} role={role} timeframe={timeframe} badges={badges} />
+      <HeroBody
+        kicker={kicker}
+        title={title}
+        titleLine2={titleLine2}
+        body={body}
+        role={role}
+        timeframe={timeframe}
+        badges={badges}
+      />
     </section>
   );
 }

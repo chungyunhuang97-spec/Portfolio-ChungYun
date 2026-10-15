@@ -81,8 +81,8 @@ function InsightCard({ text }: { text: string }) {
     <SlideIn delay={0.3} className="w-full">
       <div className="rounded-[24px] bg-accent-pink/5 p-6 md:p-10">
         <div className="flex items-center justify-between">
-          <span className="text-[22px]" aria-hidden>
-            💡
+          <span className="text-[16px] text-accent-pink" aria-hidden>
+            ◆
           </span>
           <span className="h-px w-10 bg-grey-300" aria-hidden />
         </div>
