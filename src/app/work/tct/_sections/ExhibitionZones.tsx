@@ -8,6 +8,14 @@ import { SlideIn } from "@/components/design-system/SlideIn";
 interface ZoneStep {
   label: string;
   desc?: string;
+  /** Design-mode screenshot for this specific step. Only one step tends to
+   * have a matching reference screenshot at a time -- steps without one
+   * fall back to DeviceFrame's own empty state rather than reusing another
+   * step's image, since the screens genuinely differ step to step. Key
+   * ends in `ImageUrl` so the admin's generic ContentEditor recognizes it
+   * as a media field (see MEDIA_KEY_PATTERN) and renders an upload
+   * dropzone for it instead of a plain text input. */
+  designImageUrl?: string;
 }
 
 interface GalleryItem {
@@ -28,9 +36,14 @@ interface Zone {
   title: string;
   desc: string;
   steps?: ZoneStep[];
-  designImage?: string;
+  /** Fallback Design-mode image for zones with no per-step stepper
+   * (Zone 2/3). Zone 1 instead uses each step's own `designImageUrl`. */
+  designImageUrl?: string;
   designCaption?: string;
-  liveImage?: string;
+  /** One real recording per zone, shown in Live mode regardless of which
+   * step is selected -- the footage demonstrates the zone as a whole, it
+   * isn't cut per step. */
+  liveImageUrl?: string;
   liveCaption?: string;
   gallery?: GalleryItem[];
   spotlight?: Spotlight;
@@ -100,11 +113,10 @@ function WayfindingLine({ containerRef }: { containerRef: RefObject<HTMLDivEleme
 }
 
 /** Zone 1's own left-rail step list (世界全覽 → 洲際聚焦 → 場次選擇 →
- * 演出詳情), ported from the original site's interactive stepper. Only one
- * step (洲際聚焦) has a matching reference screenshot, so clicking a step
- * updates the highlighted state and description text here but does not
- * swap the device-frame image on the right -- see `designCaption`, which
- * stays zone-level rather than per-step until per-step media exists. */
+ * 演出詳情), ported from the original site's interactive stepper. Clicking
+ * a step swaps the Design-mode screenshot on the right to that step's own
+ * `designImageUrl` (when one exists); Live mode is unaffected, since it's
+ * one continuous recording of the zone rather than per-step footage. */
 function StepList({
   steps,
   active,
@@ -174,11 +186,11 @@ function DeviceFrame({ image, alt }: { image?: string; alt: string }) {
       <div className="aspect-[2000/1255] w-full bg-grey-50">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt={alt} className="h-full w-full object-cover object-top" />
+          <img key={image} src={image} alt={alt} className="h-full w-full object-cover object-top" />
         ) : (
           <div className="flex h-full w-full items-center justify-center px-6 text-center">
             <p className="font-nunito text-[12px] font-bold leading-relaxed text-grey-400">
-              實機畫面待上傳
+              此畫面製作中
             </p>
           </div>
         )}
@@ -214,61 +226,67 @@ function ModeToggle({
   );
 }
 
-/** Zone 2/3's "幕後花絮" footer: a spotlight (the original site's modal
- * popup content, e.g. 娜魯灣劇場演出) plus a compact list of the other
- * archive/video entries from the same gallery -- the original masonry
- * grid's individual photos aren't available as separate asset files, so
- * this represents the same real archive entries as a reading list rather
- * than reproducing the masonry layout itself. */
-function SpotlightBlock({ spotlight, gallery }: { spotlight?: Spotlight; gallery?: GalleryItem[] }) {
+/**
+ * Zone 2/3's "幕後花絮" strip -- a horizontally swipeable, snap-scrolling
+ * carousel rather than the original site's click-to-open modal. A kiosk-
+ * style click/tap-to-reveal pattern reads as a dead end on a portfolio
+ * page (nothing visibly indicates it's clickable, and clicking to "open"
+ * content that's already fully known defeats the point) -- everything here
+ * is visible by just scrolling the strip sideways, no click required. The
+ * spotlight entry (the one with a full bilingual caption, e.g. 娜魯灣劇場
+ * 演出) leads as a wider feature card; the rest of the same gallery follow
+ * as compact date-chip cards.
+ */
+function GalleryCarousel({ spotlight, gallery }: { spotlight?: Spotlight; gallery?: GalleryItem[] }) {
   if (!spotlight && (!gallery || gallery.length === 0)) return null;
 
   return (
-    <div className="mt-6 grid gap-4 md:grid-cols-[1.2fr_1fr] md:gap-6">
-      {spotlight && (
-        <div className="rounded-[16px] border border-accent-pink/20 bg-accent-pink/5 p-5 md:p-6">
-          {spotlight.tag && (
-            <p className="font-nunito text-[11px] font-extrabold uppercase tracking-[0.1em] text-accent-pink">
-              {spotlight.tag}
-            </p>
-          )}
-          <h5 className="font-nunito mt-1 text-[16px] font-bold leading-6 text-grey-800">{spotlight.title}</h5>
-          {spotlight.titleEn && (
-            <p className="font-nunito text-[12px] font-semibold text-grey-500">{spotlight.titleEn}</p>
-          )}
-          {spotlight.textZh && (
-            <p className="font-nunito mt-3 text-[13px] leading-[21px] font-normal text-grey-700">
-              {spotlight.textZh}
-            </p>
-          )}
-        </div>
-      )}
-      {gallery && gallery.length > 0 && (
-        <div className="rounded-[16px] border border-grey-100 bg-grey-50 p-5 md:p-6">
-          <p className="font-nunito text-[11px] font-extrabold uppercase tracking-[0.1em] text-grey-400">
-            更多花絮
-          </p>
-          <ul className="mt-2 divide-y divide-grey-100">
-            {gallery.map((item) => (
-              <li key={item.title} className="py-2 first:pt-0">
-                <p className="font-nunito text-[13px] font-bold leading-5 text-grey-800">{item.title}</p>
-                {item.date && <p className="font-nunito text-[11px] font-semibold text-grey-400">{item.date}</p>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+    <div className="mt-6">
+      <p className="font-nunito mb-2 text-[11px] font-semibold tracking-[0.05em] text-grey-400">
+        ← 左右滑動瀏覽幕後花絮 →
+      </p>
+      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {spotlight && (
+          <div className="w-[260px] shrink-0 snap-start rounded-[16px] border border-accent-pink/20 bg-accent-pink/5 p-5 md:w-[320px]">
+            {spotlight.tag && (
+              <p className="font-nunito text-[11px] font-extrabold uppercase tracking-[0.1em] text-accent-pink">
+                {spotlight.tag}
+              </p>
+            )}
+            <h5 className="font-nunito mt-1 text-[15px] font-bold leading-6 text-grey-800">{spotlight.title}</h5>
+            {spotlight.titleEn && (
+              <p className="font-nunito text-[11px] font-semibold text-grey-500">{spotlight.titleEn}</p>
+            )}
+            {spotlight.textZh && (
+              <p className="font-nunito mt-3 text-[12px] leading-[19px] font-normal text-grey-700">
+                {spotlight.textZh}
+              </p>
+            )}
+          </div>
+        )}
+        {gallery?.map((item) => (
+          <div
+            key={item.title}
+            className="w-[160px] shrink-0 snap-start rounded-[16px] border border-grey-100 bg-grey-50 p-4"
+          >
+            <p className="font-nunito text-[13px] font-bold leading-5 text-grey-800">{item.title}</p>
+            {item.date && <p className="font-nunito mt-1 text-[11px] font-semibold text-grey-400">{item.date}</p>}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
   const Icon = ZONE_ICONS[index] ?? ZONE_ICONS[0];
-  const hasToggle = Boolean(zone.designImage && zone.liveImage);
-  const [mode, setMode] = useState<"design" | "live">(zone.designImage ? "design" : "live");
+  const hasSteps = Boolean(zone.steps && zone.steps.length > 0);
+  const hasToggle = Boolean((hasSteps || zone.designImageUrl) && zone.liveImageUrl);
+  const [mode, setMode] = useState<"design" | "live">(hasSteps || zone.designImageUrl ? "design" : "live");
   const [activeStep, setActiveStep] = useState(() => Math.min(1, (zone.steps?.length ?? 1) - 1));
 
-  const image = mode === "design" ? zone.designImage : zone.liveImage;
+  const designImage = hasSteps ? zone.steps?.[activeStep]?.designImageUrl : zone.designImageUrl;
+  const image = mode === "design" ? designImage : zone.liveImageUrl;
   const caption = mode === "design" ? zone.designCaption : zone.liveCaption;
 
   return (
@@ -289,7 +307,7 @@ function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
 
         <div className="mt-6 grid gap-6 md:grid-cols-[0.8fr_1.2fr] md:gap-8">
           <div className="flex flex-col gap-5">
-            {zone.steps && zone.steps.length > 0 && (
+            {hasSteps && zone.steps && (
               <StepList steps={zone.steps} active={activeStep} onSelect={setActiveStep} />
             )}
             {hasToggle && <ModeToggle mode={mode} onChange={setMode} />}
@@ -303,7 +321,7 @@ function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
           </div>
         </div>
 
-        <SpotlightBlock spotlight={zone.spotlight} gallery={zone.gallery} />
+        <GalleryCarousel spotlight={zone.spotlight} gallery={zone.gallery} />
       </div>
     </SlideIn>
   );

@@ -218,6 +218,17 @@ function expandShortHex(hex: string) {
   return `#${r}${r}${g}${g}${b}${b}`;
 }
 
+/** Appends `key` onto `prefix` as a Storage-path segment, e.g.
+ * `extendPrefix("tct/process", "zones")` -> `"tct/process/zones"`. Used to
+ * build up a nested field's media path as `AnyValueEditor`/
+ * `NestedObjectFields` recurse, so an upload from e.g.
+ * `zones[0].steps[1].designImageUrl` lands at a distinct Storage path
+ * instead of colliding with every other nested media field. */
+function extendPrefix(prefix: string | undefined, key: string | undefined): string | undefined {
+  if (!key) return prefix;
+  return prefix ? `${prefix}/${key}` : key;
+}
+
 /**
  * Renders ANY JSON value with no raw-JSON fallback for object/array
  * shapes: primitives become real inputs (a color swatch for hex-looking
@@ -227,8 +238,40 @@ function expandShortHex(hex: string) {
  * own values, so arbitrarily nested content (e.g. a row whose own
  * `features` field is itself a list of {title, desc} objects) never drops
  * into a JSON textarea.
+ *
+ * `fieldKey`/`mediaPathPrefix` let a NESTED string field (e.g. one array
+ * item's `designImageUrl`, several levels inside a top-level `structured`
+ * field like `zones`) still get the same `AdminMediaDropzone` upload UI a
+ * top-level `_media_url`-style field gets -- previously only top-level
+ * fields went through `detectType`'s key-based media check at all, so any
+ * image/video URL nested inside an array-of-objects or object field (every
+ * zone's screenshots and recordings, for instance) could only be hand-typed
+ * as plain text, with no uploader. Both props are optional and absent for
+ * the common case (a field with no media URLs nested inside it), so this
+ * is purely additive for every other project's existing content.
  */
-function AnyValueEditor({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) {
+function AnyValueEditor({
+  value,
+  onChange,
+  fieldKey,
+  mediaPathPrefix,
+}: {
+  value: unknown;
+  onChange: (value: unknown) => void;
+  fieldKey?: string;
+  mediaPathPrefix?: string;
+}) {
+  if (fieldKey && MEDIA_KEY_PATTERN.test(fieldKey) && (typeof value === "string" || value == null)) {
+    return (
+      <AdminMediaDropzone
+        value={(value as string) ?? ""}
+        onChange={onChange}
+        mediaPathPrefix={extendPrefix(mediaPathPrefix, fieldKey)}
+        compact
+      />
+    );
+  }
+
   if (typeof value === "string" && HEX_COLOR_PATTERN.test(value)) {
     const colorInputValue = value.length === 4 || value.length === 5 ? expandShortHex(value) : value.slice(0, 7);
     return (
@@ -314,6 +357,7 @@ function AnyValueEditor({ value, onChange }: { value: unknown; onChange: (value:
     const items = value as unknown[];
     const templateKeys =
       items[0] && typeof items[0] === "object" && !Array.isArray(items[0]) ? Object.keys(items[0] as object) : [];
+    const arrayPrefix = extendPrefix(mediaPathPrefix, fieldKey);
     return (
       <div className="space-y-3">
         {items.map((item, i) => (
@@ -336,6 +380,7 @@ function AnyValueEditor({ value, onChange }: { value: unknown; onChange: (value:
                 nextItems[i] = next;
                 onChange(nextItems);
               }}
+              mediaPathPrefix={extendPrefix(arrayPrefix, String(i))}
             />
           </div>
         ))}
@@ -354,7 +399,11 @@ function AnyValueEditor({ value, onChange }: { value: unknown; onChange: (value:
   if (typeof value === "object") {
     return (
       <div className="rounded-md border border-admin-border bg-admin-surface p-3">
-        <NestedObjectFields obj={value as Record<string, unknown>} onChange={onChange} />
+        <NestedObjectFields
+          obj={value as Record<string, unknown>}
+          onChange={onChange}
+          mediaPathPrefix={extendPrefix(mediaPathPrefix, fieldKey)}
+        />
       </div>
     );
   }
@@ -371,13 +420,19 @@ function AnyValueEditor({ value, onChange }: { value: unknown; onChange: (value:
 
 /** One level of a plain object's own key/value pairs, each recursing back
  * into `AnyValueEditor` -- shared by both the "single nested object" case
- * and each row of an "array of objects" case. */
+ * and each row of an "array of objects" case. `mediaPathPrefix` is the
+ * Storage-path prefix accumulated by the ancestors above this object (see
+ * `AnyValueEditor`'s doc comment); each entry's own key is passed through
+ * as `fieldKey` so a nested `..._media_url`-style field still gets the
+ * `AdminMediaDropzone` upload UI instead of a plain text input. */
 function NestedObjectFields({
   obj,
   onChange,
+  mediaPathPrefix,
 }: {
   obj: Record<string, unknown>;
   onChange: (obj: Record<string, unknown>) => void;
+  mediaPathPrefix?: string;
 }) {
   return (
     <div className="space-y-3">
@@ -387,6 +442,8 @@ function NestedObjectFields({
           <AnyValueEditor
             value={v}
             onChange={(nv) => onChange({ ...obj, [k]: nv })}
+            fieldKey={k}
+            mediaPathPrefix={mediaPathPrefix}
           />
         </div>
       ))}
@@ -428,7 +485,9 @@ function FieldEditor({
   }
 
   if (field.type === "structured") {
-    return <AnyValueEditor value={field.value} onChange={onChange} />;
+    return (
+      <AnyValueEditor value={field.value} onChange={onChange} fieldKey={field.key} mediaPathPrefix={mediaPathPrefix} />
+    );
   }
 
   // raw fallback -- only for shapes even the recursive editor can't label
@@ -669,7 +728,12 @@ export function ContentEditor({
                       mediaPathPrefix={mediaPathPrefix}
                     />
                   ) : (
-                    <AnyValueEditor value={field.value} onChange={(v) => updateField(index, v)} />
+                    <AnyValueEditor
+                      value={field.value}
+                      onChange={(v) => updateField(index, v)}
+                      fieldKey={field.key}
+                      mediaPathPrefix={mediaPathPrefix}
+                    />
                   )}
                 </div>
               );
@@ -774,6 +838,7 @@ function ArrayWithRowMediaEditor({
               nextItems[i] = next;
               onChange(nextItems);
             }}
+            mediaPathPrefix={extendPrefix(mediaPathPrefix, String(i))}
           />
 
           {(mediaByRow.get(i) ?? []).map((m) => (

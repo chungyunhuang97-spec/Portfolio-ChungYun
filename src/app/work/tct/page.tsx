@@ -8,6 +8,7 @@ import { Hero } from "./_sections/Hero";
 import { Context } from "./_sections/Context";
 import { RoleContribution } from "./_sections/RoleContribution";
 import { ExhibitionZones } from "./_sections/ExhibitionZones";
+import { OnSite } from "./_sections/OnSite";
 import { Outcome } from "./_sections/Outcome";
 import { Closing } from "./_sections/Closing";
 import { getProjectWithSections } from "@/lib/data";
@@ -36,8 +37,17 @@ import { getProjectWithSections } from "@/lib/data";
 //   - Signature motions (none reused from another project): Hero's
 //     touch-ripple pulse (the exhibition is a touchscreen kiosk), Context's
 //     torn-paper/enlarged-target icon pairing, ExhibitionZones' scroll-linked
-//     01→02→03 wayfinding line, Outcome's CountUp of exhibition days, and
-//     Closing's film-grain/scanline flicker (analog archive turning legible).
+//     01→02→03 wayfinding line, Outcome's CountUp stat row, and Closing's
+//     film-grain/scanline flicker (analog archive turning legible).
+//
+// Section order after a round of Joe's feedback against the original site's
+// screenshots: Hero -> Context -> RoleContribution -> ExhibitionZones (each
+// zone: Design/Live toggle, Zone 1's own step-driven screenshot, Zone 2/3's
+// swipeable spotlight+gallery carousel) -> OnSite (展覽現場實況, restored --
+// a plain real-photo collage, kept separate from the zones' own Live
+// recordings per Joe's explicit call) -> Outcome (成果與反思: stat row +
+// the grandma anecdote as intro + a split-out insight/pull-quote card from
+// the `reflection` row) -> Closing (`reflection` row again, full quote).
 // Closing itself keeps the cross-project `bg-secondary-blue` convention that
 // metro/nest-stay/piiluu all share regardless of their own dominant color
 // (same as Footer always being orange, BackToTop always blue-bordered) --
@@ -91,7 +101,8 @@ export default async function TctPage() {
         <Context overview={data.overview} challenge={data.challenge} />
         <RoleContribution role={data.role} />
         <ExhibitionZones process={data.process} />
-        <Outcome outcome={data.outcome} project={data.project} />
+        <OnSite outcome={data.outcome} />
+        <Outcome outcome={data.outcome} reflection={data.reflection} />
         <Closing reflection={data.reflection} />
       </main>
       <Footer
