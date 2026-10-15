@@ -183,10 +183,15 @@ function DeviceFrame({ image, alt }: { image?: string; alt: string }) {
         <span className="size-2.5 rounded-full bg-[#febc2e]" />
         <span className="size-2.5 rounded-full bg-[#28c840]" />
       </div>
-      <div className="aspect-[2000/1255] w-full bg-grey-50">
+      {/* `object-contain` rather than `object-cover` -- the real reference
+       * screenshots aren't a uniform aspect ratio (Zone 2's crop is closer
+       * to 4:5, Zone 1/3's closer to 3:2), and `cover` was silently cropping
+       * content out of the taller ones. Contain + a neutral fill keeps the
+       * whole screenshot visible regardless of its own aspect ratio. */}
+      <div className="aspect-[3/2] w-full bg-grey-50">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img key={image} src={image} alt={alt} className="h-full w-full object-cover object-top" />
+          <img key={image} src={image} alt={alt} className="h-full w-full object-contain" />
         ) : (
           <div className="flex h-full w-full items-center justify-center px-6 text-center">
             <p className="font-nunito text-[12px] font-bold leading-relaxed text-grey-400">
@@ -200,7 +205,13 @@ function DeviceFrame({ image, alt }: { image?: string; alt: string }) {
 }
 
 /** DESIGN / LIVE segmented toggle, only rendered when a zone actually has
- * both states -- some zones (e.g. 展區三) only have a Live recording. */
+ * both states -- some zones (e.g. 展區三) only have one mockup so far.
+ * Sits directly above `DeviceFrame` in the same (right) column, matching
+ * the original site's placement -- it previously lived in the left column
+ * next to the step list, which read as disconnected from the screenshot it
+ * actually controls. `self-start` keeps it a compact pill instead of
+ * stretching to the column's full width (the flex-col parent's default
+ * `align-items: stretch` was doing that before). */
 function ModeToggle({
   mode,
   onChange,
@@ -209,7 +220,7 @@ function ModeToggle({
   onChange: (m: "design" | "live") => void;
 }) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-grey-100 bg-proj-white p-1 shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+    <div className="inline-flex self-start items-center gap-1 rounded-full border border-grey-100 bg-proj-white p-1 shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
       {(["design", "live"] as const).map((m) => (
         <button
           key={m}
@@ -235,17 +246,17 @@ function ModeToggle({
  * is visible by just scrolling the strip sideways, no click required. The
  * spotlight entry (the one with a full bilingual caption, e.g. 娜魯灣劇場
  * 演出) leads as a wider feature card; the rest of the same gallery follow
- * as compact date-chip cards.
+ * as compact date-chip cards. No "swipe sideways" hint label -- the next
+ * card's edge already peeks into view (`pr-10` on the scroll track plus
+ * each card's own `shrink-0` width), which is enough of a visual cue on
+ * its own per Joe's "remove the redundant text" ask.
  */
 function GalleryCarousel({ spotlight, gallery }: { spotlight?: Spotlight; gallery?: GalleryItem[] }) {
   if (!spotlight && (!gallery || gallery.length === 0)) return null;
 
   return (
     <div className="mt-6">
-      <p className="font-nunito mb-2 text-[11px] font-semibold tracking-[0.05em] text-grey-400">
-        ← 左右滑動瀏覽幕後花絮 →
-      </p>
-      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pr-10 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {spotlight && (
           <div className="w-[260px] shrink-0 snap-start rounded-[16px] border border-accent-pink/20 bg-accent-pink/5 p-5 md:w-[320px]">
             {spotlight.tag && (
@@ -287,14 +298,19 @@ function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
 
   const designImage = hasSteps ? zone.steps?.[activeStep]?.designImageUrl : zone.designImageUrl;
   const image = mode === "design" ? designImage : zone.liveImageUrl;
-  const caption = mode === "design" ? zone.designCaption : zone.liveCaption;
+  // `designCaption`/`liveCaption` are still readable/editable from the
+  // admin (e.g. for internal reference), but no longer rendered on the
+  // page -- the zone's own title+desc on the left already says what the
+  // screenshot shows, so the caption line underneath it was redundant text
+  // per Joe's review.
+  const alt = (mode === "design" ? zone.designCaption : zone.liveCaption) ?? zone.title;
 
   return (
     <SlideIn delay={0.08 + index * 0.1} className="relative flex gap-5 pl-0 md:gap-8">
       <div className="relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-accent-pink bg-proj-white text-accent-pink md:size-16">
         <Icon className="size-6 md:size-8" />
       </div>
-      <div className="flex-1 pb-14 pt-1 last:pb-0">
+      <div className="flex-1 pb-20 pt-1 last:pb-0 md:pb-28">
         <p className="font-nunito text-[12px] font-extrabold tracking-[0.1em] text-grey-400">
           展區 {String(index + 1).padStart(2, "0")}
         </p>
@@ -305,19 +321,20 @@ function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
           {zone.desc}
         </p>
 
-        <div className="mt-6 grid gap-6 md:grid-cols-[0.8fr_1.2fr] md:gap-8">
-          <div className="flex flex-col gap-5">
-            {hasSteps && zone.steps && (
-              <StepList steps={zone.steps} active={activeStep} onSelect={setActiveStep} />
-            )}
-            {hasToggle && <ModeToggle mode={mode} onChange={setMode} />}
-          </div>
+        {/* Zones with a step list split into two tracks (steps left, frame
+            right); zones without one (no second grid child to fill that
+            track) skip `grid-cols` entirely -- otherwise the lone frame
+            column would collapse into the grid's first (narrower) track
+            instead of taking the full row, which is what actually produced
+            Zone 2's broken-looking layout before this fix. */}
+        <div className={`mt-6 grid gap-4 md:gap-8 ${hasSteps ? "md:grid-cols-[0.8fr_1.2fr]" : ""}`}>
+          {hasSteps && zone.steps && (
+            <StepList steps={zone.steps} active={activeStep} onSelect={setActiveStep} />
+          )}
 
-          <div>
-            <DeviceFrame image={image} alt={caption ?? zone.title} />
-            {caption && (
-              <p className="font-nunito mt-2 text-[12px] leading-[18px] font-semibold text-grey-500">{caption}</p>
-            )}
+          <div className="flex flex-col gap-3 md:max-w-[640px]">
+            {hasToggle && <ModeToggle mode={mode} onChange={setMode} />}
+            <DeviceFrame image={image} alt={alt} />
           </div>
         </div>
 
