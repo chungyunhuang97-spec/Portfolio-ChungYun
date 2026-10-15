@@ -8,11 +8,19 @@ import { motion, useReducedMotion, useInView } from "framer-motion";
  * other project page's Closing has its own ambient treatment: Metro's
  * DotDrift/MetallicSheen/OrbitRings, Nest Stay's diamond drift, Piiluu's
  * trust-network field -- none of which are reused here). Two layers:
- * drifting horizontal scanlines (old film/CRT read) plus a slow opacity
+ * drifting horizontal scanlines (old film/CRT read) plus a slow brightness
  * flicker, together reading as "analog archive footage resolving into
  * something legible" -- this project's whole premise (80 years of
  * incomplete historical material turned into a working digital exhibit).
  * Pauses under `prefers-reduced-motion`.
+ *
+ * The flicker layer is a plain white wash rather than an accent-colored
+ * tint -- it used to be accent-pink/10, back when this project's own
+ * dominant color (pink) differed from Closing's cross-project
+ * `bg-secondary-blue`, so the tint still read as this project's own touch
+ * against that shared blue base. Now that this project's dominant is blue
+ * too, a blue-on-blue tint would be invisible; a brightness pulse keeps the
+ * "flicker" motion legible without needing a second color at all.
  */
 function ArchiveFlicker() {
   const reduceMotion = useReducedMotion();
@@ -32,7 +40,7 @@ function ArchiveFlicker() {
         transition={{ duration: 6, repeat: run ? Infinity : 0, ease: "linear" }}
       />
       <motion.div
-        className="absolute inset-0 bg-accent-pink/10"
+        className="absolute inset-0 bg-proj-white/10"
         animate={run ? { opacity: [0.15, 0.05, 0.2, 0.08, 0.15] } : { opacity: 0.12 }}
         transition={{ duration: 3.2, repeat: run ? Infinity : 0, ease: "easeInOut" }}
       />

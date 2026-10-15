@@ -27,9 +27,15 @@ import { getProjectWithSections } from "@/lib/data";
 // layer (tokens, shared components, card-shadow formula, SlideIn/FadeIn
 // motion feel, mobile/desktop as two independent trees) matches the other
 // three pages exactly. Personality layer for this project:
-//   - Dominant accent: accent-pink (#FF5BC0) -- the one color token not yet
-//     claimed as a project's dominant (Nest Stay = orange, Metro/Piiluu =
-//     blue), per the conventions doc's "每個專案挑一個主導色" checklist.
+//   - Dominant accent: secondary-blue (#0D21FF) -- originally launched with
+//     accent-pink (the one color token not yet claimed, per the conventions
+//     doc's "每個專案挑一個主導色" checklist), but switched to blue per Joe's
+//     call: the real NTSO touchscreen interface is itself blue-dominant, so
+//     matching that reads truer than picking an unclaimed color for its own
+//     sake -- even though this token's exact hex isn't the interface's own
+//     blue. Shares the token with Metro/Piiluu, but the conventions doc's
+//     "one dominant color per project" rule was about visual identity within
+//     each page, not a hard exclusivity lock across projects.
 //   - Pacing: continuous scroll, not slideshow -- this is a single product
 //     story (constraint -> three exhibition zones -> outcome), closer to
 //     Nest Stay/Piiluu's narrative pacing than Metro's argument-by-argument
