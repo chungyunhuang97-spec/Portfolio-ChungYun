@@ -33,8 +33,13 @@ function DoodleEnlargedTarget(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+// DATA stays orange and UX stays blue even now that the page's own
+// dominant accent is blue -- same two-tone split Piiluu's own Context
+// cards use (card 1 orange, card 2 blue), kept here so the two challenge
+// cards still read as visually distinct from each other rather than both
+// collapsing into the same color now that "blue" is this page's dominant.
 const CHALLENGE_THEME = [
-  { icon: DoodleTornPaper, label: "DATA", accent: "text-accent-pink", iconBg: "bg-accent-pink/10" },
+  { icon: DoodleTornPaper, label: "DATA", accent: "text-primary-orange", iconBg: "bg-primary-orange/10" },
   { icon: DoodleEnlargedTarget, label: "UX", accent: "text-secondary-blue", iconBg: "bg-secondary-blue/10" },
 ];
 
@@ -85,14 +90,14 @@ export function Context({
     <section className="bg-grey-50 px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[960px] flex-col items-center gap-10 md:gap-14">
         <SlideIn className="flex w-full flex-col items-center gap-4 text-center">
-          <span className="font-nunito text-[14px] font-extrabold text-accent-pink">CONTEXT</span>
+          <span className="font-nunito text-[14px] font-extrabold text-secondary-blue">CONTEXT</span>
           {intro && (
             <p className="font-nunito max-w-[70ch] text-[16px] leading-[26px] font-normal text-grey-700 md:text-[20px] md:leading-[32px]">
               {intro}
             </p>
           )}
           {note && (
-            <div className="mt-2 w-full rounded-[14px] border border-accent-pink/30 bg-accent-pink/5 px-5 py-4 md:px-6">
+            <div className="mt-2 w-full rounded-[14px] border border-secondary-blue/30 bg-secondary-blue/5 px-5 py-4 md:px-6">
               <p className="font-nunito text-[14px] font-bold leading-[22px] text-grey-800 md:text-[15px]">
                 {note}
               </p>

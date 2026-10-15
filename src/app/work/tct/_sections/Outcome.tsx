@@ -47,7 +47,7 @@ function StatTile({ target, unit, label, delay }: { target: number; unit: string
   return (
     <SlideIn delay={delay} className="flex flex-1">
       <div ref={ref} className="flex flex-1 flex-col items-center gap-1 rounded-[20px] bg-grey-50 px-6 py-8 text-center">
-        <p className="font-fredoka text-[40px] leading-none text-accent-pink md:text-[48px]">
+        <p className="font-fredoka text-[40px] leading-none text-secondary-blue md:text-[48px]">
           {value}
           <span className="font-nunito ml-1.5 text-[16px] font-bold text-grey-700 md:text-[18px]">{unit}</span>
         </p>
@@ -79,9 +79,9 @@ function InsightCard({ text }: { text: string }) {
 
   return (
     <SlideIn delay={0.3} className="w-full">
-      <div className="rounded-[24px] bg-accent-pink/5 p-6 md:p-10">
+      <div className="rounded-[24px] bg-secondary-blue/5 p-6 md:p-10">
         <div className="flex items-center justify-between">
-          <span className="text-[16px] text-accent-pink" aria-hidden>
+          <span className="text-[16px] text-secondary-blue" aria-hidden>
             ◆
           </span>
           <span className="h-px w-10 bg-grey-300" aria-hidden />
@@ -96,7 +96,7 @@ function InsightCard({ text }: { text: string }) {
           </p>
         )}
         {pullQuote && (
-          <blockquote className="font-nunito mt-6 border-l-[3px] border-accent-pink pl-4 text-[14px] font-bold leading-[22px] text-grey-800 md:text-[15px]">
+          <blockquote className="font-nunito mt-6 border-l-[3px] border-secondary-blue pl-4 text-[14px] font-bold leading-[22px] text-grey-800 md:text-[15px]">
             {pullQuote}
           </blockquote>
         )}
@@ -129,7 +129,7 @@ export function Outcome({
     <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[800px] flex-col gap-10 md:gap-12">
         <SlideIn className="text-center">
-          <span className="font-nunito text-[14px] font-extrabold text-accent-pink">FINAL THOUGHTS</span>
+          <span className="font-nunito text-[14px] font-extrabold text-secondary-blue">FINAL THOUGHTS</span>
           <h3 className="font-nunito mt-2 text-[24px] font-bold text-grey-800 md:text-[32px]">成果與反思</h3>
           {anecdote && (
             <p className="font-nunito mx-auto mt-4 max-w-[65ch] text-[14px] leading-[23px] font-normal text-grey-600 md:text-[16px] md:leading-[26px]">

@@ -84,7 +84,7 @@ const ZONE_ICONS = [DoodleDrillDown, DoodleMasonry, DoodlePlayTarget];
 /**
  * Scroll-linked wayfinding line -- this section's signature motion. A
  * dotted guide line runs behind the zone number badges; as the visitor
- * scrolls through the section, a solid pink line fills in behind it, same
+ * scrolls through the section, a solid blue line fills in behind it, same
  * idea as walking a numbered exhibition route.
  *
  * Draws an actual bent path (not a straight vertical) through each zone's
@@ -100,7 +100,7 @@ const ZONE_ICONS = [DoodleDrillDown, DoodleMasonry, DoodlePlayTarget];
  * straight again, with no separate mobile code path needed.
  *
  * `prefers-reduced-motion` keeps the bend (it's layout, not motion) but
- * skips the scroll-driven draw-in, showing the pink line fully drawn.
+ * skips the scroll-driven draw-in, showing the blue line fully drawn.
  */
 function WayfindingLine({
   containerRef,
@@ -176,7 +176,7 @@ function WayfindingLine({
       <motion.path
         d={path}
         fill="none"
-        stroke="var(--color-accent-pink)"
+        stroke="var(--color-secondary-blue)"
         strokeWidth={2}
         strokeLinecap="round"
         style={reduceMotion ? { pathLength: 1 } : { pathLength: scrollYProgress }}
@@ -222,7 +222,7 @@ function StepList({
               >
                 <span
                   className={`size-3 rounded-full border-2 transition-colors duration-300 ${
-                    isActive ? "border-accent-pink bg-accent-pink" : "border-grey-300 bg-proj-white"
+                    isActive ? "border-secondary-blue bg-secondary-blue" : "border-grey-300 bg-proj-white"
                   }`}
                 />
               </button>
@@ -233,7 +233,7 @@ function StepList({
                   isActive ? "scale-100 opacity-100" : "scale-[0.97] opacity-60"
                 }`}
               >
-                <p className={`font-nunito text-[11px] font-extrabold tracking-[0.1em] ${isActive ? "text-accent-pink" : "text-grey-400"}`}>
+                <p className={`font-nunito text-[11px] font-extrabold tracking-[0.1em] ${isActive ? "text-secondary-blue" : "text-grey-400"}`}>
                   STEP {String(i + 1).padStart(2, "0")}
                 </p>
                 <p className={`font-nunito text-[15px] font-bold ${isActive ? "text-grey-800" : "text-grey-500"}`}>
@@ -314,7 +314,7 @@ function ModeToggle({
           type="button"
           onClick={() => onChange(m)}
           className={`font-nunito rounded-full px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
-            mode === m ? "bg-accent-pink text-proj-white" : "text-grey-500 hover:text-grey-700"
+            mode === m ? "bg-secondary-blue text-proj-white" : "text-grey-500 hover:text-grey-700"
           }`}
         >
           {m === "design" ? "Design" : "Live"}
@@ -493,7 +493,7 @@ function ZoneCard({
     >
       <div
         ref={iconRef}
-        className="relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-accent-pink bg-proj-white text-accent-pink md:size-16"
+        className="relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-secondary-blue bg-proj-white text-secondary-blue md:size-16"
       >
         <Icon className="size-6 md:size-8" />
       </div>
@@ -530,7 +530,7 @@ export function ExhibitionZones({ process }: { process: Record<string, unknown> 
     <section className="bg-grey-50 px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[1000px] flex-col gap-10 md:gap-14">
         <SlideIn className="flex flex-col items-center gap-3 text-center">
-          <span className="font-nunito text-[14px] font-extrabold text-accent-pink">PROCESS</span>
+          <span className="font-nunito text-[14px] font-extrabold text-secondary-blue">PROCESS</span>
           {note && (
             <p className="font-nunito max-w-[65ch] text-[15px] leading-[24px] font-normal text-grey-700 md:text-[18px] md:leading-[28px]">
               {note}
