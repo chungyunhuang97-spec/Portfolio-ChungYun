@@ -18,20 +18,6 @@ interface ZoneStep {
   designImageUrl?: string;
 }
 
-interface GalleryItem {
-  title: string;
-  titleEn?: string;
-  date?: string;
-}
-
-interface Spotlight {
-  title: string;
-  titleEn?: string;
-  tag?: string;
-  textZh?: string;
-  textEn?: string;
-}
-
 interface Zone {
   title: string;
   desc: string;
@@ -45,8 +31,6 @@ interface Zone {
    * isn't cut per step. */
   liveImageUrl?: string;
   liveCaption?: string;
-  gallery?: GalleryItem[];
-  spotlight?: Spotlight;
 }
 
 /** Zone 1 -- 世界地圖導覽: a hierarchical drill-down (world → continent →
@@ -204,14 +188,14 @@ function DeviceFrame({ image, alt }: { image?: string; alt: string }) {
   );
 }
 
-/** DESIGN / LIVE segmented toggle, only rendered when a zone actually has
- * both states -- some zones (e.g. 展區三) only have one mockup so far.
- * Sits directly above `DeviceFrame` in the same (right) column, matching
- * the original site's placement -- it previously lived in the left column
- * next to the step list, which read as disconnected from the screenshot it
- * actually controls. `self-start` keeps it a compact pill instead of
- * stretching to the column's full width (the flex-col parent's default
- * `align-items: stretch` was doing that before). */
+/** DESIGN / LIVE segmented toggle -- always rendered, even for a zone that
+ * only has one side filled in so far (e.g. 展區三 currently has no Live
+ * recording yet): switching to the empty side just shows `DeviceFrame`'s
+ * own "此畫面製作中" placeholder, which is a legitimate state on its own
+ * rather than something to hide the toggle for. Per Joe's reference
+ * annotation, this sits as a floating badge OVERLAID on the device frame's
+ * own bottom-right corner (see `ZoneCard`'s `relative` wrapper), not as a
+ * separate element above it. */
 function ModeToggle({
   mode,
   onChange,
@@ -220,7 +204,7 @@ function ModeToggle({
   onChange: (m: "design" | "live") => void;
 }) {
   return (
-    <div className="inline-flex self-start items-center gap-1 rounded-full border border-grey-100 bg-proj-white p-1 shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+    <div className="inline-flex items-center gap-1 rounded-full border border-grey-100 bg-proj-white p-1 shadow-[0_4px_12px_rgba(0,0,0,0.12)]">
       {(["design", "live"] as const).map((m) => (
         <button
           key={m}
@@ -237,62 +221,9 @@ function ModeToggle({
   );
 }
 
-/**
- * Zone 2/3's "幕後花絮" strip -- a horizontally swipeable, snap-scrolling
- * carousel rather than the original site's click-to-open modal. A kiosk-
- * style click/tap-to-reveal pattern reads as a dead end on a portfolio
- * page (nothing visibly indicates it's clickable, and clicking to "open"
- * content that's already fully known defeats the point) -- everything here
- * is visible by just scrolling the strip sideways, no click required. The
- * spotlight entry (the one with a full bilingual caption, e.g. 娜魯灣劇場
- * 演出) leads as a wider feature card; the rest of the same gallery follow
- * as compact date-chip cards. No "swipe sideways" hint label -- the next
- * card's edge already peeks into view (`pr-10` on the scroll track plus
- * each card's own `shrink-0` width), which is enough of a visual cue on
- * its own per Joe's "remove the redundant text" ask.
- */
-function GalleryCarousel({ spotlight, gallery }: { spotlight?: Spotlight; gallery?: GalleryItem[] }) {
-  if (!spotlight && (!gallery || gallery.length === 0)) return null;
-
-  return (
-    <div className="mt-6">
-      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pr-10 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {spotlight && (
-          <div className="w-[260px] shrink-0 snap-start rounded-[16px] border border-accent-pink/20 bg-accent-pink/5 p-5 md:w-[320px]">
-            {spotlight.tag && (
-              <p className="font-nunito text-[11px] font-extrabold uppercase tracking-[0.1em] text-accent-pink">
-                {spotlight.tag}
-              </p>
-            )}
-            <h5 className="font-nunito mt-1 text-[15px] font-bold leading-6 text-grey-800">{spotlight.title}</h5>
-            {spotlight.titleEn && (
-              <p className="font-nunito text-[11px] font-semibold text-grey-500">{spotlight.titleEn}</p>
-            )}
-            {spotlight.textZh && (
-              <p className="font-nunito mt-3 text-[12px] leading-[19px] font-normal text-grey-700">
-                {spotlight.textZh}
-              </p>
-            )}
-          </div>
-        )}
-        {gallery?.map((item) => (
-          <div
-            key={item.title}
-            className="w-[160px] shrink-0 snap-start rounded-[16px] border border-grey-100 bg-grey-50 p-4"
-          >
-            <p className="font-nunito text-[13px] font-bold leading-5 text-grey-800">{item.title}</p>
-            {item.date && <p className="font-nunito mt-1 text-[11px] font-semibold text-grey-400">{item.date}</p>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
   const Icon = ZONE_ICONS[index] ?? ZONE_ICONS[0];
   const hasSteps = Boolean(zone.steps && zone.steps.length > 0);
-  const hasToggle = Boolean((hasSteps || zone.designImageUrl) && zone.liveImageUrl);
   const [mode, setMode] = useState<"design" | "live">(hasSteps || zone.designImageUrl ? "design" : "live");
   const [activeStep, setActiveStep] = useState(() => Math.min(1, (zone.steps?.length ?? 1) - 1));
 
@@ -332,13 +263,13 @@ function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
             <StepList steps={zone.steps} active={activeStep} onSelect={setActiveStep} />
           )}
 
-          <div className="flex flex-col gap-3 md:max-w-[640px]">
-            {hasToggle && <ModeToggle mode={mode} onChange={setMode} />}
+          <div className="relative md:max-w-[640px]">
             <DeviceFrame image={image} alt={alt} />
+            <div className="absolute bottom-3 right-3 z-10">
+              <ModeToggle mode={mode} onChange={setMode} />
+            </div>
           </div>
         </div>
-
-        <GalleryCarousel spotlight={zone.spotlight} gallery={zone.gallery} />
       </div>
     </SlideIn>
   );
