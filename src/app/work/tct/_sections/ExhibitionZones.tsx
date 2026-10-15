@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { RefObject, SVGProps } from "react";
 import { motion, useScroll, useMotionValueEvent, useReducedMotion } from "framer-motion";
+import { ImageSquare } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 
 /** Every zone's Design/Live frame renders at this same fixed width on
@@ -197,10 +198,13 @@ function DeviceFrame({ image, alt }: { image?: string; alt: string }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img key={image} src={image} alt={alt} className="h-full w-full object-contain" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center px-6 text-center">
-            <p className="font-nunito text-[12px] font-bold leading-relaxed text-grey-400">
-              此畫面製作中
-            </p>
+          // Dashed border + icon, matching `MockupSlot`'s established
+          // "media待上傳" convention rather than plain centered text, so an
+          // empty slot reads as an intentional pending-upload state instead
+          // of a broken image.
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-[10px] border-2 border-dashed border-grey-300 px-6 text-center">
+            <ImageSquare size={28} weight="light" className="text-grey-400" />
+            <p className="font-nunito text-[12px] font-bold leading-relaxed text-grey-400">此畫面製作中</p>
           </div>
         )}
       </div>

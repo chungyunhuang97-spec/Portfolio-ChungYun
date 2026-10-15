@@ -1,30 +1,68 @@
 "use client";
 
+import { ImageSquare } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
+
+interface Photo {
+  url?: string;
+  alt: string;
+  delay: number;
+  className: string;
+}
+
+/** One real-photo tile -- `object-cover` is fine here (unlike the
+ * exhibition-zone screenshots, which needed `contain` to avoid cropping UI
+ * chrome/text) since these are ordinary photographs where a small amount
+ * of edge cropping to fill the tile reads as normal, not lossy. */
+function PhotoTile({ url, alt, delay, className }: Photo) {
+  return (
+    <SlideIn delay={delay} className={className}>
+      <div className="h-full w-full overflow-hidden rounded-[16px] bg-grey-50 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt={alt} className="h-full w-full border border-grey-100 object-cover" />
+        ) : (
+          // Dashed border + icon, matching `MockupSlot`'s established
+          // "media待上傳" convention -- see ExhibitionZones.tsx's DeviceFrame
+          // empty state for the same fix applied there.
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 border-2 border-dashed border-grey-300 p-4 text-center">
+            <ImageSquare size={24} weight="light" className="text-grey-400" />
+            <p className="font-nunito text-[11px] font-bold leading-relaxed text-grey-400">現場照片待上傳</p>
+          </div>
+        )}
+      </div>
+    </SlideIn>
+  );
+}
 
 /**
  * Section 5 -- On Site (展覽現場實況). Restored from the original site,
  * which had this as its own standalone section between the exhibition
- * zones and the closing reflection: a plain photo collage of the actual
- * installed exhibit, no video. Per Joe's explicit ask, the per-zone Live
- * recordings stay inside ExhibitionZones (each zone's own Design/Live
- * toggle) rather than being collected here -- this section's job is purely
- * "proof this got built", the textural evidence that the mockups above
- * became a real room people walked into, so it stays photo-only like the
- * original rather than re-showing the same footage a second time.
+ * zones and the closing reflection: real photos of the installed exhibit,
+ * no video. Per Joe's explicit ask, the per-zone Live recordings stay
+ * inside ExhibitionZones (each zone's own Design/Live toggle) rather than
+ * being collected here -- this section's job is purely "proof this got
+ * built", the textural evidence that the mockups above became a real room
+ * people walked into.
+ *
+ * Laid out as a real masonry grid of 4 separate photos (one tall, one
+ * wide, two small) rather than one flattened collage image -- the
+ * previous version used a single pre-composited screenshot of the whole
+ * grid, which meant there was nothing for the admin to individually
+ * replace. Each tile is its own top-level `outcome.onsitePhotoNImageUrl`
+ * field, so each has its own upload dropzone in the admin like every
+ * other media field on this page.
  *
  * Content model: reuses the `outcome` row's `items[0]` (the run-summary
  * sentence, e.g. "展覽期間...透過大螢幕觸控與沉浸式體驗...") as this
  * section's intro -- the same line the original site used here -- so
- * `Outcome.tsx` doesn't repeat it. The collage itself is `onsiteImageUrl`,
- * a real top-level field on the same row (not hardcoded), so it has the
- * admin's full upload dropzone like any other top-level media field --
- * swap it from the admin UI once a higher-resolution export exists.
+ * `Outcome.tsx` doesn't repeat it.
  */
 export function OnSite({ outcome }: { outcome: Record<string, unknown> }) {
   const items = Array.isArray(outcome.items) ? (outcome.items as string[]) : [];
   const intro = items[0];
-  const collageUrl = (outcome.onsiteImageUrl as string | undefined) || "/work/tct/onsite/collage.webp";
+
+  const photo = (key: string) => outcome[key] as string | undefined;
 
   return (
     <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-24">
@@ -39,16 +77,36 @@ export function OnSite({ outcome }: { outcome: Record<string, unknown> }) {
           )}
         </SlideIn>
 
-        <SlideIn delay={0.1} className="w-full">
-          <div className="overflow-hidden rounded-[20px] border border-grey-100 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={collageUrl}
-              alt="展覽現場實況：觀眾操作觸控螢幕與展區實景照片"
-              className="w-full object-cover"
+        <div className="grid w-full grid-cols-2 gap-3 md:gap-4">
+          <PhotoTile
+            url={photo("onsitePhoto1ImageUrl")}
+            alt="NTSO影音特區觸控螢幕實景"
+            delay={0.1}
+            className="row-span-2 aspect-[740/866]"
+          />
+          <div className="flex flex-col gap-3 md:gap-4">
+            <PhotoTile
+              url={photo("onsitePhoto2ImageUrl")}
+              alt="舞台之外的風景展區實景"
+              delay={0.15}
+              className="aspect-[588/375]"
             />
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
+              <PhotoTile
+                url={photo("onsitePhoto3ImageUrl")}
+                alt="國臺交之音世界地圖展區實景"
+                delay={0.2}
+                className="aspect-[294/418]"
+              />
+              <PhotoTile
+                url={photo("onsitePhoto4ImageUrl")}
+                alt="觀眾參觀展區走道實景"
+                delay={0.25}
+                className="aspect-[314/418]"
+              />
+            </div>
           </div>
-        </SlideIn>
+        </div>
       </div>
     </section>
   );
