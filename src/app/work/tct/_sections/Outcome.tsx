@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useInView } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
-import type { Project } from "@/lib/types";
 
 /** CountUp hook -- per docs/case-study-design-conventions.md's "數字類
  * 統計一律用 CountUp" rule (0 → target, ~1.3s, easeOut). Metro/Nest Stay
@@ -28,73 +27,124 @@ function useCountUp(target: number, start: boolean, duration = 1300) {
   return value;
 }
 
-/** The exhibition's real run dates (2025.11.15–12.07, inclusive), fixed
- * historical fact rather than something parsed out of the free-text
- * `project.timeframe` label -- same "hardcode the specific known number"
- * precedent other project pages use for their own one-off facts. */
-const EXHIBITION_DAYS = 23;
+/** The three headline facts from the original site's "成果與反思" stat
+ * row -- fixed, already-established project facts (NTSO's 80th
+ * anniversary, the 1-month build the `challenge` row already describes,
+ * the 3 zones `ExhibitionZones` renders), hardcoded the same way
+ * `EXHIBITION_DAYS` was in the previous version of this file rather than
+ * re-derived from other rows' free text. */
+const STATS: { target: number; unit: string; label: string }[] = [
+  { target: 80, unit: "Years", label: "交響樂團歷史軌跡" },
+  { target: 1, unit: "Mon.", label: "極限開發與設計" },
+  { target: 3, unit: "Zones", label: "獨立沈浸式展區" },
+];
 
-function DaysStat({ timeframe }: { timeframe: string }) {
+function StatTile({ target, unit, label, delay }: { target: number; unit: string; label: string; delay: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
-  const days = useCountUp(EXHIBITION_DAYS, inView);
+  const value = useCountUp(target, inView);
 
   return (
-    <div ref={ref} className="flex flex-1 flex-col items-center justify-center gap-2 rounded-[20px] bg-grey-50 p-8 text-center md:p-10">
-      <p className="font-fredoka text-[56px] leading-none text-accent-pink md:text-[72px]">{days}</p>
-      <p className="font-nunito text-[13px] font-extrabold uppercase tracking-[0.1em] text-grey-500">
-        展覽開放天數
-      </p>
-      <p className="font-nunito text-[13px] font-semibold text-grey-400">{timeframe}</p>
-    </div>
+    <SlideIn delay={delay} className="flex flex-1">
+      <div ref={ref} className="flex flex-1 flex-col items-center gap-1 rounded-[20px] bg-grey-50 px-6 py-8 text-center">
+        <p className="font-fredoka text-[40px] leading-none text-accent-pink md:text-[48px]">
+          {value}
+          <span className="font-nunito ml-1.5 text-[16px] font-bold text-grey-700 md:text-[18px]">{unit}</span>
+        </p>
+        <p className="font-nunito mt-2 text-[13px] font-semibold text-grey-500">{label}</p>
+      </div>
+    </SlideIn>
   );
 }
 
-function QuoteCard({ text }: { text: string }) {
+/** The closing insight, taken from the `reflection` row's single `text`
+ * field (also used in full by `Closing.tsx`'s big quote) -- split here
+ * into a lightbulb "insight" card (everything up to the final sentence)
+ * and a short highlighted pull-quote (the final "這個專案讓我學會" line),
+ * matching the original site's own two-part treatment of this same
+ * paragraph. Splitting a known, fixed string rather than storing the
+ * pieces as separate DB fields, consistent with this page's existing
+ * precedent for project-specific constants (e.g. `STATS` above). */
+function splitReflection(text: string): { body: string; pullQuote: string } {
+  const marker = "這個專案讓我學會";
+  const idx = text.indexOf(marker);
+  if (idx === -1) return { body: text, pullQuote: "" };
+  return { body: text.slice(0, idx).trim(), pullQuote: text.slice(idx).trim() };
+}
+
+function InsightCard({ text }: { text: string }) {
+  const { body, pullQuote } = splitReflection(text);
+  const [heading, ...rest] = body.split("。").filter(Boolean);
+  const restBody = rest.join("。").trim();
+
   return (
-    <div className="relative flex-[1.4] rounded-[20px] border border-accent-pink/20 bg-proj-white p-8 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)] md:p-10">
-      <span aria-hidden className="font-nunito absolute left-6 top-4 text-[40px] font-bold leading-none text-accent-pink/20 md:left-8 md:top-6 md:text-[56px]">
-        “
-      </span>
-      <p className="font-nunito relative text-[15px] leading-[26px] font-semibold text-grey-800 md:text-[17px] md:leading-[28px]">
-        {text}
-      </p>
-    </div>
+    <SlideIn delay={0.3} className="w-full">
+      <div className="rounded-[24px] bg-accent-pink/5 p-6 md:p-10">
+        <div className="flex items-center justify-between">
+          <span className="text-[22px]" aria-hidden>
+            💡
+          </span>
+          <span className="h-px w-10 bg-grey-300" aria-hidden />
+        </div>
+        <h5 className="font-nunito mt-4 text-[20px] font-bold leading-7 text-grey-800 md:text-[24px]">
+          {heading}
+          {heading && "。"}
+        </h5>
+        {restBody && (
+          <p className="font-nunito mt-3 max-w-[70ch] text-[14px] leading-[23px] font-normal text-grey-700 md:text-[15px]">
+            {restBody}
+          </p>
+        )}
+        {pullQuote && (
+          <blockquote className="font-nunito mt-6 border-l-[3px] border-accent-pink pl-4 text-[14px] font-bold leading-[22px] text-grey-800 md:text-[15px]">
+            {pullQuote}
+          </blockquote>
+        )}
+      </div>
+    </SlideIn>
   );
 }
 
 /**
- * Section 5 -- Outcome (`outcome` row's `items`: a run-summary sentence
- * and the grandma anecdote). White background, continuing the alternation.
+ * Section 6 -- Final Thoughts (成果與反思). Content model: `outcome`
+ * row's `items[1]` (the grandma anecdote) as this section's plain intro
+ * paragraph -- `items[0]` now lives in `OnSite.tsx` instead, matching the
+ * original site's own split between the two sections -- plus `reflection`
+ * row's `text` for the insight card below the stat row.
  */
-export function Outcome({ outcome, project }: { outcome: Record<string, unknown>; project: Project }) {
+export function Outcome({
+  outcome,
+  reflection,
+}: {
+  outcome: Record<string, unknown>;
+  reflection: Record<string, unknown>;
+}) {
   const items = Array.isArray(outcome.items) ? (outcome.items as string[]) : [];
-  if (items.length === 0) return null;
+  const anecdote = items[1];
+  const reflectionText = reflection.text as string | undefined;
 
-  const [summary, anecdote] = items;
+  if (!anecdote && !reflectionText) return null;
 
   return (
     <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-24">
-      <div className="mx-auto flex max-w-[960px] flex-col gap-10 md:gap-12">
+      <div className="mx-auto flex max-w-[800px] flex-col gap-10 md:gap-12">
         <SlideIn className="text-center">
-          <span className="font-nunito text-[14px] font-extrabold text-accent-pink">OUTCOME</span>
-          {summary && (
-            <p className="font-nunito mx-auto mt-4 max-w-[65ch] text-[15px] leading-[24px] font-normal text-grey-600 md:text-[18px] md:leading-[28px]">
-              {summary}
+          <span className="font-nunito text-[14px] font-extrabold text-accent-pink">FINAL THOUGHTS</span>
+          <h3 className="font-nunito mt-2 text-[24px] font-bold text-grey-800 md:text-[32px]">成果與反思</h3>
+          {anecdote && (
+            <p className="font-nunito mx-auto mt-4 max-w-[65ch] text-[14px] leading-[23px] font-normal text-grey-600 md:text-[16px] md:leading-[26px]">
+              {anecdote}
             </p>
           )}
         </SlideIn>
 
-        <div className="flex flex-col gap-6 md:flex-row">
-          <SlideIn direction="left" delay={0.1} className="flex flex-1">
-            <DaysStat timeframe={project.timeframe ?? ""} />
-          </SlideIn>
-          {anecdote && (
-            <SlideIn direction="right" delay={0.16} className="flex flex-[1.4]">
-              <QuoteCard text={anecdote} />
-            </SlideIn>
-          )}
+        <div className="flex flex-col gap-4 md:flex-row md:gap-6">
+          {STATS.map((stat, i) => (
+            <StatTile key={stat.label} {...stat} delay={0.1 + i * 0.08} />
+          ))}
         </div>
+
+        {reflectionText && <InsightCard text={reflectionText} />}
       </div>
     </section>
   );
