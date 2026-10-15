@@ -2,8 +2,17 @@
 
 import { useRef, useState } from "react";
 import type { RefObject, SVGProps } from "react";
-import { motion, useScroll, useReducedMotion } from "framer-motion";
+import { motion, useScroll, useMotionValueEvent, useReducedMotion } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
+
+/** Every zone's Design/Live frame renders at this same fixed width on
+ * desktop, whether or not it shares its row with a step list -- Joe's
+ * "frame 大小忽大忽小" note: `object-contain` already kept each image's own
+ * aspect ratio from being cropped, but the FRAME ITSELF still rendered at
+ * different widths (Zone 1 constrained by sharing a grid row with
+ * StepList, Zone 2/3 stretching up to their own `max-w`). Fixing the
+ * column width here makes all three read as one consistent frame size. */
+const FRAME_WIDTH = "md:w-[520px]";
 
 interface ZoneStep {
   label: string;
@@ -97,24 +106,29 @@ function WayfindingLine({ containerRef }: { containerRef: RefObject<HTMLDivEleme
 }
 
 /** Zone 1's own left-rail step list (世界全覽 → 洲際聚焦 → 場次選擇 →
- * 演出詳情), ported from the original site's interactive stepper. Clicking
- * a step swaps the Design-mode screenshot on the right to that step's own
- * `designImageUrl` (when one exists); Live mode is unaffected, since it's
- * one continuous recording of the zone rather than per-step footage. */
+ * 演出詳情), ported from the original site's interactive stepper. On
+ * mobile (and under `prefers-reduced-motion`) a step changes only by
+ * tapping/clicking it. On desktop, `ScrollySteps` below drives `active`
+ * from scroll position instead -- clicking still moves it immediately,
+ * but the next scroll frame recomputes it from scroll position again, so
+ * scrolling remains the primary driver, per Joe's "讓用戶不用自己點選" ask.
+ * The inactive steps fade and shrink slightly (rather than just swapping
+ * a static color) so the transition itself reads as the "動態效果" Joe
+ * asked for, not just a instant label swap. */
 function StepList({
   steps,
   active,
   onSelect,
+  hint = "↓ scroll or click",
 }: {
   steps: ZoneStep[];
   active: number;
   onSelect: (i: number) => void;
+  hint?: string;
 }) {
   return (
     <div>
-      <p className="font-nunito mb-3 text-[11px] font-bold uppercase tracking-[0.1em] text-grey-400">
-        ↓ scroll or click
-      </p>
+      <p className="font-nunito mb-3 text-[11px] font-bold uppercase tracking-[0.1em] text-grey-400">{hint}</p>
       <ol className="space-y-0">
         {steps.map((step, i) => {
           const isActive = i === active;
@@ -127,12 +141,18 @@ function StepList({
                 className="absolute -left-[7px] top-0.5 flex size-3 items-center justify-center rounded-full"
               >
                 <span
-                  className={`size-3 rounded-full border-2 transition-colors ${
+                  className={`size-3 rounded-full border-2 transition-colors duration-300 ${
                     isActive ? "border-accent-pink bg-accent-pink" : "border-grey-300 bg-proj-white"
                   }`}
                 />
               </button>
-              <button type="button" onClick={() => onSelect(i)} className="text-left">
+              <button
+                type="button"
+                onClick={() => onSelect(i)}
+                className={`origin-left text-left transition-all duration-300 ${
+                  isActive ? "scale-100 opacity-100" : "scale-[0.97] opacity-60"
+                }`}
+              >
                 <p className={`font-nunito text-[11px] font-extrabold tracking-[0.1em] ${isActive ? "text-accent-pink" : "text-grey-400"}`}>
                   STEP {String(i + 1).padStart(2, "0")}
                 </p>
@@ -221,55 +241,133 @@ function ModeToggle({
   );
 }
 
-function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
-  const Icon = ZONE_ICONS[index] ?? ZONE_ICONS[0];
+/** The frame + its overlaid Design/Live toggle, shared by every zone
+ * layout below -- `FRAME_WIDTH` keeps every zone's frame the same size
+ * regardless of whether it shares its row with a step list. */
+function FrameWithToggle({
+  image,
+  alt,
+  mode,
+  onModeChange,
+}: {
+  image?: string;
+  alt: string;
+  mode: "design" | "live";
+  onModeChange: (m: "design" | "live") => void;
+}) {
+  return (
+    <div className={`relative w-full ${FRAME_WIDTH}`}>
+      <DeviceFrame image={image} alt={alt} />
+      <div className="absolute bottom-3 right-3 z-10">
+        <ModeToggle mode={mode} onChange={onModeChange} />
+      </div>
+    </div>
+  );
+}
+
+function ZoneHeader({ zone, index }: { zone: Zone; index: number }) {
+  return (
+    <>
+      <p className="font-nunito text-[12px] font-extrabold tracking-[0.1em] text-grey-400">
+        展區 {String(index + 1).padStart(2, "0")}
+      </p>
+      <h4 className="font-nunito mt-1 text-[19px] font-bold leading-6 text-grey-800 md:text-[22px]">{zone.title}</h4>
+      <p className="font-nunito mt-2 max-w-[60ch] text-[14px] leading-[22px] font-normal text-grey-600 md:text-[15px]">
+        {zone.desc}
+      </p>
+    </>
+  );
+}
+
+/** Zone 1's desktop-only scroll-driven stepper (世界全覽 → 洲際聚焦 →
+ * 場次選擇 → 演出詳情), per Joe's "滾動時自動輪替，不需要用戶點選" ask: a
+ * tall scroll track (`stepCount * 70vh`) holds the step list + frame
+ * `sticky`-pinned on screen while the visitor scrolls through it, and
+ * `scrollYProgress` through that track drives which step (and therefore
+ * which Design screenshot) is active -- the same "pin a visual, scroll
+ * drives state" pattern Piiluu's Hero already uses for its own one-shot
+ * reveal, just continuous here instead of triggered once. Live mode stays
+ * click-only regardless (the footage doesn't change per step), matching
+ * Joe's explicit "live 則是用點選" call.
+ *
+ * `prefers-reduced-motion` skips the tall/sticky track altogether and
+ * falls back to the same plain click-to-select layout mobile uses --
+ * auto-advancing the screen around a visitor while they scroll is exactly
+ * the kind of motion that preference exists to opt out of, same
+ * precedent as Piiluu's Hero jumping straight to its settled state. */
+function ScrollySteps({ zone, mode, onModeChange }: { zone: Zone; mode: "design" | "live"; onModeChange: (m: "design" | "live") => void }) {
+  const steps = zone.steps!;
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [activeStep, setActiveStep] = useState(() => Math.min(1, steps.length - 1));
+  const { scrollYProgress } = useScroll({ target: trackRef, offset: ["start start", "end end"] });
+
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    setActiveStep(Math.min(steps.length - 1, Math.max(0, Math.floor(v * steps.length))));
+  });
+
+  const designImage = steps[activeStep]?.designImageUrl;
+  const image = mode === "design" ? designImage : zone.liveImageUrl;
+  const alt = (mode === "design" ? steps[activeStep]?.label : zone.liveCaption) ?? zone.title;
+
+  return (
+    <div ref={trackRef} className="relative hidden md:block" style={{ height: `${steps.length * 70}vh` }}>
+      <div className="sticky top-28 grid grid-cols-[0.8fr_1.2fr] gap-8 pb-16">
+        <StepList steps={steps} active={activeStep} onSelect={setActiveStep} hint="↓ 繼續往下捲動" />
+        <FrameWithToggle image={image} alt={alt} mode={mode} onModeChange={onModeChange} />
+      </div>
+    </div>
+  );
+}
+
+/** The plain click-to-select layout -- used for Zone 1 on mobile and
+ * under `prefers-reduced-motion` (wrapped by the caller in whatever
+ * visibility class that context needs), and unconditionally for Zone 2/3
+ * (no step list, no scroll-driven variant at all). Manages its own
+ * Design/Live + step state locally rather than sharing `ZoneCard`'s,
+ * since this and `ScrollySteps` are never visible at the same time. */
+function StaticZoneBody({ zone }: { zone: Zone }) {
   const hasSteps = Boolean(zone.steps && zone.steps.length > 0);
   const [mode, setMode] = useState<"design" | "live">(hasSteps || zone.designImageUrl ? "design" : "live");
   const [activeStep, setActiveStep] = useState(() => Math.min(1, (zone.steps?.length ?? 1) - 1));
 
   const designImage = hasSteps ? zone.steps?.[activeStep]?.designImageUrl : zone.designImageUrl;
   const image = mode === "design" ? designImage : zone.liveImageUrl;
-  // `designCaption`/`liveCaption` are still readable/editable from the
-  // admin (e.g. for internal reference), but no longer rendered on the
-  // page -- the zone's own title+desc on the left already says what the
-  // screenshot shows, so the caption line underneath it was redundant text
-  // per Joe's review.
   const alt = (mode === "design" ? zone.designCaption : zone.liveCaption) ?? zone.title;
+
+  return (
+    <div className="mt-6 grid gap-4 md:gap-8">
+      {hasSteps && zone.steps && <StepList steps={zone.steps} active={activeStep} onSelect={setActiveStep} />}
+      <FrameWithToggle image={image} alt={alt} mode={mode} onModeChange={setMode} />
+    </div>
+  );
+}
+
+function ZoneCard({ zone, index }: { zone: Zone; index: number }) {
+  const Icon = ZONE_ICONS[index] ?? ZONE_ICONS[0];
+  const hasSteps = Boolean(zone.steps && zone.steps.length > 0);
+  const reduceMotion = useReducedMotion();
+  // Only `ScrollySteps` (Zone 1, desktop, motion-ok) needs this -- every
+  // other path renders `StaticZoneBody`, which manages its own mode state.
+  const [mode, setMode] = useState<"design" | "live">(zone.designImageUrl ? "design" : "live");
 
   return (
     <SlideIn delay={0.08 + index * 0.1} className="relative flex gap-5 pl-0 md:gap-8">
       <div className="relative z-10 flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-accent-pink bg-proj-white text-accent-pink md:size-16">
         <Icon className="size-6 md:size-8" />
       </div>
-      <div className="flex-1 pb-20 pt-1 last:pb-0 md:pb-28">
-        <p className="font-nunito text-[12px] font-extrabold tracking-[0.1em] text-grey-400">
-          展區 {String(index + 1).padStart(2, "0")}
-        </p>
-        <h4 className="font-nunito mt-1 text-[19px] font-bold leading-6 text-grey-800 md:text-[22px]">
-          {zone.title}
-        </h4>
-        <p className="font-nunito mt-2 max-w-[60ch] text-[14px] leading-[22px] font-normal text-grey-600 md:text-[15px]">
-          {zone.desc}
-        </p>
+      <div className="flex-1 pb-24 pt-1 last:pb-0 md:pb-32">
+        <ZoneHeader zone={zone} index={index} />
 
-        {/* Zones with a step list split into two tracks (steps left, frame
-            right); zones without one (no second grid child to fill that
-            track) skip `grid-cols` entirely -- otherwise the lone frame
-            column would collapse into the grid's first (narrower) track
-            instead of taking the full row, which is what actually produced
-            Zone 2's broken-looking layout before this fix. */}
-        <div className={`mt-6 grid gap-4 md:gap-8 ${hasSteps ? "md:grid-cols-[0.8fr_1.2fr]" : ""}`}>
-          {hasSteps && zone.steps && (
-            <StepList steps={zone.steps} active={activeStep} onSelect={setActiveStep} />
-          )}
-
-          <div className="relative md:max-w-[640px]">
-            <DeviceFrame image={image} alt={alt} />
-            <div className="absolute bottom-3 right-3 z-10">
-              <ModeToggle mode={mode} onChange={setMode} />
+        {hasSteps && !reduceMotion ? (
+          <>
+            <div className="md:hidden">
+              <StaticZoneBody zone={zone} />
             </div>
-          </div>
-        </div>
+            <ScrollySteps zone={zone} mode={mode} onModeChange={setMode} />
+          </>
+        ) : (
+          <StaticZoneBody zone={zone} />
+        )}
       </div>
     </SlideIn>
   );
