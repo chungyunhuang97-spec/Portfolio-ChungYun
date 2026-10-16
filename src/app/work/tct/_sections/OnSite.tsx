@@ -3,6 +3,7 @@
 import { ImageSquare } from "@phosphor-icons/react/dist/ssr";
 import { motion, useReducedMotion } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
+import { SectionKicker } from "@/components/design-system/SectionKicker";
 
 interface Photo {
   url?: string;
@@ -91,8 +92,8 @@ export function OnSite({ outcome }: { outcome: Record<string, unknown> }) {
     <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[1000px] flex-col items-center gap-10 md:gap-12">
         <SlideIn className="flex flex-col items-center gap-3 text-center">
-          <span className="font-nunito text-[14px] font-extrabold text-secondary-blue">ON SITE</span>
-          <h3 className="font-nunito text-[22px] font-bold text-grey-800 md:text-[32px]">展覽現場實況</h3>
+          <SectionKicker color="blue">ON SITE</SectionKicker>
+          <h2 className="font-display text-[24px] font-bold text-grey-800 md:text-[32px]">展覽現場實況</h2>
           {intro && (
             <p className="font-nunito max-w-[60ch] text-[14px] leading-[22px] font-normal text-grey-600 md:text-[16px] md:leading-[26px]">
               {intro}

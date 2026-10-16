@@ -89,7 +89,7 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
         <span aria-hidden className="absolute left-[120px] top-[80px] font-nunito text-[120px] font-bold leading-[120px] text-proj-white">
           「
         </span>
-        <span aria-hidden className="absolute bottom-[120px] right-[160px] translate-x-full translate-y-full font-nunito text-[120px] font-bold leading-[120px] text-proj-white">
+        <span aria-hidden className="absolute bottom-[80px] right-[120px] font-nunito text-[120px] font-bold leading-[120px] text-proj-white">
           」
         </span>
         <div className="flex w-[760px] flex-col items-center gap-5 text-center text-proj-white">

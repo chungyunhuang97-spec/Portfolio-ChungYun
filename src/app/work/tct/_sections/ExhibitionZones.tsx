@@ -5,6 +5,7 @@ import type { RefObject, SVGProps } from "react";
 import { motion, useScroll, useMotionValueEvent, useReducedMotion } from "framer-motion";
 import { ImageSquare } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
+import { SectionKicker } from "@/components/design-system/SectionKicker";
 
 /** Every zone's Design/Live frame renders at this same fixed width on
  * desktop, whether or not it shares its row with a step list -- Joe's
@@ -530,7 +531,8 @@ export function ExhibitionZones({ process }: { process: Record<string, unknown> 
     <section className="bg-grey-50 px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[1000px] flex-col gap-10 md:gap-14">
         <SlideIn className="flex flex-col items-center gap-3 text-center">
-          <span className="font-nunito text-[14px] font-extrabold text-secondary-blue">PROCESS</span>
+          <SectionKicker color="blue">PROCESS</SectionKicker>
+          <h2 className="font-display text-[24px] font-bold text-grey-800 md:text-[32px]">三個沉浸式展區</h2>
           {note && (
             <p className="font-nunito max-w-[65ch] text-[15px] leading-[24px] font-normal text-grey-700 md:text-[18px] md:leading-[28px]">
               {note}

@@ -2,6 +2,8 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { Tag } from "@/components/design-system/Tag";
+import { SectionKicker } from "@/components/design-system/SectionKicker";
+import { SlideIn } from "@/components/design-system/SlideIn";
 import type { Project } from "@/lib/types";
 
 /** "專案角色 ⋯ · 時程 ⋯" pill, same shape as every other project page's
@@ -90,8 +92,8 @@ interface HeroContentProps {
 function HeroBody({ kicker, title, titleLine2, body, role, timeframe, badges }: HeroContentProps) {
   return (
     <div className="flex flex-col items-center gap-6 px-6 pt-6 pb-10 text-center md:gap-10 md:px-[120px] md:pt-[180px] md:pb-[100px]">
-      <div className="flex flex-col items-center gap-3 md:gap-4">
-        <span className="font-nunito text-[14px] font-extrabold text-secondary-blue">{kicker}</span>
+      <SlideIn delay={0.05} className="flex flex-col items-center gap-3 md:gap-4">
+        <SectionKicker color="blue" icon={null}>{kicker}</SectionKicker>
         {/* Split into two tiers -- the project's full name ("NTSO 80週年
          * 特展 互動展區體驗設計") read as one run-on h1 wrapped awkwardly
          * across lines and was hard to parse. `title` (NTSO 80週年特展)
@@ -99,12 +101,16 @@ function HeroBody({ kicker, title, titleLine2, body, role, timeframe, badges }: 
          * immediately after as a smaller, lighter second line -- same
          * "big headline + supporting line" shape as Nest Stay/Metro's own
          * Hero titles, just split into two DB fields instead of one here
-         * since this project's name itself has that two-part structure. */}
-        <h1 className="font-nunito max-w-[22ch] text-[32px] leading-[42px] font-bold text-grey-800 md:text-[64px] md:leading-[80px] md:font-extrabold md:text-primary-black">
+         * since this project's name itself has that two-part structure.
+         *
+         * Font: font-display (Outfit Bold/ExtraBold) per Figma spec --
+         * Outfit gives the display headline more visual weight and
+         * typographic contrast vs Nunito body copy, matching the design. */}
+        <h1 className="font-display max-w-[22ch] text-[32px] leading-[42px] font-bold text-grey-800 md:text-[64px] md:leading-[80px] md:font-extrabold md:text-primary-black">
           {title}
         </h1>
         {titleLine2 && (
-          <p className="font-nunito max-w-[24ch] text-[18px] font-bold leading-[26px] text-grey-600 md:text-[28px] md:leading-[38px]">
+          <p className="font-display max-w-[24ch] text-[18px] font-bold leading-[26px] text-grey-600 md:text-[28px] md:leading-[38px]">
             {titleLine2}
           </p>
         )}
@@ -114,21 +120,21 @@ function HeroBody({ kicker, title, titleLine2, body, role, timeframe, badges }: 
           </p>
         )}
         {timeframe && <MetaPill role={role} timeframe={timeframe} />}
-      </div>
+      </SlideIn>
 
       {badges.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
+        <SlideIn delay={0.15} className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
           {badges.map((badge) => (
             <Tag key={badge} variant="blue">
               {badge}
             </Tag>
           ))}
-        </div>
+        </SlideIn>
       )}
 
-      <div className="w-full max-w-[640px]">
+      <SlideIn delay={0.25} className="w-full max-w-[640px]">
         <KioskFrame />
-      </div>
+      </SlideIn>
     </div>
   );
 }

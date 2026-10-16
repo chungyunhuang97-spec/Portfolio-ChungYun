@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useInView } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
+import { SectionKicker } from "@/components/design-system/SectionKicker";
 
 /** CountUp hook -- per docs/case-study-design-conventions.md's "數字類
  * 統計一律用 CountUp" rule (0 → target, ~1.3s, easeOut). Metro/Nest Stay
@@ -47,7 +48,7 @@ function StatTile({ target, unit, label, delay }: { target: number; unit: string
   return (
     <SlideIn delay={delay} className="flex flex-1">
       <div ref={ref} className="flex flex-1 flex-col items-center gap-1 rounded-[20px] bg-grey-50 px-6 py-8 text-center">
-        <p className="font-fredoka text-[40px] leading-none text-secondary-blue md:text-[48px]">
+        <p className="font-fredoka text-[40px] leading-none text-secondary-blue md:text-[64px]">
           {value}
           <span className="font-nunito ml-1.5 text-[16px] font-bold text-grey-700 md:text-[18px]">{unit}</span>
         </p>
@@ -128,9 +129,9 @@ export function Outcome({
   return (
     <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[800px] flex-col gap-10 md:gap-12">
-        <SlideIn className="text-center">
-          <span className="font-nunito text-[14px] font-extrabold text-secondary-blue">FINAL THOUGHTS</span>
-          <h3 className="font-nunito mt-2 text-[24px] font-bold text-grey-800 md:text-[32px]">成果與反思</h3>
+        <SlideIn className="flex flex-col items-center gap-3 text-center">
+          <SectionKicker color="blue">FINAL THOUGHTS</SectionKicker>
+          <h2 className="font-display text-[24px] font-bold text-grey-800 md:text-[40px]">成果與反思</h2>
           {anecdote && (
             <p className="font-nunito mx-auto mt-4 max-w-[65ch] text-[14px] leading-[23px] font-normal text-grey-600 md:text-[16px] md:leading-[26px]">
               {anecdote}
