@@ -42,6 +42,14 @@ interface Zone {
    * isn't cut per step. */
   liveImageUrl?: string;
   liveCaption?: string;
+  /** A screenshot of the real on-site popup/dialog the kiosk shows when a
+   * visitor taps something in this zone -- a third, separate image from
+   * Design/Live, not a bigger copy of whichever of those is currently
+   * showing. Only Zone 2/3 use this (see `MagnifiableFrame`'s
+   * `enabled` gating); Joe's correction after an earlier pass of this
+   * feature reused the current Design/Live image instead, which wasn't
+   * what he meant by "彈窗的圖". */
+  popupImageUrl?: string;
 }
 
 /** Zone 1 -- 世界地圖導覽: a hierarchical drill-down (world → continent →
@@ -350,25 +358,32 @@ function ModeToggle({
 /**
  * Floats an enlarged copy of the frame's current image above it on
  * interaction -- Zone 2 & 3 only (`enabled`), per Joe's explicit "展區
- * 二、三有這個觸發機制，展區一無" call. Reuses whichever image `DeviceFrame`
- * is already showing (Design or Live) rather than a separate upload --
- * the point is "look at this one closer", not a different photo.
+ * 二、三有這個觸發機制，展區一無" call. `popupImage` is a SEPARATE upload
+ * from Design/Live (`zone.popupImageUrl`): a screenshot of the real
+ * on-site popup/dialog the kiosk shows when a visitor taps something in
+ * that zone, not a bigger copy of whichever of Design/Live the frame is
+ * currently showing -- an earlier pass of this feature reused the
+ * current frame image instead, which Joe corrected ("你好像搞錯我意思了
+ * ...是要顯示實際在展場時點選之後跳出的彈窗").
  *
  * Desktop hovers it open/closed. Touch has no "move the pointer away"
  * gesture to close it with, so on a device that can't hover it instead
  * opens on tap and needs its own close button (also closes on an outside
  * tap). The small magnifier badge is the only hint either device gets
  * that the frame is interactive -- it hides itself once the preview is
- * open and never renders at all when there's no image yet (an empty
- * "此畫面製作中" slot has nothing to magnify).
+ * open and never renders at all when there's no popup image uploaded yet.
  */
 function MagnifiableFrame({
   image,
   alt,
+  popupImage,
+  popupAlt,
   enabled,
 }: {
   image?: string;
   alt: string;
+  popupImage?: string;
+  popupAlt: string;
   enabled: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -390,7 +405,7 @@ function MagnifiableFrame({
     return () => document.removeEventListener("pointerdown", handleOutside);
   }, [canHover, open]);
 
-  if (!enabled || !image) return <DeviceFrame image={image} alt={alt} />;
+  if (!enabled || !popupImage) return <DeviceFrame image={image} alt={alt} />;
 
   return (
     <div
@@ -418,10 +433,10 @@ function MagnifiableFrame({
             transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeOut" }}
             className="pointer-events-auto absolute -inset-6 z-30 overflow-hidden rounded-[16px] border border-grey-100 bg-proj-white shadow-[0_30px_90px_rgba(0,0,0,0.3)] md:-inset-10"
           >
-            {isVideoUrl(image) ? (
+            {isVideoUrl(popupImage) ? (
               <video
-                src={image}
-                aria-label={alt}
+                src={popupImage}
+                aria-label={popupAlt}
                 className="h-full w-full object-contain"
                 autoPlay
                 loop
@@ -430,7 +445,7 @@ function MagnifiableFrame({
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={image} alt={alt} className="h-full w-full object-contain" />
+              <img src={popupImage} alt={popupAlt} className="h-full w-full object-contain" />
             )}
             {!canHover && (
               <button
@@ -461,16 +476,26 @@ function FrameWithToggle({
   mode,
   onModeChange,
   enableMagnify = false,
+  popupImage,
+  popupAlt,
 }: {
   image?: string;
   alt: string;
   mode: "design" | "live";
   onModeChange: (m: "design" | "live") => void;
   enableMagnify?: boolean;
+  popupImage?: string;
+  popupAlt?: string;
 }) {
   return (
     <div className={`relative w-full ${FRAME_WIDTH}`}>
-      <MagnifiableFrame image={image} alt={alt} enabled={enableMagnify} />
+      <MagnifiableFrame
+        image={image}
+        alt={alt}
+        popupImage={popupImage}
+        popupAlt={popupAlt ?? alt}
+        enabled={enableMagnify}
+      />
       <div className="absolute bottom-3 right-3 z-10">
         <ModeToggle mode={mode} onChange={onModeChange} />
       </div>
@@ -545,7 +570,15 @@ function ScrollySteps({
             <StepList steps={steps} active={activeStep} onSelect={setActiveStep} hint="↓ 繼續往下捲動" />
           </div>
         </div>
-        <FrameWithToggle image={image} alt={alt} mode={mode} onModeChange={onModeChange} enableMagnify={index !== 0} />
+        <FrameWithToggle
+          image={image}
+          alt={alt}
+          mode={mode}
+          onModeChange={onModeChange}
+          enableMagnify={index !== 0}
+          popupImage={zone.popupImageUrl}
+          popupAlt={`${zone.title} 現場點選彈窗畫面`}
+        />
       </div>
     </div>
   );
@@ -586,7 +619,15 @@ function StaticZoneBody({ zone, index, mirrored }: { zone: Zone; index: number; 
         )}
       </div>
       <div className={mirrored ? "md:order-1" : ""}>
-        <FrameWithToggle image={image} alt={alt} mode={mode} onModeChange={setMode} enableMagnify={index !== 0} />
+        <FrameWithToggle
+          image={image}
+          alt={alt}
+          mode={mode}
+          onModeChange={setMode}
+          enableMagnify={index !== 0}
+          popupImage={zone.popupImageUrl}
+          popupAlt={`${zone.title} 現場點選彈窗畫面`}
+        />
       </div>
     </div>
   );
