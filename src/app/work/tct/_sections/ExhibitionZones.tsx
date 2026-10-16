@@ -266,7 +266,7 @@ function StepList({
 /** macOS-style window chrome around a zone's Design/Live screenshot --
  * this project's own device frame for showing a kiosk screen mockup,
  * matching the traffic-light window treatment the original site used for
- * every zone. Kept local like Hero's `KioskFrame`, same shape family but a
+ * every zone. Kept local like Hero's `OperaHouseModel`, same shape family but a
  * flatter "browser window" rather than a bezeled touchscreen, since this
  * is for a 16:10-ish screenshot rather than the Hero's portrait kiosk. */
 function DeviceFrame({ image, alt }: { image?: string; alt: string }) {

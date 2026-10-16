@@ -1,6 +1,8 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
+import { useReducedMotion, useScroll, useMotionValueEvent } from "framer-motion";
 import { Tag } from "@/components/design-system/Tag";
 import { SectionKicker } from "@/components/design-system/SectionKicker";
 import { SlideIn } from "@/components/design-system/SlideIn";
@@ -24,57 +26,70 @@ function MetaPill({ role, timeframe }: { role: string; timeframe: string }) {
   );
 }
 
-/**
- * One concentric "tap" burst -- the touch-kiosk signature motif for this
- * project (no other project page uses a touch-ripple). A single ring
- * expands and fades on a loop so the still-empty mockup slot reads as "a
- * finger just tapped the glass here", not just a decorative blob.
- */
-function TapRipple({ delay = 0 }: { delay?: number }) {
-  return (
-    <motion.span
-      aria-hidden
-      className="absolute size-3 rounded-full border-2 border-secondary-blue"
-      initial={{ opacity: 0.6, scale: 0.3 }}
-      animate={{ opacity: 0, scale: 3.2 }}
-      transition={{ duration: 2.2, repeat: Infinity, delay, ease: "easeOut" }}
-    />
-  );
-}
+/** Rendered frame count for the Opera House turntable sequence below --
+ * Joe's Gemini-generated reference clip downsampled from its native 24fps/
+ * 10s to 48 evenly-spaced stills (background keyed out), since a short,
+ * slow turntable doesn't need every frame to read as smooth once scroll
+ * (not a timer) is driving which one shows. */
+const OPERA_HOUSE_FRAME_COUNT = 48;
+const OPERA_HOUSE_FRAMES = Array.from(
+  { length: OPERA_HOUSE_FRAME_COUNT },
+  (_, i) => `/work/tct/hero/opera-house/frame-${String(i + 1).padStart(3, "0")}.webp`
+);
 
-function TapPoint() {
+/**
+ * Scroll-scrubbed turntable of the Taichung Opera House massing model --
+ * replaces the old placeholder kiosk-screen mockup now that Joe has a real
+ * hero visual, and ties directly to the exhibition's actual venue instead
+ * of a generic touchscreen render. Framed as a sprite-swap sequence rather
+ * than a `<video>` because scrubbing `video.currentTime` from scroll is
+ * unreliable across browsers (seeks snap to keyframes and stutter); a
+ * preloaded still sequence swaps instantly on every scroll tick instead.
+ *
+ * `heroRef` is `Hero`'s own `<section>` ref, not a ref on this component --
+ * progress is measured across the WHOLE hero section (title/body/badges
+ * included), not just this frame's own small transit through the
+ * viewport, so the rotation plays out while Joe's visitor reads the hero
+ * copy and finishes exactly as the section scrolls past, matching his
+ * "最後轉到大門，再接著繼續往下滑" ask: scrolling further after that just
+ * continues normally into Exhibition Zones, nothing stays pinned.
+ */
+function OperaHouseModel({ heroRef }: { heroRef: RefObject<HTMLElement | null> }) {
   const reduceMotion = useReducedMotion();
-  return (
-    <div className="absolute bottom-[18%] right-[16%] flex items-center justify-center">
-      <span className="size-3 rounded-full bg-secondary-blue shadow-[0_0_0_4px_rgba(13,33,255,0.18)]" />
-      {!reduceMotion && (
-        <>
-          <TapRipple delay={0} />
-          <TapRipple delay={0.9} />
-        </>
-      )}
-    </div>
-  );
-}
+  const [frameIndex, setFrameIndex] = useState(0);
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
 
-/**
- * Landscape touchscreen-kiosk chrome -- this project's own device frame,
- * distinct from the shared `PhoneFrame` (portrait phone chrome doesn't fit
- * a wall-mounted exhibition touchscreen). Kept local to this page rather
- * than added to design-system/, same precedent as Piiluu's local CardFace/
- * DisintegratingCard: this bezel shape has no other caller yet.
- */
-function KioskFrame({ textSize = "text-[10px] md:text-[13px]" }: { textSize?: string }) {
+  useEffect(() => {
+    // Warms the browser's own image cache so swapping `src` below never
+    // flashes an unloaded frame -- the objects themselves are discarded,
+    // only the cache entries they trigger are kept.
+    OPERA_HOUSE_FRAMES.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
+
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    if (reduceMotion) return;
+    setFrameIndex(Math.min(OPERA_HOUSE_FRAME_COUNT - 1, Math.max(0, Math.floor(v * OPERA_HOUSE_FRAME_COUNT))));
+  });
+
+  // Reduced motion skips the scroll-driven rotation and simply rests on
+  // the final "facing the entrance" frame, same precedent as this page's
+  // other scroll-driven motion (`ScrollySteps`) falling back to a settled
+  // static state rather than animating.
+  const activeFrame = reduceMotion ? OPERA_HOUSE_FRAMES[OPERA_HOUSE_FRAME_COUNT - 1] : OPERA_HOUSE_FRAMES[frameIndex];
+
   return (
-    <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[20px] border-[10px] border-primary-black bg-grey-50 shadow-[0_20px_60px_rgba(0,0,0,0.14)] md:rounded-[28px] md:border-[14px]">
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
-        <span className={`font-nunito font-bold leading-relaxed text-grey-500 ${textSize}`}>
-          展區觸控畫面
-          <br />
-          （實機拍攝影像待上傳）
-        </span>
-      </div>
-      <TapPoint />
+    <div className="relative aspect-[16/10] w-full">
+      {/* eslint-disable-next-line @next/next/no-img-element -- rapid src
+       * swapping across a preloaded sequence, not a fit for next/image's
+       * lazy-loading model. */}
+      <img
+        src={activeFrame}
+        alt="台中國家歌劇院 3D 量體模型"
+        className="h-full w-full object-contain drop-shadow-[0_30px_50px_rgba(13,33,255,0.16)]"
+      />
     </div>
   );
 }
@@ -87,6 +102,7 @@ interface HeroContentProps {
   role: string;
   timeframe: string;
   badges: string[];
+  heroRef: RefObject<HTMLElement | null>;
 }
 
 /** Mobile-only badge trim -- matching Figma's mobile Hero exactly: a
@@ -98,7 +114,7 @@ interface HeroContentProps {
 const MOBILE_HIDDEN_BADGES = new Set(["Client Work"]);
 const MOBILE_BADGE_RENAMES: Record<string, string> = { "Kiosk/Touch UI": "Kiosk UI" };
 
-function HeroBody({ kicker, title, titleLine2, body, role, timeframe, badges }: HeroContentProps) {
+function HeroBody({ kicker, title, titleLine2, body, role, timeframe, badges, heroRef }: HeroContentProps) {
   const mobileBadges = badges
     .filter((badge) => !MOBILE_HIDDEN_BADGES.has(badge))
     .map((badge) => MOBILE_BADGE_RENAMES[badge] ?? badge);
@@ -157,7 +173,7 @@ function HeroBody({ kicker, title, titleLine2, body, role, timeframe, badges }: 
         )}
 
         <div className="w-full max-w-[640px]">
-          <KioskFrame />
+          <OperaHouseModel heroRef={heroRef} />
         </div>
       </SlideIn>
 
@@ -193,7 +209,7 @@ function HeroBody({ kicker, title, titleLine2, body, role, timeframe, badges }: 
         )}
 
         <SlideIn delay={0.25} className="w-full max-w-[640px]">
-          <KioskFrame textSize="text-[13px]" />
+          <OperaHouseModel heroRef={heroRef} />
         </SlideIn>
       </div>
     </>
@@ -214,9 +230,13 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
   const role = project.role || "UI Designer";
   const timeframe = project.timeframe || "";
   const badges = project.tags ?? [];
+  // Scroll range for OperaHouseModel's turntable -- spans this whole
+  // section (not just the model's own small frame) so the rotation plays
+  // out across the full hero scroll, see that component's doc comment.
+  const heroRef = useRef<HTMLElement>(null);
 
   return (
-    <section id="hero" className="relative overflow-hidden bg-proj-white">
+    <section id="hero" ref={heroRef} className="relative overflow-hidden bg-proj-white">
       <HeroBody
         kicker={kicker}
         title={title}
@@ -225,6 +245,7 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
         role={role}
         timeframe={timeframe}
         badges={badges}
+        heroRef={heroRef}
       />
     </section>
   );

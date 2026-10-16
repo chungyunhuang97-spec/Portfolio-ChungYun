@@ -15,7 +15,7 @@ interface Photo {
    * grid reads as four separate photos assembling into formation, rather
    * than the uniform fade-up every other SlideIn on this page uses. Skipped
    * under `prefers-reduced-motion` (plain fade only), same precedent as
-   * Hero's TapRipple / ExhibitionZones' ScrollySteps. */
+   * ExhibitionZones' ScrollySteps. */
   from: { x: number; y: number; rotate: number };
 }
 
