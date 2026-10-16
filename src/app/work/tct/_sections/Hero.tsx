@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { RefObject } from "react";
+import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 import { useReducedMotion, useScroll, useMotionValueEvent } from "framer-motion";
 import { Tag } from "@/components/design-system/Tag";
 import { SectionKicker } from "@/components/design-system/SectionKicker";
@@ -37,6 +37,14 @@ const OPERA_HOUSE_FRAMES = Array.from(
   (_, i) => `/work/tct/hero/opera-house/frame-${String(i + 1).padStart(3, "0")}.webp`
 );
 
+/** How far a mouse sweep from edge to edge nudges the turntable away from
+ * its scroll position, in frames -- Joe's desktop-only "跟著滑鼠旋轉" ask.
+ * Deliberately small relative to `OPERA_HOUSE_FRAME_COUNT`: this rides on
+ * top of the scroll-driven frame as a hover nudge, not a second way to
+ * drive the full rotation, so it can never itself reach the first/last
+ * frame scroll hasn't earned yet. */
+const MOUSE_NUDGE_FRAMES = 5;
+
 /**
  * Scroll-scrubbed turntable of the Taichung Opera House massing model --
  * replaces the old placeholder kiosk-screen mockup now that Joe has a real
@@ -53,10 +61,20 @@ const OPERA_HOUSE_FRAMES = Array.from(
  * copy and finishes exactly as the section scrolls past, matching his
  * "最後轉到大門，再接著繼續往下滑" ask: scrolling further after that just
  * continues normally into Exhibition Zones, nothing stays pinned.
+ *
+ * Desktop also gets a mouse-follow nudge on top of the scroll position --
+ * moving the cursor left/right across the model offsets a few frames
+ * either way, so it reads as "the model responds to you", not just an
+ * autoplaying strip. Gated on `(hover: hover) and (pointer: fine)` so
+ * touch scrolling/tapping on mobile never fights the scroll-driven frame
+ * (a touch "move" has no equivalent of hovering off to reset it).
  */
 function OperaHouseModel({ heroRef }: { heroRef: RefObject<HTMLElement | null> }) {
   const reduceMotion = useReducedMotion();
   const [frameIndex, setFrameIndex] = useState(0);
+  const [mouseNudge, setMouseNudge] = useState(0);
+  const canHoverRef = useRef(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
 
   useEffect(() => {
@@ -67,6 +85,7 @@ function OperaHouseModel({ heroRef }: { heroRef: RefObject<HTMLElement | null> }
       const img = new Image();
       img.src = src;
     });
+    canHoverRef.current = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   }, []);
 
   useMotionValueEvent(scrollYProgress, "change", (v) => {
@@ -74,14 +93,34 @@ function OperaHouseModel({ heroRef }: { heroRef: RefObject<HTMLElement | null> }
     setFrameIndex(Math.min(OPERA_HOUSE_FRAME_COUNT - 1, Math.max(0, Math.floor(v * OPERA_HOUSE_FRAME_COUNT))));
   });
 
-  // Reduced motion skips the scroll-driven rotation and simply rests on
-  // the final "facing the entrance" frame, same precedent as this page's
-  // other scroll-driven motion (`ScrollySteps`) falling back to a settled
-  // static state rather than animating.
-  const activeFrame = reduceMotion ? OPERA_HOUSE_FRAMES[OPERA_HOUSE_FRAME_COUNT - 1] : OPERA_HOUSE_FRAMES[frameIndex];
+  function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    if (reduceMotion || !canHoverRef.current || !wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
+    const fromCenter = ((e.clientX - rect.left) / rect.width) * 2 - 1; // -1 (left edge) .. 1 (right edge)
+    const clamped = Math.min(1, Math.max(-1, fromCenter));
+    setMouseNudge(Math.round(clamped * MOUSE_NUDGE_FRAMES));
+  }
+
+  function handlePointerLeave() {
+    setMouseNudge(0);
+  }
+
+  // Reduced motion skips both the scroll-driven rotation and the mouse
+  // nudge, resting on the final "facing the entrance" frame -- same
+  // precedent as this page's other scroll-driven motion (`ScrollySteps`)
+  // falling back to a settled static state rather than animating.
+  const displayedIndex = reduceMotion
+    ? OPERA_HOUSE_FRAME_COUNT - 1
+    : Math.min(OPERA_HOUSE_FRAME_COUNT - 1, Math.max(0, frameIndex + mouseNudge));
+  const activeFrame = OPERA_HOUSE_FRAMES[displayedIndex];
 
   return (
-    <div className="relative aspect-[16/10] w-full">
+    <div
+      ref={wrapRef}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      className="relative aspect-[16/10] w-full"
+    >
       {/* eslint-disable-next-line @next/next/no-img-element -- rapid src
        * swapping across a preloaded sequence, not a fit for next/image's
        * lazy-loading model. */}
