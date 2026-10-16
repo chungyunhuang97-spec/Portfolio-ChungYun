@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { RefObject, SVGProps } from "react";
-import { motion, useScroll, useMotionValueEvent, useReducedMotion } from "framer-motion";
-import { ImageSquare } from "@phosphor-icons/react/dist/ssr";
+import { AnimatePresence, motion, useScroll, useMotionValueEvent, useReducedMotion } from "framer-motion";
+import { ImageSquare, MagnifyingGlassPlus, X } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { SectionKicker } from "@/components/design-system/SectionKicker";
 
@@ -347,6 +347,111 @@ function ModeToggle({
   );
 }
 
+/**
+ * Floats an enlarged copy of the frame's current image above it on
+ * interaction -- Zone 2 & 3 only (`enabled`), per Joe's explicit "展區
+ * 二、三有這個觸發機制，展區一無" call. Reuses whichever image `DeviceFrame`
+ * is already showing (Design or Live) rather than a separate upload --
+ * the point is "look at this one closer", not a different photo.
+ *
+ * Desktop hovers it open/closed. Touch has no "move the pointer away"
+ * gesture to close it with, so on a device that can't hover it instead
+ * opens on tap and needs its own close button (also closes on an outside
+ * tap). The small magnifier badge is the only hint either device gets
+ * that the frame is interactive -- it hides itself once the preview is
+ * open and never renders at all when there's no image yet (an empty
+ * "此畫面製作中" slot has nothing to magnify).
+ */
+function MagnifiableFrame({
+  image,
+  alt,
+  enabled,
+}: {
+  image?: string;
+  alt: string;
+  enabled: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  // Lazy initializer rather than an effect + setState -- `matchMedia` needs
+  // no DOM measurement, just a `window` guard for the SSR pass, so there's
+  // no reason to pay for an extra render after mount to learn it.
+  const [canHover] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches
+  );
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (canHover || !open) return;
+    function handleOutside(e: PointerEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", handleOutside);
+    return () => document.removeEventListener("pointerdown", handleOutside);
+  }, [canHover, open]);
+
+  if (!enabled || !image) return <DeviceFrame image={image} alt={alt} />;
+
+  return (
+    <div
+      ref={wrapRef}
+      className="relative"
+      onMouseEnter={canHover ? () => setOpen(true) : undefined}
+      onMouseLeave={canHover ? () => setOpen(false) : undefined}
+      onClick={canHover ? undefined : () => setOpen((o) => !o)}
+    >
+      <DeviceFrame image={image} alt={alt} />
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute bottom-3 left-3 z-10 flex size-8 items-center justify-center rounded-full border border-grey-100 bg-proj-white shadow-[0_4px_12px_rgba(0,0,0,0.12)] transition-opacity ${
+          open ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <MagnifyingGlassPlus size={14} weight="bold" className="text-grey-500" />
+      </span>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.92 }}
+            transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeOut" }}
+            className="pointer-events-auto absolute -inset-6 z-30 overflow-hidden rounded-[16px] border border-grey-100 bg-proj-white shadow-[0_30px_90px_rgba(0,0,0,0.3)] md:-inset-10"
+          >
+            {isVideoUrl(image) ? (
+              <video
+                src={image}
+                aria-label={alt}
+                className="h-full w-full object-contain"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={image} alt={alt} className="h-full w-full object-contain" />
+            )}
+            {!canHover && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpen(false);
+                }}
+                aria-label="關閉放大預覽"
+                className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-proj-white/90 text-grey-700 shadow-[0_4px_12px_rgba(0,0,0,0.18)]"
+              >
+                <X size={16} weight="bold" />
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 /** The frame + its overlaid Design/Live toggle, shared by every zone
  * layout below -- `FRAME_WIDTH` keeps every zone's frame the same size
  * regardless of whether it shares its row with a step list. */
@@ -355,15 +460,17 @@ function FrameWithToggle({
   alt,
   mode,
   onModeChange,
+  enableMagnify = false,
 }: {
   image?: string;
   alt: string;
   mode: "design" | "live";
   onModeChange: (m: "design" | "live") => void;
+  enableMagnify?: boolean;
 }) {
   return (
     <div className={`relative w-full ${FRAME_WIDTH}`}>
-      <DeviceFrame image={image} alt={alt} />
+      <MagnifiableFrame image={image} alt={alt} enabled={enableMagnify} />
       <div className="absolute bottom-3 right-3 z-10">
         <ModeToggle mode={mode} onChange={onModeChange} />
       </div>
@@ -438,7 +545,7 @@ function ScrollySteps({
             <StepList steps={steps} active={activeStep} onSelect={setActiveStep} hint="↓ 繼續往下捲動" />
           </div>
         </div>
-        <FrameWithToggle image={image} alt={alt} mode={mode} onModeChange={onModeChange} />
+        <FrameWithToggle image={image} alt={alt} mode={mode} onModeChange={onModeChange} enableMagnify={index !== 0} />
       </div>
     </div>
   );
@@ -479,7 +586,7 @@ function StaticZoneBody({ zone, index, mirrored }: { zone: Zone; index: number; 
         )}
       </div>
       <div className={mirrored ? "md:order-1" : ""}>
-        <FrameWithToggle image={image} alt={alt} mode={mode} onModeChange={setMode} />
+        <FrameWithToggle image={image} alt={alt} mode={mode} onModeChange={setMode} enableMagnify={index !== 0} />
       </div>
     </div>
   );
