@@ -55,9 +55,23 @@ function ArchiveFlicker() {
  * cross-project convention as Footer always being orange) -- only the
  * ambient backdrop above is this project's own.
  */
+/** Splits the quote into its two beats ("設計是為了...版面規則。" and "這個
+ * 專案讓我學會...依然好用。") -- the same marker `Outcome.tsx`'s
+ * `splitReflection` already uses for its insight card. Desktop renders
+ * these as two separate stacked blocks instead of one run-on paragraph,
+ * matching Figma's desktop Closing exactly (two distinct text nodes with a
+ * gap between); mobile keeps the original single block, also per Figma. */
+function splitQuote(text: string): [string, string | null] {
+  const marker = "這個專案讓我學會";
+  const idx = text.indexOf(marker);
+  if (idx === -1) return [text, null];
+  return [text.slice(0, idx).trim(), text.slice(idx).trim()];
+}
+
 export function Closing({ reflection }: { reflection: Record<string, unknown> }) {
   const text = reflection.text as string | undefined;
   if (!text) return null;
+  const [quoteBody, quoteLesson] = splitQuote(text);
 
   return (
     <section id="closing" className="relative overflow-hidden bg-secondary-blue">
@@ -92,7 +106,7 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
         <span aria-hidden className="absolute bottom-[80px] right-[120px] font-nunito text-[120px] font-bold leading-[120px] text-proj-white">
           」
         </span>
-        <div className="flex w-[760px] flex-col items-center gap-5 text-center text-proj-white">
+        <div className="flex w-[760px] flex-col items-center gap-10 text-center text-proj-white">
           <motion.p
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -100,8 +114,19 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
             transition={{ duration: 0.6, ease: "easeOut" }}
             className="w-full font-nunito text-[26px] font-bold leading-[40px]"
           >
-            {text}
+            {quoteBody}
           </motion.p>
+          {quoteLesson && (
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "0px" }}
+              transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+              className="w-full font-nunito text-[26px] font-bold leading-[40px]"
+            >
+              {quoteLesson}
+            </motion.p>
+          )}
         </div>
       </div>
     </section>

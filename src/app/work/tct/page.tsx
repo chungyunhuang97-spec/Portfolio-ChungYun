@@ -18,15 +18,34 @@ import { getProjectWithSections } from "@/lib/data";
 // this more specific route over the generic "work/[slug]" CMS-driven page,
 // which is what this project rendered through before this rebuild).
 //
-// Unlike metro/nest-stay/piiluu, there is no Figma source for this project --
-// it was never designed there, only content-authored through the admin CMS
-// (see the 7 typed `project_sections` rows: hero / overview / challenge /
-// role / process / outcome / reflection). So this page is art-directed
-// directly from that content plus docs/case-study-design-conventions.md's
-// "結構層 vs 個性層" rule, rather than ported from a design file. Structure
-// layer (tokens, shared components, card-shadow formula, SlideIn/FadeIn
-// motion feel, mobile/desktop as two independent trees) matches the other
-// three pages exactly. Personality layer for this project:
+// Originally had no Figma source -- it was never designed there, only
+// content-authored through the admin CMS (see the 7 typed `project_sections`
+// rows: hero / overview / challenge / role / process / outcome / reflection),
+// so the first build was art-directed directly from that content plus
+// docs/case-study-design-conventions.md's "結構層 vs 個性層" rule rather than
+// ported from a design file. Joe has since built out a real Figma file for
+// this page (fileKey 8qGUSDUJqOgJaSERffGXVc, desktop node 594:319, mobile
+// node 594:1599) and this page was brought in line with it in two rounds:
+// a first pass added the shared `SectionKicker` component and each section's
+// missing H2 heading between kicker and body copy (the "進一步分段" Joe asked
+// for, giving each section its own heading so the page reads less dense),
+// then a correction pass checked every changed value against the actual
+// Figma node data and fixed drift from it -- `font-display`/Outfit was
+// swapped back to `font-nunito` (the Figma file specifies Nunito
+// exclusively, no Outfit anywhere in it), the new H2 headings' sizes and a
+// couple of their exact wordings were corrected to match their Figma nodes
+// precisely, the Outcome stat digits were brought back from an unFigma'd
+// 64px/40px to the spec'd 48px/24px, and Hero got its still-missing changes:
+// desktop title 64px -> 90px, and a from-scratch mobile layout (the body
+// caption moved below the badge row instead of crowding the title/meta
+// pill, and badges switched from a wrapping flow to a fixed 3-column grid
+// with one dropped and one shortened -- Joe's "本來會有點疊在一起" fix).
+// Closing's desktop quote also split into two stacked blocks instead of one
+// run-on paragraph, matching Figma's two separate text nodes there.
+// Structure layer (tokens, shared components, card-shadow formula, SlideIn/
+// FadeIn motion feel, mobile/desktop as two independent trees) still
+// matches the other three pages exactly -- only this page's own personality
+// layer below changed. Personality layer for this project:
 //   - Dominant accent: secondary-blue (#0D21FF) -- originally launched with
 //     accent-pink (the one color token not yet claimed, per the conventions
 //     doc's "每個專案挑一個主導色" checklist), but switched to blue per Joe's

@@ -91,8 +91,8 @@ export function Context({
     <section className="bg-grey-50 px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[960px] flex-col items-center gap-10 md:gap-14">
         <SlideIn className="flex w-full flex-col items-center gap-4 text-center">
-          <SectionKicker color="blue">CONTEXT</SectionKicker>
-          <h2 className="font-display text-[24px] font-bold text-grey-800 md:text-[32px]">專案背景與挑戰</h2>
+          <SectionKicker color="blue" icon={null}>CONTEXT</SectionKicker>
+          <h2 className="font-nunito text-[20px] font-bold text-grey-800 md:text-[36px]">專案背景</h2>
           {intro && (
             <p className="font-nunito max-w-[70ch] text-[16px] leading-[26px] font-normal text-grey-700 md:text-[20px] md:leading-[32px]">
               {intro}
