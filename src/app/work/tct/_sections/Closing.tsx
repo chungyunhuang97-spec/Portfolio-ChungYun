@@ -69,17 +69,24 @@ function ClosingWaveEdge() {
 function ArchiveGrain({ sectionRef }: { sectionRef: RefObject<HTMLElement | null> }) {
   const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start end", "end start"] });
-  const grainY = useTransform(scrollYProgress, [0, 1], [-36, 36]);
+  // ±36px was tuned against the artifact comparison's floating-card mockup,
+  // which had a full section height of scroll room either side of the card
+  // to express it in. The real Closing section is short -- often under one
+  // viewport tall -- so that same range barely moved before the section was
+  // already gone; Joe's "好像只有波浪，没有动态" was that gap, not a missing
+  // effect. ±130 is the amplitude that actually read as motion once checked
+  // at the section's real (short) scroll length.
+  const grainY = useTransform(scrollYProgress, [0, 1], [-130, 130]);
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <motion.div
-        className="absolute -inset-x-6 -inset-y-10"
+        className="absolute -inset-x-6 -inset-y-[150px]"
         style={{
           backgroundImage: `url("${GRAIN_DATA_URI}")`,
           backgroundSize: "140px 140px",
           mixBlendMode: "overlay",
-          opacity: 0.14,
+          opacity: 0.2,
           y: reduceMotion ? 0 : grainY,
         }}
       />
@@ -119,8 +126,10 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
   // (smaller, opposite-leaning) parallax drift -- the text floats a little
   // less and a little the other way from the grain behind it, which is
   // what actually reads as depth rather than two layers moving in lockstep.
+  // Same amplitude correction as `ArchiveGrain`'s `grainY` -- ±18px over
+  // this section's real (short) scroll length read as static.
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start end", "end start"] });
-  const quoteY = useTransform(scrollYProgress, [0, 1], [18, -18]);
+  const quoteY = useTransform(scrollYProgress, [0, 1], [46, -46]);
 
   if (!text) return null;
   const [quoteBody, quoteLesson] = splitQuote(text);
@@ -148,7 +157,7 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
             」
           </span>
           <motion.p
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 32 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.5, ease: "easeOut" }}
@@ -172,7 +181,7 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
           className="flex w-[760px] flex-col items-center gap-10 text-center text-proj-white"
         >
           <motion.p
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 32 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.6, ease: "easeOut" }}
@@ -182,7 +191,7 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
           </motion.p>
           {quoteLesson && (
             <motion.p
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 32 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
