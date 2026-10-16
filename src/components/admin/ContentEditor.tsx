@@ -58,11 +58,12 @@ function detectType(value: unknown, key?: string): FieldType {
 }
 
 function contentToFields(content: Record<string, unknown>): Field[] {
-  return Object.entries(content).map(([key, value]) => ({
+  const fields = Object.entries(content).map(([key, value]) => ({
     key,
     type: detectType(value, key),
     value,
   }));
+  return reorderDesignBeforeLive(fields, (f) => f.key);
 }
 
 function fieldsToContent(fields: Field[]): Record<string, unknown> {
@@ -96,6 +97,31 @@ function arrayFieldStem(key: string): string {
     .toLowerCase()
     .replace(/[-\s]+/g, "_");
   return snake.endsWith("s") ? snake.slice(0, -1) : snake;
+}
+
+/**
+ * Keeps a `design...`/`live...` field pair (e.g. `designImageUrl` +
+ * `liveImageUrl`, `designCaption` + `liveCaption`) in that order wherever
+ * both exist as siblings. Needed because sibling order here otherwise just
+ * reflects Postgres's own jsonb key ordering (shortest-key-first, not
+ * insertion order) -- for these pairs "live" is reliably the shorter key,
+ * so it was surfacing as the FIRST upload field even though content is
+ * always shot in Design before Live. Every other field's relative order is
+ * left untouched.
+ */
+function reorderDesignBeforeLive<T>(items: T[], keyOf: (item: T) => string): T[] {
+  const result = [...items];
+  for (let i = 0; i < result.length; i++) {
+    const designMatch = /^design(.*)$/i.exec(keyOf(result[i]));
+    if (!designMatch) continue;
+    const liveKeyPattern = new RegExp(`^live${designMatch[1]}$`, "i");
+    const liveIndex = result.findIndex((item, j) => j !== i && liveKeyPattern.test(keyOf(item)));
+    if (liveIndex !== -1 && liveIndex < i) {
+      const [liveItem] = result.splice(liveIndex, 1);
+      result.splice(i, 0, liveItem);
+    }
+  }
+  return result;
 }
 
 interface AttachedMedia {
@@ -434,9 +460,10 @@ function NestedObjectFields({
   onChange: (obj: Record<string, unknown>) => void;
   mediaPathPrefix?: string;
 }) {
+  const entries = reorderDesignBeforeLive(Object.entries(obj), ([k]) => k);
   return (
     <div className="space-y-3">
-      {Object.entries(obj).map(([k, v]) => (
+      {entries.map(([k, v]) => (
         <div key={k} className="space-y-1">
           <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">{humanizeKey(k)}</label>
           <AnyValueEditor

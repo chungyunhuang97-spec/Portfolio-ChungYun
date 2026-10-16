@@ -82,6 +82,15 @@ function DoodlePlayTarget(props: SVGProps<SVGSVGElement>) {
 
 const ZONE_ICONS = [DoodleDrillDown, DoodleMasonry, DoodlePlayTarget];
 
+/** Live-mode uploads are commonly screen recordings, not stills -- matches
+ * the same URL-extension sniff `AdminMediaDropzone` and every other
+ * project's showcase section already use, since the field itself
+ * (`liveImageUrl`) can hold either an image or a video URL despite its
+ * name. */
+function isVideoUrl(url: string) {
+  return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
+}
+
 /**
  * Scroll-linked wayfinding line -- this section's signature motion. A
  * dotted guide line runs behind the zone number badges; as the visitor
@@ -275,8 +284,21 @@ function DeviceFrame({ image, alt }: { image?: string; alt: string }) {
        * whole screenshot visible regardless of its own aspect ratio. */}
       <div className="aspect-[3/2] w-full bg-grey-50">
         {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img key={image} src={image} alt={alt} className="h-full w-full object-contain" />
+          isVideoUrl(image) ? (
+            <video
+              key={image}
+              src={image}
+              aria-label={alt}
+              className="h-full w-full object-contain"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={image} src={image} alt={alt} className="h-full w-full object-contain" />
+          )
         ) : (
           // Dashed border + icon, matching `MockupSlot`'s established
           // "media待上傳" convention rather than plain centered text, so an
