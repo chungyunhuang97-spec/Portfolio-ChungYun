@@ -64,11 +64,11 @@ function TapPoint() {
  * than added to design-system/, same precedent as Piiluu's local CardFace/
  * DisintegratingCard: this bezel shape has no other caller yet.
  */
-function KioskFrame() {
+function KioskFrame({ textSize = "text-[10px] md:text-[13px]" }: { textSize?: string }) {
   return (
     <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[20px] border-[10px] border-primary-black bg-grey-50 shadow-[0_20px_60px_rgba(0,0,0,0.14)] md:rounded-[28px] md:border-[14px]">
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
-        <span className="font-nunito text-[11px] font-bold leading-relaxed text-grey-500 md:text-[13px]">
+        <span className={`font-nunito font-bold leading-relaxed text-grey-500 ${textSize}`}>
           展區觸控畫面
           <br />
           （實機拍攝影像待上傳）
@@ -89,53 +89,114 @@ interface HeroContentProps {
   badges: string[];
 }
 
+/** Mobile-only badge trim -- matching Figma's mobile Hero exactly: a
+ * strict 3-column grid replaces desktop's wrapping flow (four full-length
+ * pills wrapping at this width is what was overlapping before), "Client
+ * Work" is dropped, and "Kiosk/Touch UI" shortens to "Kiosk UI" to fit its
+ * grid cell. Desktop keeps the full four-badge set from `project.tags`
+ * unchanged. */
+const MOBILE_HIDDEN_BADGES = new Set(["Client Work"]);
+const MOBILE_BADGE_RENAMES: Record<string, string> = { "Kiosk/Touch UI": "Kiosk UI" };
+
 function HeroBody({ kicker, title, titleLine2, body, role, timeframe, badges }: HeroContentProps) {
+  const mobileBadges = badges
+    .filter((badge) => !MOBILE_HIDDEN_BADGES.has(badge))
+    .map((badge) => MOBILE_BADGE_RENAMES[badge] ?? badge);
+
+  // The body caption has a literal "," splitting its two clauses -- on
+  // desktop it stays one `whitespace-nowrap` line (comma and all), but the
+  // mobile redesign breaks it into two short lines at that same point and
+  // drops the comma, so it reads as two beats rather than one run-on
+  // sentence at mobile width.
+  const bodyParts = body.split(",");
+  const [bodyLine1, bodyLine2] = bodyParts.length > 1 ? bodyParts : [body, undefined];
+
   return (
-    <div className="flex flex-col items-center gap-6 px-6 pt-6 pb-10 text-center md:gap-10 md:px-[120px] md:pt-[180px] md:pb-[100px]">
-      <SlideIn delay={0.05} className="flex flex-col items-center gap-3 md:gap-4">
-        <SectionKicker color="blue" icon={null}>{kicker}</SectionKicker>
-        {/* Split into two tiers -- the project's full name ("NTSO 80週年
-         * 特展 互動展區體驗設計") read as one run-on h1 wrapped awkwardly
-         * across lines and was hard to parse. `title` (NTSO 80週年特展)
-         * is the main headline; `titleLine2` (互動展區體驗設計) follows
-         * immediately after as a smaller, lighter second line -- same
-         * "big headline + supporting line" shape as Nest Stay/Metro's own
-         * Hero titles, just split into two DB fields instead of one here
-         * since this project's name itself has that two-part structure.
-         *
-         * Font: font-display (Outfit Bold/ExtraBold) per Figma spec --
-         * Outfit gives the display headline more visual weight and
-         * typographic contrast vs Nunito body copy, matching the design. */}
-        <h1 className="font-display max-w-[22ch] text-[32px] leading-[42px] font-bold text-grey-800 md:text-[64px] md:leading-[80px] md:font-extrabold md:text-primary-black">
-          {title}
-        </h1>
-        {titleLine2 && (
-          <p className="font-display max-w-[24ch] text-[18px] font-bold leading-[26px] text-grey-600 md:text-[28px] md:leading-[38px]">
-            {titleLine2}
-          </p>
+    <>
+      {/* Mobile -- reworked per Joe's "本來會有點疊在一起" fix. Two
+       * structural changes from desktop, not just smaller text: the body
+       * caption moves from right under the title (where it was colliding
+       * with the meta pill) down to just above the kiosk frame, reading as
+       * the frame's own caption instead; and the badge row below switches
+       * from desktop's wrapping flow to a fixed 3-column grid (see
+       * `MOBILE_HIDDEN_BADGES`/`MOBILE_BADGE_RENAMES` above). Kept as its
+       * own tree rather than reshuffled with responsive classes, since the
+       * content order itself differs, not just sizing. */}
+      <SlideIn delay={0.05} className="flex flex-col items-center gap-6 px-6 pt-6 pb-10 text-center md:hidden">
+        <div className="flex flex-col items-center gap-3">
+          <SectionKicker color="blue" icon={null}>{kicker}</SectionKicker>
+          <div className="flex flex-col items-center">
+            <h1 className="font-nunito text-[35px] leading-[48px] font-bold text-grey-800">{title}</h1>
+            {titleLine2 && (
+              <p className="font-nunito text-[24px] leading-[36px] font-bold text-grey-500">{titleLine2}</p>
+            )}
+          </div>
+          {timeframe && <MetaPill role={role} timeframe={timeframe} />}
+        </div>
+
+        {mobileBadges.length > 0 && (
+          <div className="grid w-full grid-cols-3 gap-2">
+            {mobileBadges.map((badge) => (
+              <Tag key={badge} variant="blue" className="w-full justify-center">
+                {badge}
+              </Tag>
+            ))}
+          </div>
         )}
+
         {body && (
-          <p className="max-w-[320px] font-nunito text-[14px] leading-[21px] font-normal text-grey-600 md:max-w-[640px] md:text-[18px] md:leading-[28px]">
-            {body}
+          <p className="max-w-[286px] font-nunito text-[14px] leading-[21px] font-normal text-grey-600">
+            {bodyLine1}
+            {bodyLine2 && (
+              <>
+                <br />
+                {bodyLine2}
+              </>
+            )}
           </p>
         )}
-        {timeframe && <MetaPill role={role} timeframe={timeframe} />}
+
+        <div className="w-full max-w-[640px]">
+          <KioskFrame />
+        </div>
       </SlideIn>
 
-      {badges.length > 0 && (
-        <SlideIn delay={0.15} className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
-          {badges.map((badge) => (
-            <Tag key={badge} variant="blue">
-              {badge}
-            </Tag>
-          ))}
+      {/* Desktop -- same shape as before (kicker/title/subtitle/body/
+       * metapill, then badges, then frame); only the title grew from 64px
+       * to 90px per the redesign. */}
+      <div className="hidden flex-col items-center gap-10 px-[120px] pt-[180px] pb-[100px] text-center md:flex">
+        <SlideIn delay={0.05} className="flex flex-col items-center gap-4">
+          <SectionKicker color="blue" icon={null}>{kicker}</SectionKicker>
+          {/* Split into two tiers -- the project's full name ("NTSO 80週年
+           * 特展 互動展區體驗設計") read as one run-on h1 wrapped awkwardly
+           * across lines and was hard to parse. `title` (NTSO 80週年特展)
+           * is the main headline; `titleLine2` (互動展區體驗設計) follows
+           * immediately after as a smaller, lighter second line. */}
+          <h1 className="font-nunito text-[90px] leading-[100px] font-extrabold text-primary-black">{title}</h1>
+          {titleLine2 && (
+            <p className="font-nunito text-[28px] leading-[38px] font-bold text-grey-600">{titleLine2}</p>
+          )}
+          {body && (
+            <p className="max-w-[640px] font-nunito text-[18px] leading-[28px] font-normal text-grey-600">{body}</p>
+          )}
+          {timeframe && <MetaPill role={role} timeframe={timeframe} />}
         </SlideIn>
-      )}
 
-      <SlideIn delay={0.25} className="w-full max-w-[640px]">
-        <KioskFrame />
-      </SlideIn>
-    </div>
+        {badges.length > 0 && (
+          <SlideIn delay={0.15} className="flex flex-wrap items-center justify-center gap-4">
+            {badges.map((badge) => (
+              <Tag key={badge} variant="blue">
+                {badge}
+              </Tag>
+            ))}
+          </SlideIn>
+        )}
+
+        <SlideIn delay={0.25} className="w-full max-w-[640px]">
+          <KioskFrame textSize="text-[13px]" />
+        </SlideIn>
+      </div>
+    </>
   );
 }
 

@@ -28,8 +28,8 @@ export function RoleContribution({ role }: { role: Record<string, unknown> }) {
     <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[960px] flex-col gap-10 md:gap-12">
         <SlideIn className="flex flex-col items-center gap-3 text-center">
-          <SectionKicker color="blue">ROLE &amp; CONTRIBUTION</SectionKicker>
-          <h2 className="font-display text-[24px] font-bold text-grey-800 md:text-[32px]">我的角色與貢獻</h2>
+          <SectionKicker color="blue" icon={null}>ROLE &amp; CONTRIBUTION</SectionKicker>
+          <h2 className="font-nunito text-[20px] font-bold text-grey-800 md:text-[36px]">我的角色與貢獻</h2>
         </SlideIn>
 
         <div className="flex flex-col gap-5 md:flex-row md:gap-6">

@@ -531,8 +531,8 @@ export function ExhibitionZones({ process }: { process: Record<string, unknown> 
     <section className="bg-grey-50 px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[1000px] flex-col gap-10 md:gap-14">
         <SlideIn className="flex flex-col items-center gap-3 text-center">
-          <SectionKicker color="blue">PROCESS</SectionKicker>
-          <h2 className="font-display text-[24px] font-bold text-grey-800 md:text-[32px]">三個沉浸式展區</h2>
+          <SectionKicker color="blue" icon={null}>PROCESS</SectionKicker>
+          <h2 className="font-nunito text-[20px] font-bold text-grey-800 md:text-[36px]">三大展區設計</h2>
           {note && (
             <p className="font-nunito max-w-[65ch] text-[15px] leading-[24px] font-normal text-grey-700 md:text-[18px] md:leading-[28px]">
               {note}

@@ -48,7 +48,7 @@ function StatTile({ target, unit, label, delay }: { target: number; unit: string
   return (
     <SlideIn delay={delay} className="flex flex-1">
       <div ref={ref} className="flex flex-1 flex-col items-center gap-1 rounded-[20px] bg-grey-50 px-6 py-8 text-center">
-        <p className="font-fredoka text-[40px] leading-none text-secondary-blue md:text-[64px]">
+        <p className="font-fredoka text-[24px] leading-none text-secondary-blue md:text-[48px]">
           {value}
           <span className="font-nunito ml-1.5 text-[16px] font-bold text-grey-700 md:text-[18px]">{unit}</span>
         </p>
@@ -130,8 +130,8 @@ export function Outcome({
     <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[800px] flex-col gap-10 md:gap-12">
         <SlideIn className="flex flex-col items-center gap-3 text-center">
-          <SectionKicker color="blue">FINAL THOUGHTS</SectionKicker>
-          <h2 className="font-display text-[24px] font-bold text-grey-800 md:text-[40px]">成果與反思</h2>
+          <SectionKicker color="blue" icon={null}>FINAL THOUGHTS</SectionKicker>
+          <h2 className="font-nunito text-[20px] font-bold text-grey-800 md:text-[36px]">成果與反思</h2>
           {anecdote && (
             <p className="font-nunito mx-auto mt-4 max-w-[65ch] text-[14px] leading-[23px] font-normal text-grey-600 md:text-[16px] md:leading-[26px]">
               {anecdote}
