@@ -176,8 +176,22 @@ function HeroBody({ kicker, title, titleLine2, body, role, timeframe, badges, he
        * from desktop's wrapping flow to a fixed 3-column grid (see
        * `MOBILE_HIDDEN_BADGES`/`MOBILE_BADGE_RENAMES` above). Kept as its
        * own tree rather than reshuffled with responsive classes, since the
-       * content order itself differs, not just sizing. */}
-      <SlideIn delay={0.05} className="flex flex-col items-center gap-6 px-6 pt-6 pb-10 text-center md:hidden">
+       * content order itself differs, not just sizing.
+       *
+       * `min-h-[100dvh]` + `justify-center` so the section fills the first
+       * screen the way Piiluu's mobile Hero does, instead of just starting
+       * at the top and running however tall its content happens to be.
+       * `pt-[104px]` is `Navbar`'s own fixed mobile header footprint
+       * (py-8 top/bottom padding + the 40px hamburger button) -- `Navbar`
+       * is `position: fixed`, so it doesn't push this section down on its
+       * own; Metro and Nest Stay's Heroes already use this same 104px
+       * value for the same reason. Previously this was a plain `pt-6`,
+       * which let the title render underneath the fixed header -- Joe's
+       * "100 VH 完整顯示，同時不會跟 header 打架" report. */}
+      <SlideIn
+        delay={0.05}
+        className="flex min-h-[100dvh] flex-col items-center justify-center gap-6 px-6 pt-[104px] pb-10 text-center md:hidden"
+      >
         <div className="flex flex-col items-center gap-3">
           <SectionKicker color="blue" icon={null}>{kicker}</SectionKicker>
           <div className="flex flex-col items-center">

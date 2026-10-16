@@ -7,14 +7,24 @@ import { ImageSquare, MagnifyingGlassPlus, X } from "@phosphor-icons/react/dist/
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { SectionKicker } from "@/components/design-system/SectionKicker";
 
-/** Every zone's Design/Live frame renders at this same fixed width on
- * desktop, whether or not it shares its row with a step list -- Joe's
- * "frame 大小忽大忽小" note: `object-contain` already kept each image's own
- * aspect ratio from being cropped, but the FRAME ITSELF still rendered at
+/** Every zone's Design/Live frame renders at this same width on desktop,
+ * whether or not it shares its row with a step list -- Joe's "frame 大小
+ * 忽大忽小" note: `object-contain` already kept each image's own aspect
+ * ratio from being cropped, but the FRAME ITSELF still rendered at
  * different widths (Zone 1 constrained by sharing a grid row with
  * StepList, Zone 2/3 stretching up to their own `max-w`). Fixing the
- * column width here makes all three read as one consistent frame size. */
-const FRAME_WIDTH = "md:w-[520px]";
+ * column width here makes all three read as one consistent frame size.
+ *
+ * `max-w` rather than a hard `w-[520px]` -- the hard width is what caused
+ * Joe's "展區跑位" report: a CSS grid item's default `min-width: auto`
+ * means it won't shrink below its content's own min-content size, so a
+ * child that's hard-coded to 520px wide forces the FRAME's grid column to
+ * stay ≥520px even when the viewport can't actually fit that plus the
+ * text column next to it -- the text column was the one that gave way,
+ * collapsing to near-zero and wrapping every CJK character onto its own
+ * line. `max-w` instead lets the frame shrink to fit whatever column
+ * width the grid actually has to give it. */
+const FRAME_WIDTH = "lg:max-w-[520px]";
 
 interface ZoneStep {
   label: string;
@@ -488,7 +498,7 @@ function FrameWithToggle({
   popupAlt?: string;
 }) {
   return (
-    <div className={`relative w-full ${FRAME_WIDTH}`}>
+    <div className={`relative w-full min-w-0 ${FRAME_WIDTH}`}>
       <MagnifiableFrame
         image={image}
         alt={alt}
@@ -562,9 +572,9 @@ function ScrollySteps({
   const alt = (mode === "design" ? steps[activeStep]?.label : zone.liveCaption) ?? zone.title;
 
   return (
-    <div ref={trackRef} className="relative hidden md:block" style={{ height: `${steps.length * 70}vh` }}>
+    <div ref={trackRef} className="relative hidden lg:block" style={{ height: `${steps.length * 70}vh` }}>
       <div className="sticky top-28 grid grid-cols-[0.8fr_1.2fr] gap-8 pb-16">
-        <div>
+        <div className="min-w-0">
           <ZoneHeader zone={zone} index={index} />
           <div className="mt-6">
             <StepList steps={steps} active={activeStep} onSelect={setActiveStep} hint="↓ 繼續往下捲動" />
@@ -591,14 +601,21 @@ function ScrollySteps({
  * `ScrollySteps` are never visible at the same time.
  *
  * Text and frame share one responsive grid (`grid-cols-1` → single stacked
- * column on mobile, `md:grid-cols-[0.8fr_1.2fr]` side by side on desktop)
- * instead of the frame rendering full-width below the header -- that
- * stacked arrangement is exactly what made Zone 2/3 read as cramped (the
- * frame was squeezed into the same narrow column as the text, rather than
- * getting its own column). `mirrored` swaps which column each side lands
- * in via `order-*`, for the zigzag's one flipped zone; it only takes
- * effect at `md:`, so mobile (already a single stacked column with no
- * "narrow" problem to fix) never mirrors. */
+ * column below `lg:`, `lg:grid-cols-[0.8fr_1.2fr]` side by side from
+ * `lg:` up) instead of the frame rendering full-width below the header --
+ * that stacked arrangement is exactly what made Zone 2/3 read as cramped
+ * (the frame was squeezed into the same narrow column as the text, rather
+ * than getting its own column). The two-column grid used to switch on at
+ * `md:` (768px), but a 520px-wide frame plus a readable text column never
+ * actually fit in a 768-1023px viewport -- Joe's "展區跑位" report, the
+ * text column losing the fight for space and wrapping to one CJK
+ * character per line. Stacking all the way through `lg:` instead (and
+ * `FRAME_WIDTH` capping rather than forcing the frame's width -- see that
+ * constant's own comment) is what actually fits that range. `mirrored`
+ * swaps which column each side lands in via `order-*`, for the zigzag's
+ * one flipped zone; it only takes effect at `lg:` too, so everything
+ * narrower than that (already a single stacked column with no "narrow"
+ * problem to fix) never mirrors. */
 function StaticZoneBody({ zone, index, mirrored }: { zone: Zone; index: number; mirrored: boolean }) {
   const hasSteps = Boolean(zone.steps && zone.steps.length > 0);
   const [mode, setMode] = useState<"design" | "live">(hasSteps || zone.designImageUrl ? "design" : "live");
@@ -609,8 +626,8 @@ function StaticZoneBody({ zone, index, mirrored }: { zone: Zone; index: number; 
   const alt = (mode === "design" ? zone.designCaption : zone.liveCaption) ?? zone.title;
 
   return (
-    <div className="grid gap-4 md:grid-cols-[0.8fr_1.2fr] md:items-start md:gap-8">
-      <div className={mirrored ? "md:order-2" : ""}>
+    <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:gap-8">
+      <div className={`min-w-0 ${mirrored ? "lg:order-2" : ""}`}>
         <ZoneHeader zone={zone} index={index} />
         {hasSteps && zone.steps && (
           <div className="mt-6">
@@ -618,7 +635,7 @@ function StaticZoneBody({ zone, index, mirrored }: { zone: Zone; index: number; 
           </div>
         )}
       </div>
-      <div className={mirrored ? "md:order-1" : ""}>
+      <div className={mirrored ? "lg:order-1" : ""}>
         <FrameWithToggle
           image={image}
           alt={alt}
@@ -671,7 +688,7 @@ function ZoneCard({
       <div className="flex-1 pt-1">
         {hasSteps && !reduceMotion ? (
           <>
-            <div className="md:hidden">
+            <div className="lg:hidden">
               <StaticZoneBody zone={zone} index={index} mirrored={false} />
             </div>
             <ScrollySteps zone={zone} index={index} mode={mode} onModeChange={setMode} />

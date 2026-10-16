@@ -107,10 +107,12 @@ function ArchiveGrain({ sectionRef }: { sectionRef: RefObject<HTMLElement | null
  */
 /** Splits the quote into its two beats ("設計是為了...版面規則。" and "這個
  * 專案讓我學會...依然好用。") -- the same marker `Outcome.tsx`'s
- * `splitReflection` already uses for its insight card. Desktop renders
- * these as two separate stacked blocks instead of one run-on paragraph,
- * matching Figma's desktop Closing exactly (two distinct text nodes with a
- * gap between); mobile keeps the original single block, also per Figma. */
+ * `splitReflection` already uses for its insight card. Both the compact
+ * (phone/tablet) and desktop templates below render these as two separate
+ * stacked blocks instead of one run-on paragraph, matching Figma's
+ * desktop Closing exactly (two distinct text nodes with a gap between) --
+ * the compact template used to keep the original single block instead,
+ * which was Joe's "手機版...沒有做分段" report. */
 function splitQuote(text: string): [string, string | null] {
   const marker = "這個專案讓我學會";
   const idx = text.indexOf(marker);
@@ -144,16 +146,26 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
       <ClosingWaveEdge />
       <ArchiveGrain sectionRef={sectionRef} />
 
-      {/* Mobile */}
-      <div className="relative flex w-full flex-col items-center justify-center px-6 py-20 md:hidden">
+      {/* Compact (phone + tablet) -- the desktop block below needs its
+       * fixed-pixel 760px text column plus 120px/100px quote-mark and
+       * padding offsets to actually fit, which only a `lg:` (1024px+)
+       * viewport has room for: narrower than that, the fixed-width column
+       * either collided with the big quote marks or forced this whole
+       * section to overflow sideways. Joe's "footer 的内容会被超出那个上下
+       * 引号" report was exactly a ~973px viewport caught in that gap
+       * between the old `md:` (768px) switch and the space 760px+margins
+       * actually need. Scales its own max-width/type up a step at `md:`
+       * so tablet still reads as a deliberate layout, not just a stretched
+       * phone one. */}
+      <div className="relative flex w-full flex-col items-center justify-center px-6 py-20 lg:hidden">
         <motion.div
           style={{ y: reduceMotion ? 0 : quoteY }}
-          className="relative flex w-full max-w-[326px] flex-col items-center gap-3 pt-12 pb-12 text-center text-proj-white"
+          className="relative flex w-full max-w-[326px] flex-col items-center gap-6 pt-12 pb-12 text-center text-proj-white md:max-w-[560px]"
         >
-          <span aria-hidden className="pointer-events-none absolute left-0 top-0 font-nunito text-[40px] font-bold leading-[40px] text-proj-white">
+          <span aria-hidden className="pointer-events-none absolute left-0 top-0 font-nunito text-[40px] font-bold leading-[40px] text-proj-white md:text-[56px] md:leading-[56px]">
             「
           </span>
-          <span aria-hidden className="pointer-events-none absolute bottom-0 right-0 font-nunito text-[40px] font-bold leading-[40px] text-proj-white">
+          <span aria-hidden className="pointer-events-none absolute bottom-0 right-0 font-nunito text-[40px] font-bold leading-[40px] text-proj-white md:text-[56px] md:leading-[56px]">
             」
           </span>
           <motion.p
@@ -161,15 +173,26 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="w-full font-nunito text-[16px] font-bold leading-[26px]"
+            className="w-full font-nunito text-[16px] font-bold leading-[26px] md:text-[18px] md:leading-[28px]"
           >
-            {text}
+            {quoteBody}
           </motion.p>
+          {quoteLesson && (
+            <motion.p
+              initial={{ opacity: 0, y: 32 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "0px" }}
+              transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+              className="w-full font-nunito text-[16px] font-bold leading-[26px] md:text-[18px] md:leading-[28px]"
+            >
+              {quoteLesson}
+            </motion.p>
+          )}
         </motion.div>
       </div>
 
-      {/* Desktop */}
-      <div className="relative hidden w-full flex-col items-center justify-center gap-8 p-[100px] md:flex md:min-h-[420px]">
+      {/* Desktop -- `lg:` and up only, see the compact block's comment. */}
+      <div className="relative hidden w-full flex-col items-center justify-center gap-8 p-[100px] lg:flex lg:min-h-[420px]">
         <span aria-hidden className="absolute left-[120px] top-[80px] font-nunito text-[120px] font-bold leading-[120px] text-proj-white">
           「
         </span>
