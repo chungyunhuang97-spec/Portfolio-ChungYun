@@ -12,6 +12,7 @@ interface Platform {
   color: string;
   desc: string;
   features: string[];
+  screenshot_url?: string;
 }
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -108,7 +109,16 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
             <div className="w-[180px] md:w-[220px]">
               <PhoneFrame
                 screen={
-                  <PlaceholderScreen color={current.color} label={current.label} />
+                  current.screenshot_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={current.screenshot_url}
+                      alt={`${current.name} 介面截圖`}
+                      className="h-full w-full object-cover object-top"
+                    />
+                  ) : (
+                    <PlaceholderScreen color={current.color} label={current.label} />
+                  )
                 }
                 float
               />
