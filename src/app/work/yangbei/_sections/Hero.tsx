@@ -56,14 +56,14 @@ function MetaPill({
 }) {
   return (
     <div
-      className={`font-nunito flex items-center gap-4 rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2 text-[12px] backdrop-blur-[6px] ${className}`}
+      className={`font-nunito flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2 text-[12px] backdrop-blur-[6px] ${className}`}
     >
-      <div className="flex items-center gap-1.5 whitespace-nowrap">
+      <div className="flex items-center gap-1.5">
         <span className="text-grey-500">專案角色</span>
         <span className="font-semibold text-[#262626]">{role}</span>
       </div>
-      <span className="size-[3px] shrink-0 rounded-full bg-grey-300" aria-hidden />
-      <div className="flex items-center gap-1.5 whitespace-nowrap">
+      <span className="hidden size-[3px] shrink-0 rounded-full bg-grey-300 sm:block" aria-hidden />
+      <div className="flex items-center gap-1.5">
         <span className="text-grey-500">時程</span>
         <span className="font-semibold text-[#262626]">{timeframe}</span>
       </div>
@@ -120,16 +120,16 @@ export function Hero({
 
   return (
     <section id="hero" className="relative overflow-hidden bg-proj-white">
-      {/* Mobile */}
+      {/* Mobile — fits within 100dvh */}
       <motion.div
-        className="flex flex-col gap-4 px-6 pt-[104px] pb-12 md:hidden"
+        className="flex h-dvh flex-col gap-3 px-6 pt-[88px] pb-6 md:hidden"
         variants={heroContainer}
         initial="hidden"
         animate="show"
       >
         <motion.div variants={heroItem} className="flex flex-col items-start gap-2">
           <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
-          <h1 className="font-nunito text-[35px] leading-[48px] font-bold text-[#333]">
+          <h1 className="font-nunito text-[32px] leading-[44px] font-bold text-[#333]">
             {title}
           </h1>
         </motion.div>
@@ -139,7 +139,7 @@ export function Hero({
             <MetaPill
               role={role}
               timeframe={timeframe}
-              className="w-full justify-between"
+              className="w-full"
             />
           </motion.div>
         )}
@@ -157,14 +157,11 @@ export function Hero({
           </motion.div>
         )}
 
-        <motion.div variants={heroItem} className="mx-auto w-[62%] max-w-[240px] py-4">
-          <PhoneFrame screen={screen} float />
-        </motion.div>
-
-        <motion.div variants={heroItem}>
-          <p className="font-nunito text-center text-[14px] leading-[21px] font-normal text-[#666]">
-            {body}
-          </p>
+        {/* Phone — flex-1 so it fills remaining space, capped to avoid overflow */}
+        <motion.div variants={heroItem} className="flex min-h-0 flex-1 items-center justify-center py-1">
+          <div className="h-full max-h-[320px] w-auto" style={{ aspectRatio: "375/812" }}>
+            <PhoneFrame screen={screen} float />
+          </div>
         </motion.div>
       </motion.div>
 
