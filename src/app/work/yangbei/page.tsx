@@ -12,6 +12,7 @@ import { AIWorkflow } from "./_sections/AIWorkflow";
 import { Outcomes } from "./_sections/Outcomes";
 import { Closing } from "./_sections/Closing";
 import { getProjectWithSections } from "@/lib/data";
+import type { YangbeiPlatform } from "./types";
 
 // Hand-crafted static route for 央北社宅活動報名系統 case study.
 // Next.js resolves this more-specific route before the generic /work/[slug] page.
@@ -56,11 +57,15 @@ export default async function YangbeiPage() {
   const data = await loadYangbei();
   if (!data) notFound();
 
+  const platforms = Array.isArray(data.process.platforms)
+    ? (data.process.platforms as YangbeiPlatform[])
+    : [];
+
   return (
     <DoorReveal>
       <Navbar backHref="/" />
       <main className="font-nunito bg-proj-white">
-        <Hero project={data.project} hero={data.hero} />
+        <Hero project={data.project} hero={data.hero} platforms={platforms} />
         <WhyThisProject process={data.process} />
         <ThreeLayerArchitecture process={data.process} />
         <PlatformShowcase process={data.process} />

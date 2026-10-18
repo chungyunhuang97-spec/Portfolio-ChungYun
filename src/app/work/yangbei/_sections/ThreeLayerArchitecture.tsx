@@ -3,20 +3,10 @@
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
+import type { YangbeiPlatform as Platform } from "../types";
 
 function toHref(url: string) {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
-}
-
-interface Platform {
-  id: string;
-  name: string;
-  label: string;
-  color: string;
-  url: string;
-  auth: string;
-  desc: string;
-  features: string[];
 }
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];

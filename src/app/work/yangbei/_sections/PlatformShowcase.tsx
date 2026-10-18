@@ -4,16 +4,17 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
+import { LaptopFrame } from "@/components/design-system/LaptopFrame";
+import type { YangbeiPlatform as Platform } from "../types";
 
-interface Platform {
-  id: string;
-  name: string;
-  label: string;
-  color: string;
-  desc: string;
-  features: string[];
-  screenshot_url?: string;
-}
+/**
+ * Which platforms are used on a computer rather than a phone — drives which
+ * device frame renders its screenshot. 後台 (admin) is desktop-first: course
+ * management and the signup-funnel monitor are built for a wide screen, so a
+ * phone mockup would misrepresent how it's actually used. Keyed on `id`
+ * rather than matching the display name, since that's CMS-editable copy.
+ */
+const DESKTOP_PLATFORM_IDS = new Set(["admin"]);
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -104,10 +105,11 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
           transition={{ duration: 0.3, ease: EASE }}
           className="flex flex-col gap-8 md:flex-row md:items-center md:gap-16"
         >
-          {/* Phone mockup */}
-          <div className="flex justify-center md:w-[220px] md:shrink-0">
-            <div className="w-[180px] md:w-[220px]">
-              <PhoneFrame
+          {/* Device mockup — laptop for desktop-first platforms, phone otherwise */}
+          {DESKTOP_PLATFORM_IDS.has(current.id) ? (
+            <div className="w-full md:max-w-[480px] md:shrink-0">
+              <LaptopFrame
+                url={current.url}
                 screen={
                   current.screenshot_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -120,10 +122,29 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
                     <PlaceholderScreen color={current.color} label={current.label} />
                   )
                 }
-                float
               />
             </div>
-          </div>
+          ) : (
+            <div className="flex justify-center md:w-[220px] md:shrink-0">
+              <div className="w-[180px] md:w-[220px]">
+                <PhoneFrame
+                  screen={
+                    current.screenshot_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={current.screenshot_url}
+                        alt={`${current.name} 介面截圖`}
+                        className="h-full w-full object-cover object-top"
+                      />
+                    ) : (
+                      <PlaceholderScreen color={current.color} label={current.label} />
+                    )
+                  }
+                  float
+                />
+              </div>
+            </div>
+          )}
 
           {/* Text details */}
           <div className="flex flex-1 flex-col gap-5">
