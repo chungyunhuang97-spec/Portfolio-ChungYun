@@ -147,10 +147,10 @@ export function Hero({
         {badges.length > 0 && (
           <motion.div
             variants={heroItem}
-            className="flex w-full flex-wrap items-center gap-2"
+            className="grid w-full grid-cols-2 gap-2"
           >
             {badges.map((badge) => (
-              <Tag key={badge} variant="orange">
+              <Tag key={badge} variant="orange" className="w-full justify-center text-center">
                 {badge}
               </Tag>
             ))}

@@ -20,7 +20,12 @@ const cardVariants = {
   }),
 };
 
-/** Owner badge — distinguishes Joe vs AI vs collab. */
+/**
+ * Owner badge — distinguishes Joe vs AI vs collab. Joe's own contribution
+ * gets a solid fill rather than the AI/collab tint: this is the one badge
+ * meant to stand out against the dark card (see yangbei UX review 5-3 —
+ * the tinted treatment read as too low-contrast to notice).
+ */
 function OwnerBadge({ owner }: { owner: string }) {
   const isAI = owner.includes("AI") || owner.includes("Claude");
   const isCollab = owner.includes("+") || owner.includes("共");
@@ -28,7 +33,7 @@ function OwnerBadge({ owner }: { owner: string }) {
     ? "bg-secondary-blue/10 text-secondary-blue"
     : isCollab
     ? "bg-accent-pink/10 text-accent-pink"
-    : "bg-primary-orange/10 text-primary-orange";
+    : "bg-primary-orange text-proj-white";
   return (
     <span className={`font-nunito rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${bg}`}>
       {owner}

@@ -1,7 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
+
+function toHref(url: string) {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
 
 interface Platform {
   id: string;
@@ -130,11 +135,19 @@ export function ThreeLayerArchitecture({ process }: { process: Record<string, un
                 ))}
               </ul>
 
-              {/* URL chip */}
+              {/* URL chip — clickable so recruiters can open the live product */}
               <div className="mt-auto pt-2">
-                <span className="font-nunito rounded-md bg-white/[0.06] px-2.5 py-1 text-[11px] text-white/30 font-mono">
-                  {platform.url}
-                </span>
+                {platform.url ? (
+                  <a
+                    href={toHref(platform.url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-nunito inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-2.5 py-1 text-[11px] text-white/50 font-mono transition-colors hover:bg-white/[0.1] hover:text-white"
+                  >
+                    {platform.url}
+                    <ArrowUpRight size={11} weight="bold" aria-hidden />
+                  </a>
+                ) : null}
               </div>
             </motion.div>
           </div>
