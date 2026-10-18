@@ -58,7 +58,7 @@ export default async function YangbeiPage() {
 
   return (
     <DoorReveal>
-      <Navbar />
+      <Navbar backHref="/" />
       <main className="font-nunito bg-proj-white">
         <Hero project={data.project} hero={data.hero} />
         <WhyThisProject process={data.process} />

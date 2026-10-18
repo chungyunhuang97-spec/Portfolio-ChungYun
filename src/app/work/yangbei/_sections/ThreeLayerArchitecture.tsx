@@ -57,7 +57,7 @@ export function ThreeLayerArchitecture({ process }: { process: Record<string, un
   if (platforms.length === 0) return null;
 
   return (
-    <section className="bg-[#0A0A0A] px-6 py-16 md:px-[120px] md:py-[80px]">
+    <section className="border-t border-white/[0.06] bg-[#0A0A0A] px-6 py-16 md:px-[120px] md:py-[80px]">
       <SlideIn delay={0.05}>
         <div className="mb-10 flex flex-col gap-3 md:mb-14">
           <span className="font-nunito text-[13px] font-extrabold tracking-[1px] text-white/60 uppercase">

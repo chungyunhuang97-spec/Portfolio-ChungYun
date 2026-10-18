@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { List, X } from "@phosphor-icons/react/dist/ssr";
+import { List, X, ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { StaggeredMenu } from "./StaggeredMenu";
 
 /**
@@ -26,6 +26,7 @@ const LINKS = [
 
 export function Navbar({
   wordmarkTone = "dark",
+  backHref,
 }: {
   /**
    * The mobile-only wordmark ("Chung Yun") only ever shows at the very
@@ -35,6 +36,14 @@ export function Navbar({
    * for contrast instead.
    */
   wordmarkTone?: "dark" | "light";
+  /**
+   * When set, replaces the mobile wordmark with a "← 返回作品集" link back
+   * to the portfolio (same top-of-page-only visibility). Case-study pages
+   * only reachable the hamburger menu otherwise have no way back on mobile
+   * (yangbei UX review 5-2) — opt-in per page rather than default so pages
+   * that don't want it (e.g. the homepage itself) are unaffected.
+   */
+  backHref?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [atTop, setAtTop] = useState(true);
@@ -78,18 +87,37 @@ export function Navbar({
       {/* Mobile: wordmark (top-of-page only) + hamburger (hides on scroll down) */}
       <div className="flex items-center justify-between px-6 py-8 md:hidden">
         <AnimatePresence>
-          {atTop && (
-            <motion.span
+          {atTop && backHref ? (
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className={`font-fredoka text-[20px] ${
-                wordmarkTone === "light" ? "text-cream" : "text-grey-700"
-              }`}
             >
-              Chung Yun
-            </motion.span>
+              <Link
+                href={backHref}
+                className={`font-nunito flex items-center gap-1.5 text-[13px] font-bold ${
+                  wordmarkTone === "light" ? "text-cream" : "text-grey-700"
+                }`}
+              >
+                <ArrowLeft size={14} weight="bold" />
+                返回作品集
+              </Link>
+            </motion.div>
+          ) : (
+            atTop && (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className={`font-fredoka text-[20px] ${
+                  wordmarkTone === "light" ? "text-cream" : "text-grey-700"
+                }`}
+              >
+                Chung Yun
+              </motion.span>
+            )
           )}
         </AnimatePresence>
         <AnimatePresence>

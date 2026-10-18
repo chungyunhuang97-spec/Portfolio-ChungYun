@@ -11,6 +11,11 @@ function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
 }
 
+/** The one badge meant to read as the differentiator (yangbei UX review 4-3). */
+function isHighlightBadge(badge: string) {
+  return /live/i.test(badge);
+}
+
 /** Desktop ±2° mouse-tracking parallax tilt on the phone mockup. */
 function TiltMockup({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -150,7 +155,11 @@ export function Hero({
             className="grid w-full grid-cols-2 gap-2"
           >
             {badges.map((badge) => (
-              <Tag key={badge} variant="orange" className="w-full justify-center text-center">
+              <Tag
+                key={badge}
+                variant={isHighlightBadge(badge) ? "orange" : "outline"}
+                className="w-full justify-center text-center"
+              >
                 {badge}
               </Tag>
             ))}
@@ -195,7 +204,7 @@ export function Hero({
             className="flex items-center justify-center gap-4 flex-wrap"
           >
             {badges.map((badge) => (
-              <Tag key={badge} variant="orange">
+              <Tag key={badge} variant={isHighlightBadge(badge) ? "orange" : "outline"}>
                 {badge}
               </Tag>
             ))}
