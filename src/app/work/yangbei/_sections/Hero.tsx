@@ -5,6 +5,7 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { LabelSmall } from "@/components/design-system/Typography";
 import { Tag } from "@/components/design-system/Tag";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
+import { LaptopFrame } from "@/components/design-system/LaptopFrame";
 import type { Project } from "@/lib/types";
 import type { YangbeiPlatform } from "../types";
 
@@ -12,23 +13,50 @@ function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
 }
 
-/** The one badge meant to read as the differentiator (yangbei UX review 4-3). */
-function isHighlightBadge(badge: string) {
-  return /live/i.test(badge);
+/** 後台 is desktop-first — same device-matching rule as PlatformShowcase. */
+function isDesktopPlatform(platform: YangbeiPlatform) {
+  return platform.id === "admin";
 }
 
-/** One phone in the Hero's three-platform overview row. */
-function MiniPhone({
+/**
+ * One device mockup in the Hero's three-platform overview row — a phone
+ * for 前台/中台, a (smaller, scaled-down) laptop for 後台. Purely visual:
+ * no role label underneath, since this row is a quick "it's a three-tier
+ * system" glance, not the place that explains what each platform is
+ * (PlatformShowcase does that below).
+ */
+function MiniDevice({
   platform,
-  heightClass,
-  tilt,
+  sizeClass,
   float = false,
 }: {
   platform: YangbeiPlatform;
-  heightClass: string;
-  tilt?: "left" | "right";
+  /** Height class (phones size off height, via aspect-ratio) or width
+   *  class (the laptop frame sizes off width — its total height is the
+   *  16:10 screen plus its own browser-chrome bar, so a height-driven
+   *  aspect-ratio box would mismatch the component's real rendered size). */
+  sizeClass: string;
   float?: boolean;
 }) {
+  if (isDesktopPlatform(platform)) {
+    return (
+      <div className={sizeClass}>
+        <LaptopFrame
+          screen={
+            platform.screenshot_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={platform.screenshot_url}
+                alt={`${platform.name} ${platform.label} 介面截圖`}
+                className="h-full w-full object-contain"
+              />
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  }
+
   const screen = platform.screenshot_url ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -39,44 +67,30 @@ function MiniPhone({
   ) : undefined;
 
   return (
-    <div
-      className={`flex flex-col items-center gap-2 ${
-        tilt === "left"
-          ? "-rotate-3 translate-y-4 md:translate-y-8"
-          : tilt === "right"
-          ? "rotate-3 translate-y-4 md:translate-y-8"
-          : "z-10"
-      }`}
-    >
-      <div className={`w-auto ${heightClass}`} style={{ aspectRatio: "375/812" }}>
-        <PhoneFrame
-          screen={screen}
-          label={`${platform.name} 畫面（上傳截圖後顯示）`}
-          float={float}
-        />
-      </div>
-      <span className="font-nunito text-center text-[10px] font-semibold text-grey-600 md:text-[12px]">
-        {platform.name} <span className="text-grey-500">{platform.label}</span>
-      </span>
+    <div className={`w-auto ${sizeClass}`} style={{ aspectRatio: "375/812" }}>
+      <PhoneFrame screen={screen} float={float} />
     </div>
   );
 }
 
 /**
  * Hero's "三端並排" overview row — 前台 centered and larger, 中台/後台
- * flanking smaller and staggered (not evenly aligned), so the one visual
- * says "this is a three-tier system" at a glance without duplicating
- * PlatformShowcase's per-platform deep dive below.
+ * flanking smaller, so the one visual says "this is a three-tier system"
+ * at a glance without duplicating PlatformShowcase's per-platform deep
+ * dive below. Plain size hierarchy only (no rotation/offset per device —
+ * that read as misaligned rather than intentionally staggered).
  */
 function PlatformMockupRow({
   platforms,
   centerHeight,
   sideHeight,
+  adminWidth,
   float = false,
 }: {
   platforms: YangbeiPlatform[];
   centerHeight: string;
   sideHeight: string;
+  adminWidth: string;
   float?: boolean;
 }) {
   const frontend = platforms.find((p) => p.id === "frontend") ?? platforms[0];
@@ -84,10 +98,10 @@ function PlatformMockupRow({
   const admin = platforms.find((p) => p.id === "admin") ?? platforms[2];
 
   return (
-    <div className="flex items-end justify-center gap-3 md:gap-6">
-      {instructor && <MiniPhone platform={instructor} heightClass={sideHeight} tilt="left" />}
-      {frontend && <MiniPhone platform={frontend} heightClass={centerHeight} float={float} />}
-      {admin && <MiniPhone platform={admin} heightClass={sideHeight} tilt="right" />}
+    <div className="flex items-center justify-center gap-3 md:gap-6">
+      {instructor && <MiniDevice platform={instructor} sizeClass={sideHeight} />}
+      {frontend && <MiniDevice platform={frontend} sizeClass={centerHeight} float={float} />}
+      {admin && <MiniDevice platform={admin} sizeClass={adminWidth} />}
     </div>
   );
 }
@@ -126,57 +140,34 @@ function TiltMockup({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * 專案角色 · 時程 frosted pill.
- *
- * `stack` renders the two fields as two independent full-width chips
- * instead of one combined pill: the combined pill relied on `flex-wrap`
- * to break between "專案角色" and "時程" on narrow screens, but each
- * field is itself a nested flex row (label + value), which doesn't
- * shrink below its own content width — so on long copy the whole thing
- * stayed on one line and ran off the right edge of the viewport instead
- * of wrapping. Two stacked chips can't overflow that way, and `truncate`
- * is a hard backstop regardless of how long the CMS copy ever gets.
+ * 專案角色 · 時程 frosted pill — same single-row shape as every other
+ * project's Hero (ported from nest-stay/piiluu's MetaPill: one line,
+ * `whitespace-nowrap` on each field, no stacking). `overflow-x-auto` is a
+ * silent backstop only: it never shows a visible scrollbar at this size in
+ * any mainstream mobile browser, so the pill still *reads* as a single
+ * line — it only matters if yangbei's timeframe copy is ever long enough
+ * to not fit even this unabridged, which is a copy-length question, not
+ * a layout one.
  */
 function MetaPill({
   role,
   timeframe,
   className = "",
-  stack = false,
 }: {
   role: string;
   timeframe: string;
   className?: string;
-  stack?: boolean;
 }) {
-  if (stack) {
-    return (
-      <div className={`flex flex-col gap-2 ${className}`}>
-        {[
-          { label: "專案角色", value: role },
-          { label: "時程", value: timeframe },
-        ].map(({ label, value }) => (
-          <div
-            key={label}
-            className="font-nunito flex min-w-0 items-center gap-1.5 rounded-full border border-black/[0.06] bg-white/60 px-5 py-2 text-[12px] backdrop-blur-[6px]"
-          >
-            <span className="shrink-0 text-grey-500">{label}</span>
-            <span className="min-w-0 truncate font-semibold text-[#262626]">{value}</span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div
-      className={`font-nunito flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2 text-[12px] backdrop-blur-[6px] ${className}`}
+      className={`font-nunito flex items-center gap-4 overflow-x-auto rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2 text-[12px] backdrop-blur-[6px] ${className}`}
     >
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 whitespace-nowrap">
         <span className="text-grey-500">專案角色</span>
         <span className="font-semibold text-[#262626]">{role}</span>
       </div>
-      <span className="hidden size-[3px] shrink-0 rounded-full bg-grey-300 sm:block" aria-hidden />
-      <div className="flex items-center gap-1.5">
+      <span className="size-[3px] shrink-0 rounded-full bg-grey-300" aria-hidden />
+      <div className="flex items-center gap-1.5 whitespace-nowrap">
         <span className="text-grey-500">時程</span>
         <span className="font-semibold text-[#262626]">{timeframe}</span>
       </div>
@@ -254,21 +245,17 @@ export function Hero({
 
         {timeframe && (
           <motion.div variants={heroItem}>
-            <MetaPill role={role} timeframe={timeframe} stack className="w-full" />
+            <MetaPill role={role} timeframe={timeframe} className="w-full" />
           </motion.div>
         )}
 
         {badges.length > 0 && (
           <motion.div
             variants={heroItem}
-            className="grid w-full grid-cols-2 gap-2"
+            className="flex w-full flex-wrap items-center justify-center gap-2"
           >
             {badges.map((badge) => (
-              <Tag
-                key={badge}
-                variant={isHighlightBadge(badge) ? "orange" : "outline"}
-                className="w-full justify-center text-center"
-              >
+              <Tag key={badge} variant="orange">
                 {badge}
               </Tag>
             ))}
@@ -280,8 +267,9 @@ export function Hero({
           {platforms.length > 0 ? (
             <PlatformMockupRow
               platforms={platforms}
-              centerHeight="h-[190px]"
-              sideHeight="h-[150px]"
+              centerHeight="h-[170px]"
+              sideHeight="h-[130px]"
+              adminWidth="w-[120px]"
               float
             />
           ) : (
@@ -322,7 +310,7 @@ export function Hero({
             className="flex items-center justify-center gap-4 flex-wrap"
           >
             {badges.map((badge) => (
-              <Tag key={badge} variant={isHighlightBadge(badge) ? "orange" : "outline"}>
+              <Tag key={badge} variant="orange">
                 {badge}
               </Tag>
             ))}
@@ -334,8 +322,9 @@ export function Hero({
             <TiltMockup>
               <PlatformMockupRow
                 platforms={platforms}
-                centerHeight="h-[340px]"
-                sideHeight="h-[260px]"
+                centerHeight="h-[300px]"
+                sideHeight="h-[220px]"
+                adminWidth="w-[260px]"
                 float
               />
             </TiltMockup>

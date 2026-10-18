@@ -72,39 +72,45 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
         </div>
       </SlideIn>
 
-      {/* Tab strip */}
-      <div className="mb-8 flex gap-2 md:mb-10">
-        {platforms.map((p, i) => (
-          <button
-            key={p.id}
-            onClick={() => setActive(i)}
-            className={`font-nunito relative rounded-full px-4 py-2 text-[13px] font-semibold transition-colors duration-200 md:text-[14px] ${
-              i === active ? "text-proj-white" : "text-grey-500 hover:text-primary-black"
-            }`}
-          >
-            {i === active && (
-              <motion.span
-                layoutId="tab-pill"
-                className="absolute inset-0 rounded-full"
-                style={{ backgroundColor: current.color }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              />
-            )}
-            <span className="relative">{p.name}</span>
-          </button>
-        ))}
-      </div>
+      {/* Tab strip + content — wrapped in one scroll-triggered reveal so this
+          section doesn't just "pop in" already-settled by the time the user
+          scrolls to it (it used to animate once on mount only, which plays
+          out long before anyone below-the-fold ever sees it). The
+          AnimatePresence tab-switch crossfade below is a separate, independent
+          animation on its own element and still runs on every tab click. */}
+      <SlideIn delay={0.1}>
+        <div className="mb-8 flex gap-2 md:mb-10">
+          {platforms.map((p, i) => (
+            <button
+              key={p.id}
+              onClick={() => setActive(i)}
+              className={`font-nunito relative rounded-full px-4 py-2 text-[13px] font-semibold transition-colors duration-200 md:text-[14px] ${
+                i === active ? "text-proj-white" : "text-grey-500 hover:text-primary-black"
+              }`}
+            >
+              {i === active && (
+                <motion.span
+                  layoutId="tab-pill"
+                  className="absolute inset-0 rounded-full"
+                  style={{ backgroundColor: current.color }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              )}
+              <span className="relative">{p.name}</span>
+            </button>
+          ))}
+        </div>
 
-      {/* Content area */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={current.id}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.3, ease: EASE }}
-          className="flex flex-col gap-8 md:flex-row md:items-center md:gap-16"
-        >
+        {/* Content area */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={current.id}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3, ease: EASE }}
+            className="flex flex-col gap-8 md:flex-row md:items-center md:gap-16"
+          >
           {/* Device mockup — laptop for desktop-first platforms, phone otherwise */}
           {DESKTOP_PLATFORM_IDS.has(current.id) ? (
             <div className="w-full md:max-w-[480px] md:shrink-0">
@@ -112,11 +118,17 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
                 url={current.url}
                 screen={
                   current.screenshot_url ? (
+                    // object-contain, not object-cover: the current admin
+                    // screenshot is a mobile-width capture, not a real
+                    // desktop one, so cropping to fill this 16:10 frame cut
+                    // off most of the content. Showing the whole image
+                    // letterboxed is correct until a real desktop capture
+                    // replaces it.
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={current.screenshot_url}
                       alt={`${current.name} 介面截圖`}
-                      className="h-full w-full object-cover object-top"
+                      className="h-full w-full object-contain"
                     />
                   ) : (
                     <PlaceholderScreen color={current.color} label={current.label} />
@@ -180,7 +192,8 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
             </ul>
           </div>
         </motion.div>
-      </AnimatePresence>
+        </AnimatePresence>
+      </SlideIn>
     </section>
   );
 }
