@@ -42,21 +42,21 @@ function WhyStepItem({
     >
       <div
         className={`h-11 w-[3px] shrink-0 rounded-[2px] transition-colors duration-300 ${
-          highlighted ? "bg-primary-orange" : "bg-white/15"
+          highlighted ? "bg-primary-orange" : "bg-black/10"
         }`}
         aria-hidden
       />
       <div className="flex flex-1 flex-col gap-1">
         <p
           className={`font-nunito text-[14px] leading-[20px] font-bold transition-colors duration-300 ${
-            highlighted ? "text-primary-orange" : "text-white"
+            highlighted ? "text-primary-orange" : "text-grey-700"
           }`}
         >
           {step.title}
         </p>
         <p
           className={`font-nunito text-[13px] leading-[20px] font-normal md:text-[14px] md:leading-[22px] transition-colors duration-300 ${
-            highlighted ? "text-[#d9d9d9]" : "text-grey-500"
+            highlighted ? "text-grey-700" : "text-grey-500"
           }`}
         >
           {step.desc}
@@ -94,17 +94,17 @@ export function WhyThisProject({ process }: { process: Record<string, unknown> }
   if (!intro || steps.length === 0) return null;
 
   return (
-    <section className="flex min-h-[100dvh] flex-col justify-center bg-primary-black px-6 py-8 md:min-h-0 md:px-[120px] md:py-[72px]">
+    <section className="flex min-h-[100dvh] flex-col justify-center bg-grey-50 px-6 py-8 md:min-h-0 md:px-[120px] md:py-[72px]">
       <div className="flex flex-col gap-5 md:gap-10">
         <SlideIn delay={0.1}>
           <div className="flex flex-col gap-3">
-            <span className="font-nunito text-[13px] font-extrabold tracking-[1px] text-white uppercase">
+            <span className="font-nunito text-[13px] font-extrabold tracking-[1px] text-primary-black/40 uppercase">
               Why This Project
             </span>
             <h3 className="font-nunito text-[24px] leading-[34px] font-bold text-primary-orange md:text-[44px] md:leading-[56px]">
               為什麼做這個專案？
             </h3>
-            <div className="w-full border-t border-dashed border-white/15 md:hidden" />
+            <div className="w-full border-t border-dashed border-black/10 md:hidden" />
           </div>
         </SlideIn>
 
@@ -112,7 +112,7 @@ export function WhyThisProject({ process }: { process: Record<string, unknown> }
           <SlideIn direction="left" delay={0.15} className="w-full md:w-[458px] md:shrink-0">
             <div className="relative flex w-full flex-col gap-4 rounded-lg py-5 md:rounded-none md:py-0">
               <QuoteGlyph />
-              <p className="font-nunito px-2 text-center text-[14px] leading-[21px] font-normal text-white md:px-5 md:text-[20px] md:leading-[32px] md:font-bold">
+              <p className="font-nunito px-2 text-center text-[14px] leading-[21px] font-normal text-primary-black md:px-5 md:text-[20px] md:leading-[32px] md:font-bold">
                 {intro}
               </p>
               <QuoteGlyph close />

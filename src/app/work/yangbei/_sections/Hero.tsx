@@ -11,6 +11,11 @@ function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
 }
 
+/** The one badge meant to read as the differentiator (yangbei UX review 4-3). */
+function isHighlightBadge(badge: string) {
+  return /live/i.test(badge);
+}
+
 /** Desktop ±2° mouse-tracking parallax tilt on the phone mockup. */
 function TiltMockup({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -44,16 +49,48 @@ function TiltMockup({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** 專案角色 · 時程 frosted pill */
+/**
+ * 專案角色 · 時程 frosted pill.
+ *
+ * `stack` renders the two fields as two independent full-width chips
+ * instead of one combined pill: the combined pill relied on `flex-wrap`
+ * to break between "專案角色" and "時程" on narrow screens, but each
+ * field is itself a nested flex row (label + value), which doesn't
+ * shrink below its own content width — so on long copy the whole thing
+ * stayed on one line and ran off the right edge of the viewport instead
+ * of wrapping. Two stacked chips can't overflow that way, and `truncate`
+ * is a hard backstop regardless of how long the CMS copy ever gets.
+ */
 function MetaPill({
   role,
   timeframe,
   className = "",
+  stack = false,
 }: {
   role: string;
   timeframe: string;
   className?: string;
+  stack?: boolean;
 }) {
+  if (stack) {
+    return (
+      <div className={`flex flex-col gap-2 ${className}`}>
+        {[
+          { label: "專案角色", value: role },
+          { label: "時程", value: timeframe },
+        ].map(({ label, value }) => (
+          <div
+            key={label}
+            className="font-nunito flex min-w-0 items-center gap-1.5 rounded-full border border-black/[0.06] bg-white/60 px-5 py-2 text-[12px] backdrop-blur-[6px]"
+          >
+            <span className="shrink-0 text-grey-500">{label}</span>
+            <span className="min-w-0 truncate font-semibold text-[#262626]">{value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`font-nunito flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2 text-[12px] backdrop-blur-[6px] ${className}`}
@@ -136,21 +173,21 @@ export function Hero({
 
         {timeframe && (
           <motion.div variants={heroItem}>
-            <MetaPill
-              role={role}
-              timeframe={timeframe}
-              className="w-full"
-            />
+            <MetaPill role={role} timeframe={timeframe} stack className="w-full" />
           </motion.div>
         )}
 
         {badges.length > 0 && (
           <motion.div
             variants={heroItem}
-            className="flex w-full flex-wrap items-center gap-2"
+            className="grid w-full grid-cols-2 gap-2"
           >
             {badges.map((badge) => (
-              <Tag key={badge} variant="orange">
+              <Tag
+                key={badge}
+                variant={isHighlightBadge(badge) ? "orange" : "outline"}
+                className="w-full justify-center text-center"
+              >
                 {badge}
               </Tag>
             ))}
@@ -195,7 +232,7 @@ export function Hero({
             className="flex items-center justify-center gap-4 flex-wrap"
           >
             {badges.map((badge) => (
-              <Tag key={badge} variant="orange">
+              <Tag key={badge} variant={isHighlightBadge(badge) ? "orange" : "outline"}>
                 {badge}
               </Tag>
             ))}

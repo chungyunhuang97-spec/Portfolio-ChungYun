@@ -81,7 +81,7 @@ export function Outcomes({ process }: { process: Record<string, unknown> }) {
             <div className="flex items-baseline gap-2">
               <motion.span
                 variants={numberPop}
-                className="font-fredoka text-[40px] leading-none text-primary-orange md:text-[56px]"
+                className="font-fredoka text-[48px] leading-none text-primary-orange md:text-[64px]"
               >
                 {outcome.number}
               </motion.span>
