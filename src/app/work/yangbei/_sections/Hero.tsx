@@ -6,6 +6,7 @@ import { LabelSmall } from "@/components/design-system/Typography";
 import { Tag } from "@/components/design-system/Tag";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 import type { Project } from "@/lib/types";
+import type { YangbeiPlatform } from "../types";
 
 function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
@@ -14,6 +15,81 @@ function isVideoUrl(url: string) {
 /** The one badge meant to read as the differentiator (yangbei UX review 4-3). */
 function isHighlightBadge(badge: string) {
   return /live/i.test(badge);
+}
+
+/** One phone in the Hero's three-platform overview row. */
+function MiniPhone({
+  platform,
+  heightClass,
+  tilt,
+  float = false,
+}: {
+  platform: YangbeiPlatform;
+  heightClass: string;
+  tilt?: "left" | "right";
+  float?: boolean;
+}) {
+  const screen = platform.screenshot_url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={platform.screenshot_url}
+      alt={`${platform.name} ${platform.label} 介面截圖`}
+      className="h-full w-full object-cover object-top"
+    />
+  ) : undefined;
+
+  return (
+    <div
+      className={`flex flex-col items-center gap-2 ${
+        tilt === "left"
+          ? "-rotate-3 translate-y-4 md:translate-y-8"
+          : tilt === "right"
+          ? "rotate-3 translate-y-4 md:translate-y-8"
+          : "z-10"
+      }`}
+    >
+      <div className={`w-auto ${heightClass}`} style={{ aspectRatio: "375/812" }}>
+        <PhoneFrame
+          screen={screen}
+          label={`${platform.name} 畫面（上傳截圖後顯示）`}
+          float={float}
+        />
+      </div>
+      <span className="font-nunito text-center text-[10px] font-semibold text-grey-600 md:text-[12px]">
+        {platform.name} <span className="text-grey-500">{platform.label}</span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Hero's "三端並排" overview row — 前台 centered and larger, 中台/後台
+ * flanking smaller and staggered (not evenly aligned), so the one visual
+ * says "this is a three-tier system" at a glance without duplicating
+ * PlatformShowcase's per-platform deep dive below.
+ */
+function PlatformMockupRow({
+  platforms,
+  centerHeight,
+  sideHeight,
+  float = false,
+}: {
+  platforms: YangbeiPlatform[];
+  centerHeight: string;
+  sideHeight: string;
+  float?: boolean;
+}) {
+  const frontend = platforms.find((p) => p.id === "frontend") ?? platforms[0];
+  const instructor = platforms.find((p) => p.id === "instructor") ?? platforms[1];
+  const admin = platforms.find((p) => p.id === "admin") ?? platforms[2];
+
+  return (
+    <div className="flex items-end justify-center gap-3 md:gap-6">
+      {instructor && <MiniPhone platform={instructor} heightClass={sideHeight} tilt="left" />}
+      {frontend && <MiniPhone platform={frontend} heightClass={centerHeight} float={float} />}
+      {admin && <MiniPhone platform={admin} heightClass={sideHeight} tilt="right" />}
+    </div>
+  );
 }
 
 /** Desktop ±2° mouse-tracking parallax tilt on the phone mockup. */
@@ -121,9 +197,11 @@ const heroItem = {
 export function Hero({
   project,
   hero,
+  platforms = [],
 }: {
   project: Project;
   hero: Record<string, unknown>;
+  platforms?: YangbeiPlatform[];
 }) {
   const kicker =
     (hero.kicker as string) || project.category || "COMMUNITY SERVICE DESIGN";
@@ -138,6 +216,9 @@ export function Hero({
     : [];
   const mediaUrl = (hero.mockup_media_url as string) || undefined;
 
+  // Fallback single-mockup path — only used if `platforms` isn't supplied
+  // (e.g. content not migrated yet). The three-platform row above is the
+  // intended rendering per the yangbei design memo.
   const screen =
     mediaUrl && mediaUrl.length > 0 ? (
       isVideoUrl(mediaUrl) ? (
@@ -194,11 +275,20 @@ export function Hero({
           </motion.div>
         )}
 
-        {/* Phone — flex-1 so it fills remaining space, capped to avoid overflow */}
+        {/* Mockup row — flex-1 so it fills remaining space, capped to avoid overflow */}
         <motion.div variants={heroItem} className="flex min-h-0 flex-1 items-center justify-center py-1">
-          <div className="h-full max-h-[320px] w-auto" style={{ aspectRatio: "375/812" }}>
-            <PhoneFrame screen={screen} float />
-          </div>
+          {platforms.length > 0 ? (
+            <PlatformMockupRow
+              platforms={platforms}
+              centerHeight="h-[190px]"
+              sideHeight="h-[150px]"
+              float
+            />
+          ) : (
+            <div className="h-full max-h-[320px] w-auto" style={{ aspectRatio: "375/812" }}>
+              <PhoneFrame screen={screen} float />
+            </div>
+          )}
         </motion.div>
       </motion.div>
 
@@ -239,10 +329,23 @@ export function Hero({
           </motion.div>
         )}
 
-        <motion.div variants={heroItem} className="w-[188px]">
-          <TiltMockup>
-            <PhoneFrame screen={screen} float />
-          </TiltMockup>
+        <motion.div variants={heroItem}>
+          {platforms.length > 0 ? (
+            <TiltMockup>
+              <PlatformMockupRow
+                platforms={platforms}
+                centerHeight="h-[340px]"
+                sideHeight="h-[260px]"
+                float
+              />
+            </TiltMockup>
+          ) : (
+            <div className="w-[188px]">
+              <TiltMockup>
+                <PhoneFrame screen={screen} float />
+              </TiltMockup>
+            </div>
+          )}
         </motion.div>
       </motion.div>
     </section>
