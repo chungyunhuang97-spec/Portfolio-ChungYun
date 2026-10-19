@@ -1,8 +1,16 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+  useTransform,
+} from "framer-motion";
+import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { LabelSmall } from "@/components/design-system/Typography";
 import { Tag } from "@/components/design-system/Tag";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
@@ -151,6 +159,88 @@ function TiltMockup({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * Three waypoints the demo cursor visits inside the Hero mockup, matching
+ * the registration flow's own step labels (LINE 登入 → 挑選課程 →
+ * 完成報名) so the overlay reads as "someone walking through this exact
+ * flow," not a generic decorative animation. Positions are percentages of
+ * the mockup's screen area.
+ */
+const CURSOR_STEPS = [
+  { x: "20%", y: "42%", label: "LINE 登入" },
+  { x: "52%", y: "40%", label: "挑選課程" },
+  { x: "82%", y: "34%", label: "完成報名" },
+];
+
+/**
+ * Simulated cursor walking through the registration flow, layered over the
+ * Hero's browser-mockup screenshot — the screenshot itself is a static
+ * image, so this is what turns the mockup from "a picture of the product"
+ * into "something that looks like it's being used." Desktop only (no mouse
+ * on touch devices to simulate), and off entirely under reduced motion.
+ */
+function CursorDemo() {
+  const reduceMotion = useReducedMotion();
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const id = setInterval(() => setStep((s) => (s + 1) % CURSOR_STEPS.length), 2400);
+    return () => clearInterval(id);
+  }, [reduceMotion]);
+
+  if (reduceMotion) return null;
+  const current = CURSOR_STEPS[step];
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 hidden md:block" aria-hidden>
+      <motion.div
+        className="absolute flex -translate-x-1/2 -translate-y-full flex-col items-center gap-1.5"
+        initial={false}
+        animate={{ left: current.x, top: current.y }}
+        transition={{ duration: 0.9, ease: EASE_SPEC }}
+      >
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={current.label}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.25 }}
+            className="font-nunito whitespace-nowrap rounded-full bg-primary-black/85 px-2.5 py-1 text-[11px] font-semibold text-proj-white shadow-sm"
+          >
+            {current.label}
+          </motion.span>
+        </AnimatePresence>
+
+        <motion.div
+          key={step}
+          initial={{ scale: 1 }}
+          animate={{ scale: [1, 0.82, 1] }}
+          transition={{ duration: 0.9, delay: 0.7, times: [0, 0.5, 1], ease: EASE_SPEC }}
+          className="relative mt-1"
+        >
+          <motion.span
+            className="absolute inset-0 -z-10 rounded-full border border-primary-orange/50"
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: [0.6, 2], opacity: [0.6, 0] }}
+            transition={{ duration: 0.9, delay: 0.7, ease: "easeOut" }}
+          />
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M3 2l13 5.5-5.4 1.8L8.8 15 3 2Z"
+              fill="#262626"
+              stroke="white"
+              strokeWidth="1"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+}
+
+/**
  * 專案角色 · 時程 frosted pill — same single-row shape as every other
  * project's Hero (ported from nest-stay/piiluu's MetaPill: one line,
  * `whitespace-nowrap` on each field, no stacking). `overflow-x-auto` is a
@@ -217,6 +307,7 @@ export function Hero({
     ? (hero.badges as string[])
     : [];
   const mediaUrl = (hero.mockup_media_url as string) || undefined;
+  const ctaLabel = (hero.ctaLabel as string) || "前往體驗網站";
 
   // Fallback single-mockup path — only used if `platforms` isn't supplied
   // (e.g. content not migrated yet). The three-platform row above is the
@@ -239,6 +330,33 @@ export function Hero({
           fill
           sizes="(min-width: 768px) 188px, 150px"
           className="object-cover"
+        />
+      )
+    ) : undefined;
+
+  // Desktop mockup — 前台's own screenshot takes priority over the generic
+  // hero.mockup_media_url fallback, since the browser-chrome frame is
+  // specifically meant to show the frontend registration flow.
+  const frontend = platforms.find((p) => p.id === "frontend");
+  const desktopShotUrl = frontend?.screenshot_url || mediaUrl;
+  const desktopScreen =
+    desktopShotUrl && desktopShotUrl.length > 0 ? (
+      isVideoUrl(desktopShotUrl) ? (
+        <video
+          src={desktopShotUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="h-full w-full object-cover object-top"
+        />
+      ) : (
+        <Image
+          src={desktopShotUrl}
+          alt={`${title} 前台介面截圖`}
+          fill
+          sizes="(min-width: 768px) 520px, 100vw"
+          className="object-cover object-top"
         />
       )
     ) : undefined;
@@ -300,9 +418,14 @@ export function Hero({
         </motion.div>
       </motion.div>
 
-      {/* Desktop */}
+      {/* Desktop — same centered/stacked shape as every other case-study
+          Hero (kicker → title → subtitle → meta pill → badges → CTA →
+          mockup). Padding is tightened from the shared 180/100 convention
+          since the single screenshot mockup + new CTA button add more
+          height than the old three-device row did — the goal is to still
+          read as "one screen" rather than match those numbers exactly. */}
       <motion.div
-        className="relative z-10 hidden flex-col items-center gap-10 px-[120px] pt-[180px] pb-[100px] md:flex"
+        className="relative z-10 hidden flex-col items-center gap-5 px-[120px] pt-[120px] pb-12 md:flex"
         variants={heroContainer}
         initial="hidden"
         animate="show"
@@ -341,24 +464,38 @@ export function Hero({
           </motion.div>
         )}
 
-        <motion.div variants={heroItem}>
-          {platforms.length > 0 ? (
-            <TiltMockup>
-              <PlatformMockupRow
-                platforms={platforms}
-                centerHeight="h-[300px]"
-                sideHeight="h-[220px]"
-                adminWidth="w-[260px]"
-                float
-              />
-            </TiltMockup>
-          ) : (
-            <div className="w-[188px]">
-              <TiltMockup>
-                <PhoneFrame screen={screen} float />
-              </TiltMockup>
-            </div>
-          )}
+        {project.external_url && (
+          <motion.div variants={heroItem}>
+            <a
+              href={project.external_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary-orange px-5 py-3 shadow-[0_2px_4px_rgba(255,82,13,0.2)] outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary-orange focus-visible:ring-offset-2"
+            >
+              <span className="font-nunito text-[16px] font-bold tracking-[0.5px] text-proj-white">
+                {ctaLabel}
+              </span>
+              <ArrowUpRight size={20} weight="bold" className="text-proj-white" />
+            </a>
+          </motion.div>
+        )}
+
+        <motion.div variants={heroItem} className="w-full max-w-[440px]">
+          <TiltMockup>
+            <LaptopFrame
+              className="-rotate-1"
+              label="前台畫面（上傳截圖後顯示）"
+              float
+              screen={
+                desktopScreen ? (
+                  <>
+                    {desktopScreen}
+                    <CursorDemo />
+                  </>
+                ) : undefined
+              }
+            />
+          </TiltMockup>
         </motion.div>
       </motion.div>
     </section>

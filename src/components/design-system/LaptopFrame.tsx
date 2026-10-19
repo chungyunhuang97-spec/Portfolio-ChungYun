@@ -1,4 +1,7 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 
 /**
  * Minimal browser-chrome frame for desktop-first screens — grey top bar with
@@ -18,13 +21,17 @@ export function LaptopFrame({
   url,
   label = "後台畫面（上傳截圖後顯示）",
   className = "",
+  float = false,
 }: {
   screen?: ReactNode;
   url?: string;
   label?: string;
   className?: string;
+  /** Same slow up/down bob as `<PhoneFrame float />` — used on the Hero's
+   *  mockup so it doesn't read as a dead, flat screenshot. */
+  float?: boolean;
 }) {
-  return (
+  const frame = (
     <div
       className={`overflow-hidden rounded-xl border border-grey-100 bg-proj-white shadow-[0_24px_60px_rgba(0,0,0,0.12)] ${className}`}
     >
@@ -53,5 +60,17 @@ export function LaptopFrame({
         )}
       </div>
     </div>
+  );
+
+  const reduceMotion = useReducedMotion();
+  if (!float || reduceMotion) return frame;
+
+  return (
+    <motion.div
+      animate={{ y: [0, -10, 0] }}
+      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+    >
+      {frame}
+    </motion.div>
   );
 }
