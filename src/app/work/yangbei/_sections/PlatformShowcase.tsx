@@ -83,11 +83,13 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
         {/* Segmented-control shell (bg-grey-100 track + padding) so the strip
             reads as one clickable tab bar at a glance, not three loose
             buttons floating on the page — Joe's "感觉不太像一个tab bar" note. */}
-        <div className="mb-8 flex justify-center md:mb-10">
+        <div role="tablist" aria-label="平台視角" className="mb-8 flex justify-center md:mb-10">
           <div className="inline-flex gap-1 rounded-full bg-grey-100 p-1.5">
             {platforms.map((p, i) => (
               <button
                 key={p.id}
+                role="tab"
+                aria-selected={i === active}
                 onClick={() => setActive(i)}
                 className={`font-nunito relative rounded-full px-4 py-2 text-[13px] font-semibold transition-colors duration-200 md:px-5 md:text-[14px] ${
                   i === active ? "text-proj-white" : "text-grey-500 hover:text-primary-black"
