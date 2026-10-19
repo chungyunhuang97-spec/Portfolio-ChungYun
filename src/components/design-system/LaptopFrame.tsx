@@ -2,11 +2,12 @@ import type { ReactNode } from "react";
 
 /**
  * Minimal browser-chrome frame for desktop-first screens — grey top bar with
- * traffic-light dots + a URL pill, same reuse tier as <PhoneFrame />. Used
- * where the real user sits at a computer (央北社宅 admin backend: course
- * management, signup-funnel monitoring), so the device frame itself signals
- * "this one's used on a laptop" rather than defaulting every platform to a
- * phone mockup regardless of how it's actually used.
+ * macOS-style traffic-light dots (real red/yellow/green, not neutral grey)
+ * + a URL pill, same reuse tier as <PhoneFrame />. Used where the real user
+ * sits at a computer (央北社宅 admin backend: course management,
+ * signup-funnel monitoring; the Hero's 前台 screenshot), so the device frame
+ * itself signals "this one's used on a laptop" rather than defaulting every
+ * platform to a phone mockup regardless of how it's actually used.
  *
  * Deliberately no window-manager bezel/shadow-frame beyond the browser
  * chrome itself — per the yangbei design memo, a simple chrome bar is
@@ -25,14 +26,14 @@ export function LaptopFrame({
 }) {
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-grey-100 bg-proj-white shadow-[0_20px_60px_rgba(0,0,0,0.12)] ${className}`}
+      className={`overflow-hidden rounded-xl border border-grey-100 bg-proj-white shadow-[0_24px_60px_rgba(0,0,0,0.12)] ${className}`}
     >
       {/* browser chrome */}
-      <div className="flex items-center gap-2 border-b border-grey-100 bg-grey-50 px-4 py-2.5">
+      <div className="flex h-8 items-center gap-2 border-b border-grey-100 bg-[#F0F0F0] pr-4 pl-3">
         <div className="flex gap-1.5" aria-hidden>
-          <span className="size-2.5 rounded-full bg-grey-300" />
-          <span className="size-2.5 rounded-full bg-grey-300" />
-          <span className="size-2.5 rounded-full bg-grey-300" />
+          <span className="size-2.5 rounded-full bg-[#FF5F56]" />
+          <span className="size-2.5 rounded-full bg-[#FFBD2E]" />
+          <span className="size-2.5 rounded-full bg-[#27C93F]" />
         </div>
         {url && (
           <div className="font-nunito ml-2 flex-1 truncate rounded-full bg-proj-white px-3 py-1 text-[11px] text-grey-500">

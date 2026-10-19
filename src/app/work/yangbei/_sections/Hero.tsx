@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import Image from "next/image";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { LabelSmall } from "@/components/design-system/Typography";
 import { Tag } from "@/components/design-system/Tag";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
@@ -217,6 +218,7 @@ export function Hero({
     ? (hero.badges as string[])
     : [];
   const mediaUrl = (hero.mockup_media_url as string) || undefined;
+  const ctaLabel = (hero.ctaLabel as string) || "前往體驗網站";
 
   // Fallback single-mockup path — only used if `platforms` isn't supplied
   // (e.g. content not migrated yet). The three-platform row above is the
@@ -239,6 +241,33 @@ export function Hero({
           fill
           sizes="(min-width: 768px) 188px, 150px"
           className="object-cover"
+        />
+      )
+    ) : undefined;
+
+  // Desktop hero mockup — 前台's own screenshot takes priority over the
+  // generic hero.mockup_media_url fallback, since the browser-chrome frame
+  // is specifically meant to show the frontend registration flow.
+  const frontend = platforms.find((p) => p.id === "frontend");
+  const desktopShotUrl = frontend?.screenshot_url || mediaUrl;
+  const desktopScreen =
+    desktopShotUrl && desktopShotUrl.length > 0 ? (
+      isVideoUrl(desktopShotUrl) ? (
+        <video
+          src={desktopShotUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="h-full w-full object-cover object-top"
+        />
+      ) : (
+        <Image
+          src={desktopShotUrl}
+          alt={`${title} 前台介面截圖`}
+          fill
+          sizes="(min-width: 768px) 560px, 100vw"
+          className="object-cover object-top"
         />
       )
     ) : undefined;
@@ -300,65 +329,72 @@ export function Hero({
         </motion.div>
       </motion.div>
 
-      {/* Desktop */}
+      {/* Desktop — left: title/subtitle/badges/CTA, right: 前台 screenshot
+          in a browser-chrome mockup, per the yangbei Hero UI revision. */}
       <motion.div
-        className="relative z-10 hidden flex-col items-center gap-10 px-[120px] pt-[180px] pb-[100px] md:flex"
+        className="relative z-10 hidden flex-row items-center justify-between gap-12 px-[120px] pt-[180px] pb-[100px] md:flex"
         variants={heroContainer}
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={heroItem} className="flex flex-col items-center gap-3">
-          <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
-          <h1 className="font-nunito text-center text-[80px] leading-[112px] font-bold text-primary-black">
-            {title}
-          </h1>
-          {body && (
-            <p className="font-nunito max-w-[667px] text-center text-[18px] leading-normal font-normal text-[#737373]">
-              {body}
-            </p>
-          )}
+        <div className="flex max-w-[600px] flex-col items-start gap-5">
+          <motion.div variants={heroItem} className="flex flex-col items-start gap-3">
+            <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
+            <h1 className="font-nunito text-[80px] leading-[112px] font-bold text-primary-black">
+              {title}
+            </h1>
+            {body && (
+              <p className="font-nunito text-[18px] leading-normal font-normal text-[#737373]">
+                {body}
+              </p>
+            )}
+          </motion.div>
+
           {timeframe && (
             <motion.div variants={heroItem}>
               <MetaPill role={role} timeframe={timeframe} />
             </motion.div>
           )}
-        </motion.div>
 
-        {badges.length > 0 && (
-          <motion.div
-            variants={heroItem}
-            className="flex items-center justify-center gap-4 flex-wrap"
-          >
-            {badges.map((badge, i) => (
-              <Tag
-                key={badge}
-                variant="orange"
-                className={i % 2 === 0 ? "-rotate-1" : "rotate-1"}
-              >
-                {badge}
-              </Tag>
-            ))}
-          </motion.div>
-        )}
-
-        <motion.div variants={heroItem}>
-          {platforms.length > 0 ? (
-            <TiltMockup>
-              <PlatformMockupRow
-                platforms={platforms}
-                centerHeight="h-[300px]"
-                sideHeight="h-[220px]"
-                adminWidth="w-[260px]"
-                float
-              />
-            </TiltMockup>
-          ) : (
-            <div className="w-[188px]">
-              <TiltMockup>
-                <PhoneFrame screen={screen} float />
-              </TiltMockup>
-            </div>
+          {badges.length > 0 && (
+            <motion.div variants={heroItem} className="flex flex-wrap items-center gap-4">
+              {badges.map((badge, i) => (
+                <Tag
+                  key={badge}
+                  variant="orange"
+                  className={i % 2 === 0 ? "-rotate-1" : "rotate-1"}
+                >
+                  {badge}
+                </Tag>
+              ))}
+            </motion.div>
           )}
+
+          {project.external_url && (
+            <motion.div variants={heroItem}>
+              <a
+                href={project.external_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary-orange px-5 py-3.5 shadow-[0_2px_4px_rgba(255,82,13,0.2)] outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary-orange focus-visible:ring-offset-2"
+              >
+                <span className="font-nunito text-[16px] font-bold tracking-[0.5px] text-proj-white">
+                  {ctaLabel}
+                </span>
+                <ArrowUpRight size={20} weight="bold" className="text-proj-white" />
+              </a>
+            </motion.div>
+          )}
+        </div>
+
+        <motion.div variants={heroItem} className="w-[560px] shrink-0">
+          <TiltMockup>
+            <LaptopFrame
+              className="-rotate-1"
+              label="前台畫面（上傳截圖後顯示）"
+              screen={desktopScreen}
+            />
+          </TiltMockup>
         </motion.div>
       </motion.div>
     </section>

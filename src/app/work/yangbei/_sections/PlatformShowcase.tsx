@@ -118,11 +118,14 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3, ease: EASE }}
-            className="flex flex-col gap-8 md:flex-row md:items-center md:gap-16"
+            className="flex flex-col gap-8 min-[810px]:flex-row min-[810px]:items-center min-[810px]:justify-between min-[810px]:gap-10 min-[1512px]:gap-16"
           >
-          {/* Device mockup — laptop for desktop-first platforms, phone otherwise */}
+          {/* Device mockup — laptop for desktop-first platforms, phone otherwise.
+              Fixed per-tier width (not flex-grow) so the parent row's
+              justify-between does the work of spacing it from the now
+              reading-width-capped text column below. */}
           {DESKTOP_PLATFORM_IDS.has(current.id) ? (
-            <div className="w-full md:max-w-[480px] md:shrink-0">
+            <div className="w-full min-[810px]:w-[360px] min-[810px]:shrink-0 min-[1512px]:w-[480px]">
               <LaptopFrame
                 url={current.url}
                 screen={
@@ -147,8 +150,8 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
               />
             </div>
           ) : (
-            <div className="flex justify-center md:w-[220px] md:shrink-0">
-              <div className="w-[180px] md:w-[220px]">
+            <div className="flex justify-center min-[810px]:shrink-0">
+              <div className="w-[180px] min-[810px]:w-[190px] min-[1512px]:w-[220px]">
                 <PhoneFrame
                   screen={
                     current.screenshot_url ? (
@@ -169,8 +172,10 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
             </div>
           )}
 
-          {/* Text details */}
-          <div className="flex flex-1 flex-col gap-5">
+          {/* Text details — capped reading width (400px tablet / 520px
+              desktop) instead of stretching to fill the row, which read as
+              uncomfortably long line-lengths at wide viewports. */}
+          <div className="flex flex-col gap-5 min-[810px]:max-w-[400px] min-[1512px]:max-w-[520px]">
             <div className="flex items-center gap-3">
               <span
                 className="font-nunito text-[24px] font-bold md:text-[32px]"
