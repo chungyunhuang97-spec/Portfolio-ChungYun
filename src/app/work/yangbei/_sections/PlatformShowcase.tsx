@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check } from "@phosphor-icons/react/dist/ssr";
+import { ArrowUpRight, Check } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 import { LaptopFrame } from "@/components/design-system/LaptopFrame";
@@ -17,6 +17,46 @@ import type { YangbeiPlatform as Platform } from "../types";
  * rather than matching the display name, since that's CMS-editable copy.
  */
 const DESKTOP_PLATFORM_IDS = new Set(["admin"]);
+
+/**
+ * Only 前台 gets a "go to the live site" link — it's the only one of the
+ * three that's actually open to the public (中台 is講師-only, 後台 is
+ * admin-only), so a link to either of those would just dead-end at a
+ * login wall. Moved here from the ThreeLayerArchitecture cards above,
+ * which used to link all three indiscriminately.
+ */
+const PUBLIC_PLATFORM_IDS = new Set(["frontend"]);
+
+function toHref(url: string) {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
+function isVideoUrl(url: string) {
+  return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
+}
+
+/**
+ * Screenshot *or* screen recording — a static image doesn't show enough of
+ * a multi-step flow to give a real sense of the product, so `screenshot_url`
+ * may point to a short looping video instead; this picks the right tag.
+ */
+function PlatformScreen({
+  url,
+  alt,
+  sizes,
+  className,
+}: {
+  url: string;
+  alt: string;
+  sizes: string;
+  className: string;
+}) {
+  return isVideoUrl(url) ? (
+    <video src={url} autoPlay loop muted playsInline className={`h-full w-full ${className}`} />
+  ) : (
+    <Image src={url} alt={alt} fill sizes={sizes} className={className} />
+  );
+}
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -137,10 +177,9 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
                     // off most of the content. Showing the whole image
                     // letterboxed is correct until a real desktop capture
                     // replaces it.
-                    <Image
-                      src={current.screenshot_url}
+                    <PlatformScreen
+                      url={current.screenshot_url}
                       alt={`${current.name} 介面截圖`}
-                      fill
                       sizes="480px"
                       className="object-contain"
                     />
@@ -156,10 +195,9 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
                 <PhoneFrame
                   screen={
                     current.screenshot_url ? (
-                      <Image
-                        src={current.screenshot_url}
+                      <PlatformScreen
+                        url={current.screenshot_url}
                         alt={`${current.name} 介面截圖`}
-                        fill
                         sizes="220px"
                         className="object-cover object-top"
                       />
@@ -215,6 +253,20 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
                 </motion.li>
               ))}
             </ul>
+
+            {/* Only 前台 is public — 中台/後台 would just dead-end at a login
+                wall, so they don't get this link (see PUBLIC_PLATFORM_IDS). */}
+            {PUBLIC_PLATFORM_IDS.has(current.id) && current.url && (
+              <a
+                href={toHref(current.url)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-nunito inline-flex w-fit items-center gap-1.5 rounded-md bg-grey-100 px-2.5 py-1 text-[11px] font-mono text-grey-600 transition-colors hover:text-primary-orange"
+              >
+                {current.url}
+                <ArrowUpRight size={11} weight="bold" aria-hidden />
+              </a>
+            )}
           </div>
         </motion.div>
         </AnimatePresence>

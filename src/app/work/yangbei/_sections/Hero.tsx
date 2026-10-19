@@ -159,24 +159,26 @@ function TiltMockup({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Three waypoints the demo cursor visits inside the Hero mockup, matching
+ * Three waypoints the demo "tap" visits inside the Hero mockup, matching
  * the registration flow's own step labels (LINE 登入 → 挑選課程 →
  * 完成報名) so the overlay reads as "someone walking through this exact
- * flow," not a generic decorative animation. Positions are percentages of
- * the mockup's screen area.
+ * flow," not a generic decorative animation. Centered horizontally and
+ * spaced down the screen since the mockup is now a phone (single-column,
+ * top-to-bottom flow) rather than a wide browser window.
  */
-const CURSOR_STEPS = [
-  { x: "20%", y: "42%", label: "LINE 登入" },
-  { x: "52%", y: "40%", label: "挑選課程" },
-  { x: "82%", y: "34%", label: "完成報名" },
+const TAP_STEPS = [
+  { x: "50%", y: "20%", label: "LINE 登入" },
+  { x: "50%", y: "50%", label: "挑選課程" },
+  { x: "50%", y: "80%", label: "完成報名" },
 ];
 
 /**
- * Simulated cursor walking through the registration flow, layered over the
- * Hero's browser-mockup screenshot — the screenshot itself is a static
+ * Simulated finger tap walking through the registration flow, layered over
+ * the Hero's phone-mockup screenshot — the screenshot itself is a static
  * image, so this is what turns the mockup from "a picture of the product"
- * into "something that looks like it's being used." Desktop only (no mouse
- * on touch devices to simulate), and off entirely under reduced motion.
+ * into "something that looks like it's being used." A tap ripple (not a
+ * desktop cursor arrow) since 前台 is overwhelmingly used on a phone. Off
+ * entirely under reduced motion.
  */
 function CursorDemo() {
   const reduceMotion = useReducedMotion();
@@ -184,15 +186,15 @@ function CursorDemo() {
 
   useEffect(() => {
     if (reduceMotion) return;
-    const id = setInterval(() => setStep((s) => (s + 1) % CURSOR_STEPS.length), 2400);
+    const id = setInterval(() => setStep((s) => (s + 1) % TAP_STEPS.length), 2400);
     return () => clearInterval(id);
   }, [reduceMotion]);
 
   if (reduceMotion) return null;
-  const current = CURSOR_STEPS[step];
+  const current = TAP_STEPS[step];
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 hidden md:block" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 z-10" aria-hidden>
       <motion.div
         className="absolute flex -translate-x-1/2 -translate-y-full flex-col items-center gap-1.5"
         initial={false}
@@ -212,28 +214,20 @@ function CursorDemo() {
           </motion.span>
         </AnimatePresence>
 
-        <motion.div
-          key={step}
-          initial={{ scale: 1 }}
-          animate={{ scale: [1, 0.82, 1] }}
-          transition={{ duration: 0.9, delay: 0.7, times: [0, 0.5, 1], ease: EASE_SPEC }}
-          className="relative mt-1"
-        >
+        <motion.div key={step} className="relative mt-1 flex size-3 items-center justify-center">
           <motion.span
-            className="absolute inset-0 -z-10 rounded-full border border-primary-orange/50"
+            className="absolute size-3 rounded-full border-2 border-primary-orange/60"
             initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: [0.6, 2], opacity: [0.6, 0] }}
+            animate={{ scale: [0.6, 2.4], opacity: [0.7, 0] }}
             transition={{ duration: 0.9, delay: 0.7, ease: "easeOut" }}
           />
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path
-              d="M3 2l13 5.5-5.4 1.8L8.8 15 3 2Z"
-              fill="#262626"
-              stroke="white"
-              strokeWidth="1"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <motion.span
+            className="size-2 rounded-full bg-primary-orange"
+            style={{ boxShadow: "0 0 0 3px rgba(255,255,255,0.9)" }}
+            initial={{ scale: 1 }}
+            animate={{ scale: [1, 0.7, 1] }}
+            transition={{ duration: 0.9, delay: 0.7, times: [0, 0.5, 1], ease: EASE_SPEC }}
+          />
         </motion.div>
       </motion.div>
     </div>
@@ -334,16 +328,18 @@ export function Hero({
       )
     ) : undefined;
 
-  // Desktop mockup — 前台's own screenshot takes priority over the generic
-  // hero.mockup_media_url fallback, since the browser-chrome frame is
-  // specifically meant to show the frontend registration flow.
+  // Desktop Hero mockup — a phone screenshot of 前台 (not a desktop/browser
+  // capture): the registration flow's actual users are residents signing
+  // up on their phones, so a phone mockup represents real usage, while the
+  // generic hero.mockup_media_url is the fallback if no platform screenshot
+  // is set yet.
   const frontend = platforms.find((p) => p.id === "frontend");
-  const desktopShotUrl = frontend?.screenshot_url || mediaUrl;
-  const desktopScreen =
-    desktopShotUrl && desktopShotUrl.length > 0 ? (
-      isVideoUrl(desktopShotUrl) ? (
+  const frontendShotUrl = frontend?.screenshot_url || mediaUrl;
+  const frontendScreen =
+    frontendShotUrl && frontendShotUrl.length > 0 ? (
+      isVideoUrl(frontendShotUrl) ? (
         <video
-          src={desktopShotUrl}
+          src={frontendShotUrl}
           autoPlay
           loop
           muted
@@ -352,10 +348,10 @@ export function Hero({
         />
       ) : (
         <Image
-          src={desktopShotUrl}
+          src={frontendShotUrl}
           alt={`${title} 前台介面截圖`}
           fill
-          sizes="(min-width: 768px) 520px, 100vw"
+          sizes="240px"
           className="object-cover object-top"
         />
       )
@@ -419,13 +415,13 @@ export function Hero({
       </motion.div>
 
       {/* Desktop — same centered/stacked shape as every other case-study
-          Hero (kicker → title → subtitle → meta pill → badges → CTA →
-          mockup). Padding is tightened from the shared 180/100 convention
-          since the single screenshot mockup + new CTA button add more
-          height than the old three-device row did — the goal is to still
-          read as "one screen" rather than match those numbers exactly. */}
+          Hero (kicker → title → subtitle → meta pill → badges → mockup,
+          CTA now anchored to the mockup's own corner instead of sitting in
+          the stack). pt-[170px] keeps content clear of the fixed Navbar
+          pill (pt-16 + ~64px pill ≈ 128px) with room to spare — a tighter
+          value here previously let the kicker text peek out from under it. */}
       <motion.div
-        className="relative z-10 hidden flex-col items-center gap-5 px-[120px] pt-[120px] pb-12 md:flex"
+        className="relative z-10 hidden flex-col items-center gap-6 px-[120px] pt-[170px] pb-16 md:flex"
         variants={heroContainer}
         initial="hidden"
         animate="show"
@@ -464,38 +460,41 @@ export function Hero({
           </motion.div>
         )}
 
-        {project.external_url && (
-          <motion.div variants={heroItem}>
+        {/* Mockup + CTA — the button is anchored to the mockup's own
+            bottom-right corner (popping slightly outside it) rather than
+            sitting in the text stack above, which read as too pushy this
+            early in the page. */}
+        <motion.div variants={heroItem} className="relative">
+          <TiltMockup>
+            <div className="w-[220px]" style={{ aspectRatio: "375/812" }}>
+              <PhoneFrame
+                label="前台畫面（上傳截圖後顯示）"
+                float
+                screen={
+                  frontendScreen ? (
+                    <>
+                      {frontendScreen}
+                      <CursorDemo />
+                    </>
+                  ) : undefined
+                }
+              />
+            </div>
+          </TiltMockup>
+
+          {project.external_url && (
             <a
               href={project.external_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary-orange px-5 py-3 shadow-[0_2px_4px_rgba(255,82,13,0.2)] outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary-orange focus-visible:ring-offset-2"
+              className="absolute -right-10 -bottom-5 inline-flex items-center gap-2 rounded-xl bg-primary-orange px-4 py-3 shadow-[0_8px_24px_rgba(255,82,13,0.3)] outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary-orange focus-visible:ring-offset-2"
             >
-              <span className="font-nunito text-[16px] font-bold tracking-[0.5px] text-proj-white">
+              <span className="font-nunito text-[14px] font-bold whitespace-nowrap tracking-[0.5px] text-proj-white">
                 {ctaLabel}
               </span>
-              <ArrowUpRight size={20} weight="bold" className="text-proj-white" />
+              <ArrowUpRight size={16} weight="bold" className="text-proj-white" />
             </a>
-          </motion.div>
-        )}
-
-        <motion.div variants={heroItem} className="w-full max-w-[440px]">
-          <TiltMockup>
-            <LaptopFrame
-              className="-rotate-1"
-              label="前台畫面（上傳截圖後顯示）"
-              float
-              screen={
-                desktopScreen ? (
-                  <>
-                    {desktopScreen}
-                    <CursorDemo />
-                  </>
-                ) : undefined
-              }
-            />
-          </TiltMockup>
+          )}
         </motion.div>
       </motion.div>
     </section>

@@ -1,13 +1,9 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowsClockwise, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
+import { ArrowsClockwise } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import type { YangbeiPlatform as Platform } from "../types";
-
-function toHref(url: string) {
-  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
-}
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -142,21 +138,6 @@ export function ThreeLayerArchitecture({ process }: { process: Record<string, un
                   </li>
                 ))}
               </ul>
-
-              {/* URL chip — clickable so recruiters can open the live product */}
-              <div className="mt-auto pt-2">
-                {platform.url ? (
-                  <a
-                    href={toHref(platform.url)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-nunito inline-flex items-center gap-1 rounded-md bg-grey-100 px-2.5 py-1 text-[11px] text-grey-600 font-mono transition-colors hover:text-primary-orange"
-                  >
-                    {platform.url}
-                    <ArrowUpRight size={11} weight="bold" aria-hidden />
-                  </a>
-                ) : null}
-              </div>
             </motion.div>
           </div>
         ))}
