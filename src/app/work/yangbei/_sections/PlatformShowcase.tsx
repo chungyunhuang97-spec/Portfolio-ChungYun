@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
@@ -132,11 +133,12 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
                     // off most of the content. Showing the whole image
                     // letterboxed is correct until a real desktop capture
                     // replaces it.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={current.screenshot_url}
                       alt={`${current.name} 介面截圖`}
-                      className="h-full w-full object-contain"
+                      fill
+                      sizes="480px"
+                      className="object-contain"
                     />
                   ) : (
                     <PlaceholderScreen color={current.color} label={current.label} />
@@ -150,11 +152,12 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
                 <PhoneFrame
                   screen={
                     current.screenshot_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={current.screenshot_url}
                         alt={`${current.name} 介面截圖`}
-                        className="h-full w-full object-cover object-top"
+                        fill
+                        sizes="220px"
+                        className="object-cover object-top"
                       />
                     ) : (
                       <PlaceholderScreen color={current.color} label={current.label} />

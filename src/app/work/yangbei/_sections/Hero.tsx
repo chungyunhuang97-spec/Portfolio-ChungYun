@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { LabelSmall } from "@/components/design-system/Typography";
 import { Tag } from "@/components/design-system/Tag";
@@ -44,11 +45,12 @@ function MiniDevice({
         <LaptopFrame
           screen={
             platform.screenshot_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={platform.screenshot_url}
                 alt={`${platform.name} ${platform.label} 介面截圖`}
-                className="h-full w-full object-contain"
+                fill
+                sizes="260px"
+                className="object-contain"
               />
             ) : undefined
           }
@@ -58,11 +60,12 @@ function MiniDevice({
   }
 
   const screen = platform.screenshot_url ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <Image
       src={platform.screenshot_url}
       alt={`${platform.name} ${platform.label} 介面截圖`}
-      className="h-full w-full object-cover object-top"
+      fill
+      sizes="220px"
+      className="object-cover object-top"
     />
   ) : undefined;
 
@@ -230,8 +233,13 @@ export function Hero({
           className="h-full w-full object-cover"
         />
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={mediaUrl} alt={title} className="h-full w-full object-cover" />
+        <Image
+          src={mediaUrl}
+          alt={title}
+          fill
+          sizes="(min-width: 768px) 188px, 150px"
+          className="object-cover"
+        />
       )
     ) : undefined;
 
