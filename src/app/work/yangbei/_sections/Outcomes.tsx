@@ -118,7 +118,8 @@ export function Outcomes({ process }: { process: Record<string, unknown> }) {
             <path d="M5.5 8l1.8 1.8L10.5 6" stroke="#FF520D" strokeOpacity="0.7" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <p className="font-nunito text-[12px] leading-[18px] text-grey-500 md:text-[13px] md:leading-[20px]">
-            這個專案仍在持續迭代中——呈現的是真實的「進行式」，而不是包裝完美的靜態成果。9 月正式開放後如有轉換率數據，會持續更新。
+            <span className="font-bold text-primary-orange">這個專案仍在持續迭代中</span>
+            ——呈現的是真實的「進行式」，而不是包裝完美的靜態成果。2026.09 正式開放後如有轉換率數據，會持續更新。
           </p>
         </div>
       </SlideIn>

@@ -1,13 +1,56 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "framer-motion";
 import { LabelSmall } from "@/components/design-system/Typography";
 import { Tag } from "@/components/design-system/Tag";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 import { LaptopFrame } from "@/components/design-system/LaptopFrame";
+import { DoodleScribble, DoodleSpiral, DoodleStar } from "@/components/design-system/doodles";
 import type { Project } from "@/lib/types";
 import type { YangbeiPlatform } from "../types";
+
+/**
+ * Loose, hand-drawn accent marks scattered behind the Hero content —
+ * breaks up the otherwise perfectly centered/symmetric layout (Joe's
+ * "有点太呆板" note) without competing with the centered copy: low
+ * opacity, asymmetric placement, a slow idle float so it reads as living
+ * texture rather than a static watermark. Skips the float under
+ * `prefers-reduced-motion`, same convention as `HeroDoodleField`.
+ */
+function HeroAccents() {
+  const reduceMotion = useReducedMotion();
+  const idle = (duration: number, rotate: number, y: number) =>
+    reduceMotion
+      ? {}
+      : {
+          animate: { rotate: [-rotate, rotate, -rotate], y: [0, -y, 0] },
+          transition: { duration, repeat: Infinity, ease: "easeInOut" as const },
+        };
+
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <motion.div
+        className="absolute left-[4%] top-[14%] w-[13%] max-w-[90px] text-primary-orange/[0.14] md:left-[7%] md:top-[18%]"
+        {...idle(8, 6, 8)}
+      >
+        <DoodleSpiral className="h-auto w-full" strokeWidth={2.5} />
+      </motion.div>
+      <motion.div
+        className="absolute right-[6%] top-[8%] w-[9%] max-w-[56px] text-accent-pink/20 md:right-[12%] md:top-[12%]"
+        {...idle(6.5, 10, 10)}
+      >
+        <DoodleStar className="h-auto w-full" />
+      </motion.div>
+      <motion.div
+        className="absolute bottom-[10%] left-[10%] w-[18%] max-w-[140px] text-primary-orange/[0.12] md:bottom-[14%] md:left-[14%]"
+        {...idle(9.5, 4, 6)}
+      >
+        <DoodleScribble className="h-auto w-full" strokeWidth={3} />
+      </motion.div>
+    </div>
+  );
+}
 
 function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
@@ -99,9 +142,17 @@ function PlatformMockupRow({
 
   return (
     <div className="flex items-center justify-center gap-3 md:gap-6">
-      {instructor && <MiniDevice platform={instructor} sizeClass={sideHeight} />}
+      {instructor && (
+        <div className="md:-translate-y-3">
+          <MiniDevice platform={instructor} sizeClass={sideHeight} />
+        </div>
+      )}
       {frontend && <MiniDevice platform={frontend} sizeClass={centerHeight} float={float} />}
-      {admin && <MiniDevice platform={admin} sizeClass={adminWidth} />}
+      {admin && (
+        <div className="md:translate-y-4">
+          <MiniDevice platform={admin} sizeClass={adminWidth} />
+        </div>
+      )}
     </div>
   );
 }
@@ -229,9 +280,10 @@ export function Hero({
 
   return (
     <section id="hero" className="relative overflow-hidden bg-proj-white">
+      <HeroAccents />
       {/* Mobile — fits within 100dvh */}
       <motion.div
-        className="flex h-dvh flex-col gap-3 px-6 pt-[88px] pb-6 md:hidden"
+        className="relative z-10 flex h-dvh flex-col gap-3 px-6 pt-[88px] pb-6 md:hidden"
         variants={heroContainer}
         initial="hidden"
         animate="show"
@@ -254,8 +306,12 @@ export function Hero({
             variants={heroItem}
             className="flex w-full flex-wrap items-center justify-center gap-2"
           >
-            {badges.map((badge) => (
-              <Tag key={badge} variant="orange">
+            {badges.map((badge, i) => (
+              <Tag
+                key={badge}
+                variant="orange"
+                className={i % 2 === 0 ? "-rotate-1" : "rotate-1"}
+              >
                 {badge}
               </Tag>
             ))}
@@ -282,7 +338,7 @@ export function Hero({
 
       {/* Desktop */}
       <motion.div
-        className="hidden flex-col items-center gap-10 px-[120px] pt-[180px] pb-[100px] md:flex"
+        className="relative z-10 hidden flex-col items-center gap-10 px-[120px] pt-[180px] pb-[100px] md:flex"
         variants={heroContainer}
         initial="hidden"
         animate="show"
@@ -309,8 +365,12 @@ export function Hero({
             variants={heroItem}
             className="flex items-center justify-center gap-4 flex-wrap"
           >
-            {badges.map((badge) => (
-              <Tag key={badge} variant="orange">
+            {badges.map((badge, i) => (
+              <Tag
+                key={badge}
+                variant="orange"
+                className={i % 2 === 0 ? "-rotate-1" : "rotate-1"}
+              >
                 {badge}
               </Tag>
             ))}

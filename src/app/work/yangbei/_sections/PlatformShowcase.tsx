@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Check } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 import { LaptopFrame } from "@/components/design-system/LaptopFrame";
@@ -60,9 +61,9 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
   const current = platforms[active];
 
   return (
-    <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-[80px]">
+    <section className="flex flex-col justify-center bg-proj-white px-6 py-16 md:min-h-screen md:px-[120px] md:py-[80px]">
       <SlideIn delay={0.05}>
-        <div className="mb-8 flex flex-col gap-3 md:mb-12">
+        <div className="mb-8 flex flex-col items-center gap-3 text-center md:mb-12">
           <span className="font-nunito text-[13px] font-extrabold tracking-[1px] text-primary-black/40 uppercase">
             Platform UI
           </span>
@@ -79,26 +80,31 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
           AnimatePresence tab-switch crossfade below is a separate, independent
           animation on its own element and still runs on every tab click. */}
       <SlideIn delay={0.1}>
-        <div className="mb-8 flex gap-2 md:mb-10">
-          {platforms.map((p, i) => (
-            <button
-              key={p.id}
-              onClick={() => setActive(i)}
-              className={`font-nunito relative rounded-full px-4 py-2 text-[13px] font-semibold transition-colors duration-200 md:text-[14px] ${
-                i === active ? "text-proj-white" : "text-grey-500 hover:text-primary-black"
-              }`}
-            >
-              {i === active && (
-                <motion.span
-                  layoutId="tab-pill"
-                  className="absolute inset-0 rounded-full"
-                  style={{ backgroundColor: current.color }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-              <span className="relative">{p.name}</span>
-            </button>
-          ))}
+        {/* Segmented-control shell (bg-grey-100 track + padding) so the strip
+            reads as one clickable tab bar at a glance, not three loose
+            buttons floating on the page — Joe's "感觉不太像一个tab bar" note. */}
+        <div className="mb-8 flex justify-center md:mb-10">
+          <div className="inline-flex gap-1 rounded-full bg-grey-100 p-1.5">
+            {platforms.map((p, i) => (
+              <button
+                key={p.id}
+                onClick={() => setActive(i)}
+                className={`font-nunito relative rounded-full px-4 py-2 text-[13px] font-semibold transition-colors duration-200 md:px-5 md:text-[14px] ${
+                  i === active ? "text-proj-white" : "text-grey-500 hover:text-primary-black"
+                }`}
+              >
+                {i === active && (
+                  <motion.span
+                    layoutId="tab-pill"
+                    className="absolute inset-0 rounded-full shadow-sm"
+                    style={{ backgroundColor: current.color }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                <span className="relative">{p.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Content area */}
@@ -176,18 +182,26 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
               {current.desc}
             </p>
 
-            <ul className="flex flex-col gap-3">
-              {current.features.map((feat) => (
-                <li key={feat} className="flex items-center gap-3">
+            <ul className="flex flex-col gap-2.5">
+              {current.features.map((feat, i) => (
+                <motion.li
+                  key={feat}
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 + i * 0.08, ease: EASE }}
+                  className="flex items-center gap-3 rounded-xl border border-grey-100 bg-grey-50 px-4 py-3"
+                >
                   <span
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: current.color }}
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full"
+                    style={{ backgroundColor: `${current.color}1A`, color: current.color }}
                     aria-hidden
-                  />
-                  <span className="font-nunito text-[14px] text-primary-black">
+                  >
+                    <Check size={13} weight="bold" />
+                  </span>
+                  <span className="font-nunito text-[14px] font-medium text-primary-black">
                     {feat}
                   </span>
-                </li>
+                </motion.li>
               ))}
             </ul>
           </div>

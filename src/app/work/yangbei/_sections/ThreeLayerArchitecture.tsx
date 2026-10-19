@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import type { YangbeiPlatform as Platform } from "../types";
@@ -20,14 +20,44 @@ const cardVariants = {
   }),
 };
 
-/** Connector line between platform nodes (desktop only, horizontal arrows). */
-function ConnectorArrow() {
+/**
+ * 前台 ↔ 中台 connector (desktop only) — a slowly spinning looping arrow
+ * rather than a straight line + single arrowhead, since the three
+ * platforms actually form a cycle (使用者報名 → 講師管理 → 回到使用者),
+ * not a one-way pipeline. Muted orange, slow and understated ("有點沉
+ * 地的感覺") rather than a flashy spin. Only rendered between 前台/中台 —
+ * Joe's call that 中台↔後台 doesn't need a visible connection.
+ */
+function CycleConnector() {
+  const reduceMotion = useReducedMotion();
   return (
-    <div className="hidden shrink-0 flex-col items-center justify-center gap-1 md:flex" aria-hidden>
-      <div className="h-px w-8 bg-grey-300" />
-      <svg width="6" height="10" viewBox="0 0 6 10" fill="none">
-        <path d="M1 1l4 4-4 4" stroke="#b3b3b3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+    <div className="hidden shrink-0 items-center justify-center md:flex" aria-hidden>
+      <motion.svg
+        width="28"
+        height="28"
+        viewBox="0 0 28 28"
+        fill="none"
+        className="text-primary-orange/60"
+        animate={reduceMotion ? {} : { rotate: 360 }}
+        transition={reduceMotion ? undefined : { duration: 6, repeat: Infinity, ease: "linear" }}
+      >
+        <path
+          d="M21 9a8 8 0 1 0 1.6 7"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <path d="M22.8 3.5l.8 6-5.8-1.4 5-4.6Z" fill="currentColor" />
+        <path
+          d="M7 19a8 8 0 1 0 -1.6 -7"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <path d="M5.2 24.5l-.8-6 5.8 1.4-5 4.6Z" fill="currentColor" />
+      </motion.svg>
     </div>
   );
 }
@@ -73,7 +103,10 @@ export function ThreeLayerArchitecture({ process }: { process: Record<string, un
       >
         {platforms.map((platform, i) => (
           <div key={platform.id} className="contents">
-            {i > 0 && <ConnectorArrow />}
+            {/* Only 前台↔中台 gets a visible connector — Joe's call that
+                中台↔後台 doesn't need one, just breathing room between the cards. */}
+            {i === 1 && <CycleConnector />}
+            {i === 2 && <div className="hidden w-6 shrink-0 md:block" aria-hidden />}
             <motion.div
               custom={i}
               variants={cardVariants}
