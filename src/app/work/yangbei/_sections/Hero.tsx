@@ -1,128 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import Image from "next/image";
-import {
-  AnimatePresence,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useSpring,
-  useTransform,
-} from "framer-motion";
-import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { LabelSmall } from "@/components/design-system/Typography";
 import { Tag } from "@/components/design-system/Tag";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
-import { LaptopFrame } from "@/components/design-system/LaptopFrame";
 import type { Project } from "@/lib/types";
 import type { YangbeiPlatform } from "../types";
 
 function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
-}
-
-/** 後台 is desktop-first — same device-matching rule as PlatformShowcase. */
-function isDesktopPlatform(platform: YangbeiPlatform) {
-  return platform.id === "admin";
-}
-
-/**
- * One device mockup in the Hero's three-platform overview row — a phone
- * for 前台/中台, a (smaller, scaled-down) laptop for 後台. Purely visual:
- * no role label underneath, since this row is a quick "it's a three-tier
- * system" glance, not the place that explains what each platform is
- * (PlatformShowcase does that below).
- */
-function MiniDevice({
-  platform,
-  sizeClass,
-  float = false,
-}: {
-  platform: YangbeiPlatform;
-  /** Height class (phones size off height, via aspect-ratio) or width
-   *  class (the laptop frame sizes off width — its total height is the
-   *  16:10 screen plus its own browser-chrome bar, so a height-driven
-   *  aspect-ratio box would mismatch the component's real rendered size). */
-  sizeClass: string;
-  float?: boolean;
-}) {
-  if (isDesktopPlatform(platform)) {
-    return (
-      <div className={sizeClass}>
-        <LaptopFrame
-          screen={
-            platform.screenshot_url ? (
-              <Image
-                src={platform.screenshot_url}
-                alt={`${platform.name} ${platform.label} 介面截圖`}
-                fill
-                sizes="260px"
-                className="object-contain"
-              />
-            ) : undefined
-          }
-        />
-      </div>
-    );
-  }
-
-  const screen = platform.screenshot_url ? (
-    <Image
-      src={platform.screenshot_url}
-      alt={`${platform.name} ${platform.label} 介面截圖`}
-      fill
-      sizes="220px"
-      className="object-cover object-top"
-    />
-  ) : undefined;
-
-  return (
-    <div className={`w-auto ${sizeClass}`} style={{ aspectRatio: "375/812" }}>
-      <PhoneFrame screen={screen} float={float} />
-    </div>
-  );
-}
-
-/**
- * Hero's "三端並排" overview row — 前台 centered and larger, 中台/後台
- * flanking smaller, so the one visual says "this is a three-tier system"
- * at a glance without duplicating PlatformShowcase's per-platform deep
- * dive below. Plain size hierarchy only (no rotation/offset per device —
- * that read as misaligned rather than intentionally staggered).
- */
-function PlatformMockupRow({
-  platforms,
-  centerHeight,
-  sideHeight,
-  adminWidth,
-  float = false,
-}: {
-  platforms: YangbeiPlatform[];
-  centerHeight: string;
-  sideHeight: string;
-  adminWidth: string;
-  float?: boolean;
-}) {
-  const frontend = platforms.find((p) => p.id === "frontend") ?? platforms[0];
-  const instructor = platforms.find((p) => p.id === "instructor") ?? platforms[1];
-  const admin = platforms.find((p) => p.id === "admin") ?? platforms[2];
-
-  return (
-    <div className="flex items-center justify-center gap-3 md:gap-6">
-      {instructor && (
-        <div className="md:-translate-y-3">
-          <MiniDevice platform={instructor} sizeClass={sideHeight} />
-        </div>
-      )}
-      {frontend && <MiniDevice platform={frontend} sizeClass={centerHeight} float={float} />}
-      {admin && (
-        <div className="md:translate-y-4">
-          <MiniDevice platform={admin} sizeClass={adminWidth} />
-        </div>
-      )}
-    </div>
-  );
 }
 
 /** Desktop ±2° mouse-tracking parallax tilt on the phone mockup. */
@@ -159,90 +47,13 @@ function TiltMockup({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Three waypoints the demo "tap" visits inside the Hero mockup, matching
- * the registration flow's own step labels (LINE 登入 → 挑選課程 →
- * 完成報名) so the overlay reads as "someone walking through this exact
- * flow," not a generic decorative animation. Centered horizontally and
- * spaced down the screen since the mockup is now a phone (single-column,
- * top-to-bottom flow) rather than a wide browser window.
- */
-const TAP_STEPS = [
-  { x: "50%", y: "20%", label: "LINE 登入" },
-  { x: "50%", y: "50%", label: "挑選課程" },
-  { x: "50%", y: "80%", label: "完成報名" },
-];
-
-/**
- * Simulated finger tap walking through the registration flow, layered over
- * the Hero's phone-mockup screenshot — the screenshot itself is a static
- * image, so this is what turns the mockup from "a picture of the product"
- * into "something that looks like it's being used." A tap ripple (not a
- * desktop cursor arrow) since 前台 is overwhelmingly used on a phone. Off
- * entirely under reduced motion.
- */
-function CursorDemo() {
-  const reduceMotion = useReducedMotion();
-  const [step, setStep] = useState(0);
-
-  useEffect(() => {
-    if (reduceMotion) return;
-    const id = setInterval(() => setStep((s) => (s + 1) % TAP_STEPS.length), 2400);
-    return () => clearInterval(id);
-  }, [reduceMotion]);
-
-  if (reduceMotion) return null;
-  const current = TAP_STEPS[step];
-
-  return (
-    <div className="pointer-events-none absolute inset-0 z-10" aria-hidden>
-      <motion.div
-        className="absolute flex -translate-x-1/2 -translate-y-full flex-col items-center gap-1.5"
-        initial={false}
-        animate={{ left: current.x, top: current.y }}
-        transition={{ duration: 0.9, ease: EASE_SPEC }}
-      >
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={current.label}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.25 }}
-            className="font-nunito whitespace-nowrap rounded-full bg-primary-black/85 px-2.5 py-1 text-[11px] font-semibold text-proj-white shadow-sm"
-          >
-            {current.label}
-          </motion.span>
-        </AnimatePresence>
-
-        <motion.div key={step} className="relative mt-1 flex size-3 items-center justify-center">
-          <motion.span
-            className="absolute size-3 rounded-full border-2 border-primary-orange/60"
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: [0.6, 2.4], opacity: [0.7, 0] }}
-            transition={{ duration: 0.9, delay: 0.7, ease: "easeOut" }}
-          />
-          <motion.span
-            className="size-2 rounded-full bg-primary-orange"
-            style={{ boxShadow: "0 0 0 3px rgba(255,255,255,0.9)" }}
-            initial={{ scale: 1 }}
-            animate={{ scale: [1, 0.7, 1] }}
-            transition={{ duration: 0.9, delay: 0.7, times: [0, 0.5, 1], ease: EASE_SPEC }}
-          />
-        </motion.div>
-      </motion.div>
-    </div>
-  );
-}
-
-/**
- * 專案角色 · 時程 frosted pill — same single-row shape as every other
- * project's Hero (ported from nest-stay/piiluu's MetaPill: one line,
- * `whitespace-nowrap` on each field, no stacking). `overflow-x-auto` is a
- * silent backstop only: it never shows a visible scrollbar at this size in
- * any mainstream mobile browser, so the pill still *reads* as a single
- * line — it only matters if yangbei's timeframe copy is ever long enough
- * to not fit even this unabridged, which is a copy-length question, not
- * a layout one.
+ * 專案角色 · 時程 frosted pill. Stacked (one field per line) on mobile
+ * instead of a single `whitespace-nowrap` row — yangbei's actual copy
+ * ("全端設計 + AI 協作實作" / "Soft Launch 7–8 月 → 正式開放 9 月") is long
+ * enough that a single row genuinely overflowed the viewport with no
+ * visible scroll affordance (just text cut off at the edge). Each stacked
+ * line is still short enough to fit on its own, so no font-size shrink is
+ * needed. Desktop keeps the original single-row layout, which has room.
  */
 function MetaPill({
   role,
@@ -255,13 +66,13 @@ function MetaPill({
 }) {
   return (
     <div
-      className={`font-nunito flex items-center gap-4 overflow-x-auto rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2 text-[12px] backdrop-blur-[6px] ${className}`}
+      className={`font-nunito flex flex-col items-start gap-1.5 rounded-[24px] border border-black/[0.06] bg-white/60 px-4 py-2.5 text-[12px] backdrop-blur-[6px] md:flex-row md:items-center md:gap-4 md:rounded-[40px] md:px-5 md:py-2 ${className}`}
     >
       <div className="flex items-center gap-1.5 whitespace-nowrap">
         <span className="text-grey-500">專案角色</span>
         <span className="font-semibold text-[#262626]">{role}</span>
       </div>
-      <span className="size-[3px] shrink-0 rounded-full bg-grey-300" aria-hidden />
+      <span className="hidden size-[3px] shrink-0 rounded-full bg-grey-300 md:block" aria-hidden />
       <div className="flex items-center gap-1.5 whitespace-nowrap">
         <span className="text-grey-500">時程</span>
         <span className="font-semibold text-[#262626]">{timeframe}</span>
@@ -301,38 +112,14 @@ export function Hero({
     ? (hero.badges as string[])
     : [];
   const mediaUrl = (hero.mockup_media_url as string) || undefined;
-  const ctaLabel = (hero.ctaLabel as string) || "前往體驗網站";
 
-  // Fallback single-mockup path — only used if `platforms` isn't supplied
-  // (e.g. content not migrated yet). The three-platform row above is the
-  // intended rendering per the yangbei design memo.
-  const screen =
-    mediaUrl && mediaUrl.length > 0 ? (
-      isVideoUrl(mediaUrl) ? (
-        <video
-          src={mediaUrl}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="h-full w-full object-cover"
-        />
-      ) : (
-        <Image
-          src={mediaUrl}
-          alt={title}
-          fill
-          sizes="(min-width: 768px) 188px, 150px"
-          className="object-cover"
-        />
-      )
-    ) : undefined;
-
-  // Desktop Hero mockup — a phone screenshot of 前台 (not a desktop/browser
+  // Hero mockup — a phone screenshot of 前台 (not a desktop/browser
   // capture): the registration flow's actual users are residents signing
-  // up on their phones, so a phone mockup represents real usage, while the
-  // generic hero.mockup_media_url is the fallback if no platform screenshot
-  // is set yet.
+  // up on their phones, so a phone mockup represents real usage. Falls
+  // back to the generic hero.mockup_media_url if no platform screenshot is
+  // set yet. Same single mockup on both breakpoints (just a different
+  // size) — it used to be a three-device row on mobile only, which no
+  // longer matched the desktop version after that switched to one phone.
   const frontend = platforms.find((p) => p.id === "frontend");
   const frontendShotUrl = frontend?.screenshot_url || mediaUrl;
   const frontendScreen =
@@ -351,7 +138,7 @@ export function Hero({
           src={frontendShotUrl}
           alt={`${title} 前台介面截圖`}
           fill
-          sizes="240px"
+          sizes="(min-width: 768px) 220px, 170px"
           className="object-cover object-top"
         />
       )
@@ -396,30 +183,19 @@ export function Hero({
           </motion.div>
         )}
 
-        {/* Mockup row — flex-1 so it fills remaining space, capped to avoid overflow */}
+        {/* Mockup — flex-1 so it fills remaining space, capped to avoid overflow */}
         <motion.div variants={heroItem} className="flex min-h-0 flex-1 items-center justify-center py-1">
-          {platforms.length > 0 ? (
-            <PlatformMockupRow
-              platforms={platforms}
-              centerHeight="h-[170px]"
-              sideHeight="h-[130px]"
-              adminWidth="w-[120px]"
-              float
-            />
-          ) : (
-            <div className="h-full max-h-[320px] w-auto" style={{ aspectRatio: "375/812" }}>
-              <PhoneFrame screen={screen} float />
-            </div>
-          )}
+          <div className="h-full max-h-[300px] w-auto" style={{ aspectRatio: "375/812" }}>
+            <PhoneFrame label="前台畫面（上傳截圖後顯示）" screen={frontendScreen} float />
+          </div>
         </motion.div>
       </motion.div>
 
       {/* Desktop — same centered/stacked shape as every other case-study
-          Hero (kicker → title → subtitle → meta pill → badges → mockup,
-          CTA now anchored to the mockup's own corner instead of sitting in
-          the stack). pt-[170px] keeps content clear of the fixed Navbar
-          pill (pt-16 + ~64px pill ≈ 128px) with room to spare — a tighter
-          value here previously let the kicker text peek out from under it. */}
+          Hero (kicker → title → subtitle → meta pill → badges → mockup).
+          pt-[170px] keeps content clear of the fixed Navbar pill (pt-16 +
+          ~64px pill ≈ 128px) with room to spare — a tighter value here
+          previously let the kicker text peek out from under it. */}
       <motion.div
         className="relative z-10 hidden flex-col items-center gap-6 px-[120px] pt-[170px] pb-16 md:flex"
         variants={heroContainer}
@@ -460,41 +236,13 @@ export function Hero({
           </motion.div>
         )}
 
-        {/* Mockup + CTA — the button is anchored to the mockup's own
-            bottom-right corner (popping slightly outside it) rather than
-            sitting in the text stack above, which read as too pushy this
-            early in the page. */}
-        <motion.div variants={heroItem} className="relative">
+        {/* The "前往體驗網站" CTA now lives in PlatformShowcase's 前台 tab
+            instead of here — it reads better paired with that platform's
+            own description than floating off the Hero mockup's corner. */}
+        <motion.div variants={heroItem} className="w-[220px]">
           <TiltMockup>
-            <div className="w-[220px]" style={{ aspectRatio: "375/812" }}>
-              <PhoneFrame
-                label="前台畫面（上傳截圖後顯示）"
-                float
-                screen={
-                  frontendScreen ? (
-                    <>
-                      {frontendScreen}
-                      <CursorDemo />
-                    </>
-                  ) : undefined
-                }
-              />
-            </div>
+            <PhoneFrame label="前台畫面（上傳截圖後顯示）" screen={frontendScreen} float />
           </TiltMockup>
-
-          {project.external_url && (
-            <a
-              href={project.external_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="absolute -right-10 -bottom-5 inline-flex items-center gap-2 rounded-xl bg-primary-orange px-4 py-3 shadow-[0_8px_24px_rgba(255,82,13,0.3)] outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary-orange focus-visible:ring-offset-2"
-            >
-              <span className="font-nunito text-[14px] font-bold whitespace-nowrap tracking-[0.5px] text-proj-white">
-                {ctaLabel}
-              </span>
-              <ArrowUpRight size={16} weight="bold" className="text-proj-white" />
-            </a>
-          )}
         </motion.div>
       </motion.div>
     </section>

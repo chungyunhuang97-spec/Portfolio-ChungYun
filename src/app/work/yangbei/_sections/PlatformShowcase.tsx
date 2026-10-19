@@ -255,16 +255,21 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
             </ul>
 
             {/* Only 前台 is public — 中台/後台 would just dead-end at a login
-                wall, so they don't get this link (see PUBLIC_PLATFORM_IDS). */}
+                wall, so they don't get this button (see PUBLIC_PLATFORM_IDS).
+                Same pill style as the Hero's old CTA, which moved here
+                since it reads better paired with 前台's own description
+                than floating off a corner of the Hero mockup. */}
             {PUBLIC_PLATFORM_IDS.has(current.id) && current.url && (
               <a
                 href={toHref(current.url)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-nunito inline-flex w-fit items-center gap-1.5 rounded-md bg-grey-100 px-2.5 py-1 text-[11px] font-mono text-grey-600 transition-colors hover:text-primary-orange"
+                className="inline-flex w-fit items-center gap-2 rounded-xl bg-primary-orange px-5 py-3 shadow-[0_2px_4px_rgba(255,82,13,0.2)] outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-primary-orange focus-visible:ring-offset-2"
               >
-                {current.url}
-                <ArrowUpRight size={11} weight="bold" aria-hidden />
+                <span className="font-nunito text-[14px] font-bold tracking-[0.5px] text-proj-white">
+                  前往體驗網站
+                </span>
+                <ArrowUpRight size={16} weight="bold" className="text-proj-white" />
               </a>
             )}
           </div>
