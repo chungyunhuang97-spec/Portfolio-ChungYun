@@ -118,12 +118,13 @@ export function PlatformShowcase({ process }: { process: Record<string, unknown>
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3, ease: EASE }}
-            className="flex flex-col gap-8 min-[810px]:flex-row min-[810px]:items-center min-[810px]:justify-between min-[810px]:gap-10 min-[1512px]:gap-16"
+            className="flex flex-col gap-8 min-[810px]:flex-row min-[810px]:items-center min-[810px]:justify-center min-[810px]:gap-12 min-[1512px]:gap-16"
           >
           {/* Device mockup — laptop for desktop-first platforms, phone otherwise.
-              Fixed per-tier width (not flex-grow) so the parent row's
-              justify-between does the work of spacing it from the now
-              reading-width-capped text column below. */}
+              Fixed per-tier width, and the row is justify-center (not
+              -between) so the mockup and the now reading-width-capped text
+              column sit close together as one centered pair, instead of
+              being pushed apart with a big empty gap between them. */}
           {DESKTOP_PLATFORM_IDS.has(current.id) ? (
             <div className="w-full min-[810px]:w-[360px] min-[810px]:shrink-0 min-[1512px]:w-[480px]">
               <LaptopFrame
