@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { ArrowUpRight, Warning } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { SectionKicker } from "@/components/design-system/SectionKicker";
@@ -18,13 +15,18 @@ interface Touchpoint {
   tech?: string;
   demoUrl?: string;
   demoLabel?: string;
-  // Admin-uploaded media -- field names are deliberately `...ImageUrl`/
-  // `...VideoUrl` so the generic admin ContentEditor (see
+  // Admin-uploaded/pasted media -- `imageUrl`/`frontImageUrl`/
+  // `backImageUrl` are named so the generic admin ContentEditor (see
   // ContentEditor.tsx's MEDIA_KEY_PATTERN) auto-detects them as nested
   // media fields inside this array and renders an AdminMediaDropzone for
   // each, no admin UI code needed beyond adding these keys to the data.
+  // `youtubeUrl` is deliberately NOT named `...videoUrl` -- it's a plain
+  // pasted link (the opening film is hosted unlisted on YouTube, not
+  // uploaded as a file -- see YouTubeEmbed's doc comment for why), so it
+  // renders as an ordinary text field in admin rather than a file
+  // dropzone, which better matches what it actually is.
   imageUrl?: string;
-  videoUrl?: string;
+  youtubeUrl?: string;
   frontImageUrl?: string;
   backImageUrl?: string;
 }
@@ -51,35 +53,60 @@ function UnframedImage({ src, alt }: { src: string; alt: string }) {
 }
 
 /**
- * Playback fallback for the opening film upload — a `.mov`/QuickTime
- * container (common straight off an iPhone) can read its own duration in
- * most browsers but still refuse to actually play, since `video/
- * quicktime` isn't a format Chrome/Firefox commit to decoding regardless
- * of the codec inside it (Joe's "無法播放" report: the player showed
- * 1:46 but pressing play did nothing). There's no reliable client-side
- * transcode fix for that — this only swaps in a clear explanation once
- * playback actually fails, instead of leaving a silently broken player.
+ * Extracts the 11-character video ID from any of YouTube's own URL
+ * shapes (youtu.be/ID, youtube.com/watch?v=ID, /embed/ID, /shorts/ID) --
+ * an unlisted video's share link is the same `watch?v=` shape a public
+ * one uses (unlisted is a visibility setting, not a different URL), so
+ * no special-casing is needed for that; embedding just works as long as
+ * the uploader hasn't disabled embedding for the video.
  */
-function VideoPlayer({ src }: { src: string }) {
-  const [failed, setFailed] = useState(false);
+function extractYouTubeId(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === "youtu.be") return parsed.pathname.slice(1) || null;
+    if (parsed.hostname.replace(/^www\./, "") === "youtube.com") {
+      if (parsed.pathname === "/watch") return parsed.searchParams.get("v");
+      const match = parsed.pathname.match(/^\/(?:embed|shorts)\/([^/?]+)/);
+      if (match) return match[1];
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
-  if (failed) {
+/**
+ * Opening film, embedded from YouTube rather than uploaded as a file --
+ * switched from a direct `<video>` upload after Joe's upload turned out
+ * to be a `.mov`/QuickTime container that loaded its own duration but
+ * wouldn't actually play in most browsers, and Joe decided to host it on
+ * YouTube (unlisted) instead rather than chase down a transcode. A
+ * malformed/unparseable link gets the same dark placeholder treatment as
+ * a genuinely broken video, so this never silently renders an empty box.
+ */
+function YouTubeEmbed({ url }: { url: string }) {
+  const videoId = extractYouTubeId(url);
+
+  if (!videoId) {
     return (
       <div className={`flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-[20px] bg-primary-black px-6 text-center text-proj-white ${CARD_SHADOW}`}>
         <Warning size={24} weight="light" className="text-accent-pink" />
         <p className="font-nunito text-[12px] leading-relaxed font-bold md:text-[13px]">
-          瀏覽器無法播放此影片格式
-        </p>
-        <p className="font-nunito text-[11px] leading-relaxed text-grey-300">
-          請轉成 .mp4（H.264）後重新上傳
+          無法辨識這個 YouTube 連結
         </p>
       </div>
     );
   }
 
   return (
-    <div className={`aspect-video w-full overflow-hidden rounded-[20px] bg-primary-black ${CARD_SHADOW}`}>
-      <video src={src} controls playsInline onError={() => setFailed(true)} className="h-full w-full object-cover" />
+    <div className={`aspect-video w-full overflow-hidden rounded-[20px] ${CARD_SHADOW}`}>
+      <iframe
+        src={`https://www.youtube.com/embed/${videoId}`}
+        title="婚禮開場影片"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        className="h-full w-full"
+      />
     </div>
   );
 }
@@ -105,7 +132,7 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
   }
 
   if (touchpoint.index === "04") {
-    if (touchpoint.videoUrl) return <VideoPlayer src={touchpoint.videoUrl} />;
+    if (touchpoint.youtubeUrl) return <YouTubeEmbed url={touchpoint.youtubeUrl} />;
     return <MockupSlot label="婚禮開場影片 素材製作中" aspect="aspect-video" />;
   }
 
@@ -219,8 +246,8 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
  *
  * Content model: `process.touchpoints` — array of
  * `{index, title, titleEn, time, desc, highlights, tech?, demoUrl?,
- * demoLabel?, imageUrl?, videoUrl?, frontImageUrl?, backImageUrl?}`. The
- * media fields are optional and admin-uploadable (see TouchpointVisual).
+ * demoLabel?, imageUrl?, youtubeUrl?, frontImageUrl?, backImageUrl?}`.
+ * The media fields are optional and admin-editable (see TouchpointVisual).
  */
 export function Touchpoints({ process }: { process: Record<string, unknown> }) {
   const touchpoints = Array.isArray(process.touchpoints) ? (process.touchpoints as Touchpoint[]) : [];
