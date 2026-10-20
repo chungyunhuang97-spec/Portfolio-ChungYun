@@ -4,6 +4,7 @@ import { SectionKicker } from "@/components/design-system/SectionKicker";
 import { MockupSlot } from "@/components/design-system/MockupSlot";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 import { Tag } from "@/components/design-system/Tag";
+import { FlipInvitationCard } from "./FlipInvitationCard";
 
 interface Touchpoint {
   index: string;
@@ -29,6 +30,8 @@ interface Touchpoint {
   youtubeUrl?: string;
   frontImageUrl?: string;
   backImageUrl?: string;
+  smallFrontImageUrl?: string;
+  smallBackImageUrl?: string;
 }
 
 const CARD_SHADOW = "shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]";
@@ -117,6 +120,10 @@ function YouTubeEmbed({ url }: { url: string }) {
  * MockupSlot/PhoneFrame placeholder (same precedent tct/page.tsx set for
  * a project with no media yet), so the page keeps reading as intentional
  * while assets trickle in and never needs a layout change once they do.
+ * Index 03 (紙本喜帖) is the exception — it has its own interactive
+ * FlipInvitationCard rather than a static image/placeholder, since the
+ * real object has three states (card front+back, small pinned card
+ * front+back) a flat image can't show on its own.
  */
 function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
   if (touchpoint.index === "02") {
@@ -137,23 +144,14 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
   }
 
   if (touchpoint.index === "03") {
-    if (touchpoint.frontImageUrl || touchpoint.backImageUrl) {
-      return (
-        <div className="grid grid-cols-2 gap-3">
-          {touchpoint.frontImageUrl ? (
-            <UnframedImage src={touchpoint.frontImageUrl} alt="紙本喜帖正面" />
-          ) : (
-            <MockupSlot label="正面 素材製作中" aspect="aspect-[3/4]" />
-          )}
-          {touchpoint.backImageUrl ? (
-            <UnframedImage src={touchpoint.backImageUrl} alt="紙本喜帖背面" />
-          ) : (
-            <MockupSlot label="背面 素材製作中" aspect="aspect-[3/4]" />
-          )}
-        </div>
-      );
-    }
-    return <MockupSlot label={`${touchpoint.title} 素材製作中`} aspect="aspect-[3/4]" />;
+    return (
+      <FlipInvitationCard
+        frontImageUrl={touchpoint.frontImageUrl}
+        backImageUrl={touchpoint.backImageUrl}
+        smallFrontImageUrl={touchpoint.smallFrontImageUrl}
+        smallBackImageUrl={touchpoint.smallBackImageUrl}
+      />
+    );
   }
 
   if (touchpoint.imageUrl) {
@@ -246,8 +244,9 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
  *
  * Content model: `process.touchpoints` — array of
  * `{index, title, titleEn, time, desc, highlights, tech?, demoUrl?,
- * demoLabel?, imageUrl?, youtubeUrl?, frontImageUrl?, backImageUrl?}`.
- * The media fields are optional and admin-editable (see TouchpointVisual).
+ * demoLabel?, imageUrl?, youtubeUrl?, frontImageUrl?, backImageUrl?,
+ * smallFrontImageUrl?, smallBackImageUrl?}`. The media fields are
+ * optional and admin-editable (see TouchpointVisual).
  */
 export function Touchpoints({ process }: { process: Record<string, unknown> }) {
   const touchpoints = Array.isArray(process.touchpoints) ? (process.touchpoints as Touchpoint[]) : [];
