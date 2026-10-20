@@ -15,28 +15,89 @@ interface Touchpoint {
   tech?: string;
   demoUrl?: string;
   demoLabel?: string;
+  // Admin-uploaded media -- field names are deliberately `...ImageUrl`/
+  // `...VideoUrl` so the generic admin ContentEditor (see
+  // ContentEditor.tsx's MEDIA_KEY_PATTERN) auto-detects them as nested
+  // media fields inside this array and renders an AdminMediaDropzone for
+  // each, no admin UI code needed beyond adding these keys to the data.
+  imageUrl?: string;
+  videoUrl?: string;
+  frontImageUrl?: string;
+  backImageUrl?: string;
 }
 
+const CARD_SHADOW = "shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]";
+
 /**
- * No uploaded media exists yet for this project (marriage certificate,
- * invitation photos, and the opening film are all still being finalized
- * per the briefing) — every visual slot here is a clearly labeled
- * MockupSlot/PhoneFrame placeholder, same precedent tct/page.tsx set for
- * a project with no media yet, so the page still reads as intentional
- * and can be upgraded later without a layout change. The digital
- * invitation (02) reuses <PhoneFrame /> since it's an actual interactive
- * site, not a static image — the other three use <MockupSlot />.
+ * Real media takes over wherever it's been uploaded from the admin
+ * dashboard; anything not yet uploaded falls back to a clearly labeled
+ * MockupSlot/PhoneFrame placeholder (same precedent tct/page.tsx set for
+ * a project with no media yet), so the page keeps reading as intentional
+ * while assets trickle in and never needs a layout change once they do.
  */
 function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
   if (touchpoint.index === "02") {
+    const screen = touchpoint.imageUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={touchpoint.imageUrl} alt={touchpoint.title} className="h-full w-full object-cover" />
+    ) : undefined;
     return (
       <div className="mx-auto w-full max-w-[220px]">
-        <PhoneFrame label="電子喜帖畫面 素材製作中" />
+        <PhoneFrame screen={screen} label="電子喜帖畫面 素材製作中" />
       </div>
     );
   }
+
   if (touchpoint.index === "04") {
+    if (touchpoint.videoUrl) {
+      return (
+        <div className={`aspect-video w-full overflow-hidden rounded-[20px] bg-primary-black ${CARD_SHADOW}`}>
+          <video src={touchpoint.videoUrl} controls playsInline className="h-full w-full object-cover" />
+        </div>
+      );
+    }
     return <MockupSlot label="婚禮開場影片 素材製作中" aspect="aspect-video" />;
+  }
+
+  if (touchpoint.index === "03") {
+    if (touchpoint.frontImageUrl || touchpoint.backImageUrl) {
+      return (
+        <div className="grid grid-cols-2 gap-3">
+          {touchpoint.frontImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={touchpoint.frontImageUrl}
+              alt="紙本喜帖正面"
+              className={`aspect-[3/4] w-full rounded-[20px] object-cover ${CARD_SHADOW}`}
+            />
+          ) : (
+            <MockupSlot label="正面 素材製作中" aspect="aspect-[3/4]" />
+          )}
+          {touchpoint.backImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={touchpoint.backImageUrl}
+              alt="紙本喜帖背面"
+              className={`aspect-[3/4] w-full rounded-[20px] object-cover ${CARD_SHADOW}`}
+            />
+          ) : (
+            <MockupSlot label="背面 素材製作中" aspect="aspect-[3/4]" />
+          )}
+        </div>
+      );
+    }
+    return <MockupSlot label={`${touchpoint.title} 素材製作中`} aspect="aspect-[4/3]" />;
+  }
+
+  if (touchpoint.imageUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={touchpoint.imageUrl}
+        alt={touchpoint.title}
+        className={`aspect-[4/3] w-full rounded-[20px] object-cover ${CARD_SHADOW}`}
+      />
+    );
   }
   return <MockupSlot label={`${touchpoint.title} 素材製作中`} aspect="aspect-[4/3]" />;
 }
@@ -124,7 +185,9 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
  * last, reading as a back-and-forth conversation across the four media.
  *
  * Content model: `process.touchpoints` — array of
- * `{index, title, titleEn, time, desc, highlights, tech?, demoUrl?, demoLabel?}`.
+ * `{index, title, titleEn, time, desc, highlights, tech?, demoUrl?,
+ * demoLabel?, imageUrl?, videoUrl?, frontImageUrl?, backImageUrl?}`. The
+ * media fields are optional and admin-uploadable (see TouchpointVisual).
  */
 export function Touchpoints({ process }: { process: Record<string, unknown> }) {
   const touchpoints = Array.isArray(process.touchpoints) ? (process.touchpoints as Touchpoint[]) : [];
