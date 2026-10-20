@@ -21,7 +21,12 @@ interface Field {
 // the camelCase suffix (`MediaUrl`) that predates that convention -- Metro's
 // own already-shipped content still has fields like `bonusPromoMobileMediaUrl`
 // that would otherwise never be recognized as media.
-const MEDIA_KEY_PATTERN = /(_media_url|_image_url|_video_url|MediaUrl|ImageUrl|VideoUrl)$/i;
+// `screenshot_url` is included explicitly: it's the field the 前台/中台/後台
+// (yangbei `process.platforms`) rows use for their mockup image/gif/video,
+// and without it here it only ever rendered as a plain text input -- no
+// dropzone, no drag-and-drop, no file picker -- even though
+// `AdminMediaDropzone` already supports uploading images, gifs, and videos.
+const MEDIA_KEY_PATTERN = /(_media_url|_image_url|_video_url|screenshot_url|MediaUrl|ImageUrl|VideoUrl)$/i;
 const DESKTOP_MOBILE_PATTERN = /desktop|mobile/i;
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{3}([0-9a-f]{3}([0-9a-f]{2})?)?$/i;
 
