@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState, type RefObject } from "react";
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
@@ -41,88 +42,140 @@ function FloatingIllustration({ src, flip }: { src: string; flip: boolean }) {
   );
 }
 
-/**
- * Connecting line between two stacked cards. Drawn with an SVG `line` +
- * `pathLength` (not a pre-rotated CSS div) so it:
- * 1. Actually animates "growing" into place as its own trigger scrolls into
- *    view (`whileInView`), instead of just appearing — this is what makes
- *    scrolling feel like it's "running the connection out" to the next card.
- * 2. Renders as a true corner-to-corner diagonal on desktop (via
- *    `preserveAspectRatio="none"`, stretched to fill its own box) without
- *    hand-tuned rotate-degree guesswork, and collapses to a plain vertical
- *    line on mobile where there's no left/right offset to connect.
- */
-function StepConnector({ leanRight }: { leanRight: boolean }) {
+/** One drawn-in connector line, shared by the mobile stem and the desktop
+ * measured diagonals — a single `pathLength` tween triggered the moment
+ * this particular line scrolls into view, so each connection "runs out" to
+ * the next card as you scroll rather than just appearing. */
+function DrawnLine({ x1, y1, x2, y2 }: { x1: number | string; y1: number | string; x2: number | string; y2: number | string }) {
   const reduceMotion = useReducedMotion();
-  const lineMotionProps = {
-    initial: { pathLength: 0 },
-    whileInView: { pathLength: 1 },
-    viewport: { once: true, margin: "-30% 0px -30% 0px" },
-    transition: { duration: reduceMotion ? 0 : 0.7, ease: EASE },
-  };
-
   return (
-    <div className="flex h-16 items-stretch justify-center md:h-24">
-      {/* Mobile: straight vertical stem. */}
-      <svg
-        className="h-full w-px overflow-visible md:hidden"
-        viewBox="0 0 2 100"
-        preserveAspectRatio="none"
-        fill="none"
-        aria-hidden
-      >
-        <motion.line
-          x1="1"
-          y1="0"
-          x2="1"
-          y2="100"
-          vectorEffect="non-scaling-stroke"
-          stroke="var(--color-primary-orange)"
-          strokeOpacity={0.35}
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          {...lineMotionProps}
-        />
-      </svg>
+    <motion.line
+      x1={x1}
+      y1={y1}
+      x2={x2}
+      y2={y2}
+      vectorEffect="non-scaling-stroke"
+      stroke="var(--color-primary-orange)"
+      strokeOpacity={0.4}
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      initial={{ pathLength: 0 }}
+      whileInView={{ pathLength: 1 }}
+      viewport={{ once: true, margin: "-25% 0px -25% 0px" }}
+      transition={{ duration: reduceMotion ? 0 : 0.8, ease: EASE }}
+    />
+  );
+}
 
-      {/* Desktop: diagonal, leaning toward whichever side the next card
-          sits on, so 前台→中台→後台 reads as one continuous zigzag path. */}
-      <div className={`hidden h-full w-full md:flex ${leanRight ? "justify-start pl-[8%]" : "justify-end pr-[8%]"}`}>
-        <svg
-          className="h-full w-28 overflow-visible lg:w-36"
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          fill="none"
-          aria-hidden
-        >
-          <motion.line
-            x1={leanRight ? 0 : 100}
-            y1="0"
-            x2={leanRight ? 100 : 0}
-            y2="100"
-            vectorEffect="non-scaling-stroke"
-            stroke="var(--color-primary-orange)"
-            strokeOpacity={0.35}
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            {...lineMotionProps}
-          />
-        </svg>
-      </div>
+/**
+ * Pure vertical gap between two stacked cards on mobile, where there's no
+ * left/right offset for a diagonal to bridge. The desktop diagonal lives in
+ * `ConnectorOverlay` instead (see its comment for why) — this element is
+ * purely a spacer there, hidden.
+ */
+function GapSpacer() {
+  return (
+    <div className="flex h-16 items-stretch justify-center md:h-28 lg:h-32">
+      <svg className="h-full w-px overflow-visible md:hidden" viewBox="0 0 2 100" preserveAspectRatio="none" fill="none" aria-hidden>
+        <DrawnLine x1="1" y1="0" x2="1" y2="100" />
+      </svg>
     </div>
   );
 }
 
-function PlatformCard({ platform, align }: { platform: Platform; align: "left" | "right" }) {
+interface LinePoints {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+/**
+ * Desktop connector lines, measured from the cards' *actual* rendered
+ * positions rather than guessed at with a fixed-size box. Card width here
+ * is intentionally fluid (a percentage, capped by a max-width) so it hugs
+ * its content across viewport sizes instead of stretching full-width — but
+ * that means the pixel gap between a left-aligned and a right-aligned card
+ * varies continuously with viewport width, which a hand-tuned "diagonal in
+ * a 140px box" (the previous approach) can't track: it either undershoots
+ * (short stub, not actually touching either card — what was reported) or
+ * overshoots once the real gap changes. Reading each card's own
+ * `offsetLeft/Top/Width/Height` (layout-box values, unaffected by the
+ * SlideIn entrance transform, unlike getBoundingClientRect) gives the
+ * exact corner-to-corner line every time, and a ResizeObserver keeps it
+ * correct across breakpoint changes and font-swap reflows.
+ */
+function ConnectorOverlay({ cardRefs, count }: { cardRefs: RefObject<(HTMLDivElement | null)[]>; count: number }) {
+  const [lines, setLines] = useState<LinePoints[]>([]);
+
+  useEffect(() => {
+    function measure() {
+      const cards = cardRefs.current;
+      const next: LinePoints[] = [];
+      for (let i = 0; i < count - 1; i++) {
+        const a = cards[i];
+        const b = cards[i + 1];
+        if (!a || !b) continue;
+        const aAlignLeft = i % 2 === 0;
+        next.push({
+          x1: aAlignLeft ? a.offsetLeft + a.offsetWidth : a.offsetLeft,
+          y1: a.offsetTop + a.offsetHeight,
+          x2: aAlignLeft ? b.offsetLeft : b.offsetLeft + b.offsetWidth,
+          y2: b.offsetTop,
+        });
+      }
+      setLines(next);
+    }
+
+    measure();
+    // A second pass shortly after mount catches any late reflow (web font
+    // swap, image boxes settling) that would otherwise leave a line's
+    // endpoint slightly short of the card it's meant to touch.
+    const t = setTimeout(measure, 300);
+    const ro = new ResizeObserver(measure);
+    cardRefs.current.forEach((el) => el && ro.observe(el));
+    window.addEventListener("resize", measure);
+    return () => {
+      clearTimeout(t);
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [cardRefs, count]);
+
+  if (lines.length === 0) return null;
+
+  return (
+    <svg className="pointer-events-none absolute inset-0 hidden h-full w-full md:block" fill="none" aria-hidden>
+      {lines.map((l, i) => (
+        <DrawnLine key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} />
+      ))}
+    </svg>
+  );
+}
+
+function PlatformCard({
+  platform,
+  align,
+  cardRef,
+}: {
+  platform: Platform;
+  align: "left" | "right";
+  cardRef: (el: HTMLDivElement | null) => void;
+}) {
   const illustration = ILLUSTRATIONS[platform.id];
 
   return (
     <SlideIn direction={align === "left" ? "left" : "right"} viewportMargin="-100px">
-      {/* Fixed, content-hugging width on desktop (not a percentage of the
-          section) so the card reads as its own object sitting in open
-          space, same as the reference — not a bar stretched edge to edge.
-          Full-width on mobile, where there's no room to offset left/right. */}
-      <div className={`relative w-full md:w-[380px] lg:w-[420px] ${align === "left" ? "md:mr-auto" : "md:ml-auto"}`}>
+      {/* Fluid, content-hugging width (a share of the row, capped) on
+          desktop so the card reads as its own object in open space rather
+          than a bar stretched edge to edge — not a fixed pixel value,
+          since ConnectorOverlay measures the real rendered box instead of
+          assuming one. Full-width on mobile, where there's no room to
+          offset left/right. */}
+      <div
+        ref={cardRef}
+        className={`relative w-full md:w-[48%] md:max-w-[420px] ${align === "left" ? "md:mr-auto" : "md:ml-auto"}`}
+      >
         {illustration && <FloatingIllustration src={illustration} flip={align === "right"} />}
 
         <div
@@ -182,10 +235,13 @@ function PlatformCard({ platform, align }: { platform: Platform; align: "left" |
 /**
  * 一套系統，三種角色 — architecture overview.
  * Shows the 3-layer platform (前台/中台/後台) as a scroll-triggered,
- * zig-zagging stack of content-hugging cards — each platform reveals on its
- * own as it scrolls into view, joined by a diagonal line that draws itself
- * in as the next card comes into view, and topped with its own floating
- * character illustration.
+ * zig-zagging stack of content-hugging cards. Each card reveals on its own
+ * as it scrolls into view, and a line visibly draws itself in from the
+ * bottom corner of one card to the top corner of the next as that gap
+ * scrolls into view — on desktop it's measured from the cards' real
+ * positions so it always actually reaches both cards (see
+ * `ConnectorOverlay`); on mobile, where cards don't offset, it's a plain
+ * vertical stem. Each card is topped with its own floating illustration.
  * Content from `process.architectureTitle`, `process.architectureSubtitle`, `process.platforms`.
  */
 export function ThreeLayerArchitecture({ process }: { process: Record<string, unknown> }) {
@@ -194,6 +250,7 @@ export function ThreeLayerArchitecture({ process }: { process: Record<string, un
   const platforms = Array.isArray(process.platforms)
     ? (process.platforms as Platform[])
     : [];
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   if (platforms.length === 0) return null;
 
@@ -216,14 +273,23 @@ export function ThreeLayerArchitecture({ process }: { process: Record<string, un
       </SlideIn>
 
       {/* Zig-zag stack: each card offset to alternating sides on desktop
-          (前台 left, 中台 right, 後台 left…), full-width stacked on mobile. */}
-      <div className="flex flex-col">
+          (前台 left, 中台 right, 後台 left…), full-width stacked on mobile.
+          `relative` so ConnectorOverlay's absolute SVG lines up with the
+          cards it measures. */}
+      <div className="relative flex flex-col">
         {platforms.map((platform, i) => (
           <div key={platform.id} className="contents">
-            {i > 0 && <StepConnector leanRight={i % 2 === 1} />}
-            <PlatformCard platform={platform} align={i % 2 === 0 ? "left" : "right"} />
+            {i > 0 && <GapSpacer />}
+            <PlatformCard
+              platform={platform}
+              align={i % 2 === 0 ? "left" : "right"}
+              cardRef={(el) => {
+                cardRefs.current[i] = el;
+              }}
+            />
           </div>
         ))}
+        <ConnectorOverlay cardRefs={cardRefs} count={platforms.length} />
       </div>
     </section>
   );
