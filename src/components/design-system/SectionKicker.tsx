@@ -1,10 +1,14 @@
 import type { ReactNode } from "react";
 
-type KickerColor = "orange" | "blue";
+type KickerColor = "orange" | "blue" | "pink";
 
 const COLOR_CLASSES: Record<KickerColor, string> = {
   orange: "text-primary-orange",
   blue: "text-secondary-blue",
+  // Added for the wedding case study, whose dominant accent is
+  // accent-pink -- the one color token no other project had claimed yet
+  // (see docs/case-study-design-conventions.md's "主導色" rule).
+  pink: "text-accent-pink",
 };
 
 /**
@@ -12,7 +16,8 @@ const COLOR_CLASSES: Record<KickerColor, string> = {
  * e.g. "◆ Project Overview".
  *
  * `color` defaults to "orange" (metro/nest-stay/piiluu), set to "blue"
- * for projects whose dominant accent is secondary-blue (TCT).
+ * for projects whose dominant accent is secondary-blue (TCT), or "pink"
+ * for projects whose dominant accent is accent-pink (wedding).
  */
 export function SectionKicker({
   icon = "◆",

@@ -8,10 +8,9 @@ import { Navbar } from "@/components/design-system/Navbar";
 export const revalidate = 60;
 
 export default async function Home() {
-  const [siteContent, caseStudies, sideProjects] = await Promise.all([
+  const [siteContent, caseStudies] = await Promise.all([
     getAllSiteContent(),
     getPublishedProjects("case_study"),
-    getPublishedProjects("side_project"),
   ]);
 
   const heroTagline = (siteContent.hero_tagline?.text as string | undefined) ?? "";
@@ -107,38 +106,6 @@ export default async function Home() {
             )}
           </div>
         </section>
-
-        {/* Side projects */}
-        {sideProjects.length > 0 && (
-          <section className="border-t border-line">
-            <div className="mx-auto max-w-[1400px] px-6 py-16 md:px-10 md:py-24">
-              <FadeIn>
-                <h2 className="text-2xl md:text-3xl">Vibe Coding Works</h2>
-              </FadeIn>
-              <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-12">
-                {sideProjects.map((project, index) => (
-                  <FadeIn key={project.id} delay={index * 0.05}>
-                    <div className="border-t border-line pt-6">
-                      <h3 className="text-lg">{project.title}</h3>
-                      {project.tags.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                          {project.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="text-[11px] tracking-[0.15em] text-ink-faint"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </FadeIn>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* Footer */}
         <footer className="border-t border-line">
