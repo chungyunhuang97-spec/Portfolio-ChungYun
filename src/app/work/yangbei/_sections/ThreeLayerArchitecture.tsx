@@ -98,49 +98,81 @@ interface LinePoints {
  * that means the pixel gap between a left-aligned and a right-aligned card
  * varies continuously with viewport width, which a hand-tuned "diagonal in
  * a 140px box" (the previous approach) can't track: it either undershoots
- * (short stub, not actually touching either card — what was reported) or
- * overshoots once the real gap changes. Reading each card's own
- * `offsetLeft/Top/Width/Height` (layout-box values, unaffected by the
- * SlideIn entrance transform, unlike getBoundingClientRect) gives the
- * exact corner-to-corner line every time, and a ResizeObserver keeps it
- * correct across breakpoint changes and font-swap reflows.
+ * or overshoots once the real gap changes.
+ *
+ * Measured via `getBoundingClientRect()` relative to `containerRef`, NOT
+ * `offsetLeft/offsetTop` — each card sits inside SlideIn's `motion.div`,
+ * which keeps a CSS `transform` set even at rest (that's how the entrance
+ * slide is driven). Any ancestor with an active `transform` becomes the
+ * browser's `offsetParent` for everything inside it, so `offsetLeft/Top`
+ * read on the card ended up relative to that per-card wrapper instead of
+ * the shared container — every card reporting position near (0, 0) and
+ * the "diagonal" collapsing into the X of two crossed, wrongly-anchored
+ * lines that was reported. `getBoundingClientRect()` isn't fooled by an
+ * intervening transform; it's also why the card is re-measured on a short
+ * rAF loop after mount (not just once), since this entrance transform
+ * animates for a few hundred ms and doesn't fire ResizeObserver (no size
+ * change, only position).
  */
-function ConnectorOverlay({ cardRefs, count }: { cardRefs: RefObject<(HTMLDivElement | null)[]>; count: number }) {
+function ConnectorOverlay({
+  containerRef,
+  cardRefs,
+  count,
+}: {
+  containerRef: RefObject<HTMLDivElement | null>;
+  cardRefs: RefObject<(HTMLDivElement | null)[]>;
+  count: number;
+}) {
   const [lines, setLines] = useState<LinePoints[]>([]);
 
   useEffect(() => {
     function measure() {
+      const container = containerRef.current;
       const cards = cardRefs.current;
+      if (!container) return;
+      const containerRect = container.getBoundingClientRect();
       const next: LinePoints[] = [];
       for (let i = 0; i < count - 1; i++) {
-        const a = cards[i];
-        const b = cards[i + 1];
+        const a = cards[i]?.getBoundingClientRect();
+        const b = cards[i + 1]?.getBoundingClientRect();
         if (!a || !b) continue;
         const aAlignLeft = i % 2 === 0;
         next.push({
-          x1: aAlignLeft ? a.offsetLeft + a.offsetWidth : a.offsetLeft,
-          y1: a.offsetTop + a.offsetHeight,
-          x2: aAlignLeft ? b.offsetLeft : b.offsetLeft + b.offsetWidth,
-          y2: b.offsetTop,
+          x1: (aAlignLeft ? a.right : a.left) - containerRect.left,
+          y1: a.bottom - containerRect.top,
+          x2: (aAlignLeft ? b.left : b.right) - containerRect.left,
+          y2: b.top - containerRect.top,
         });
       }
       setLines(next);
     }
 
     measure();
-    // A second pass shortly after mount catches any late reflow (web font
-    // swap, image boxes settling) that would otherwise leave a line's
-    // endpoint slightly short of the card it's meant to touch.
-    const t = setTimeout(measure, 300);
+    // SlideIn's entrance (a spring, ~0.6-0.9s to settle) moves each card via
+    // `transform` only — no size change, so ResizeObserver alone won't catch
+    // it. Keep remeasuring on every frame for ~1.5s to track it in, then
+    // fall back to ResizeObserver + resize for anything after that.
+    let rafId: number;
+    let elapsed = 0;
+    let last = performance.now();
+    function tick(now: number) {
+      elapsed += now - last;
+      last = now;
+      measure();
+      if (elapsed < 1500) rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+
     const ro = new ResizeObserver(measure);
     cardRefs.current.forEach((el) => el && ro.observe(el));
+    if (containerRef.current) ro.observe(containerRef.current);
     window.addEventListener("resize", measure);
     return () => {
-      clearTimeout(t);
+      cancelAnimationFrame(rafId);
       ro.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [cardRefs, count]);
+  }, [containerRef, cardRefs, count]);
 
   if (lines.length === 0) return null;
 
@@ -250,6 +282,7 @@ export function ThreeLayerArchitecture({ process }: { process: Record<string, un
   const platforms = Array.isArray(process.platforms)
     ? (process.platforms as Platform[])
     : [];
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   if (platforms.length === 0) return null;
@@ -276,7 +309,7 @@ export function ThreeLayerArchitecture({ process }: { process: Record<string, un
           (前台 left, 中台 right, 後台 left…), full-width stacked on mobile.
           `relative` so ConnectorOverlay's absolute SVG lines up with the
           cards it measures. */}
-      <div className="relative flex flex-col">
+      <div ref={containerRef} className="relative flex flex-col">
         {platforms.map((platform, i) => (
           <div key={platform.id} className="contents">
             {i > 0 && <GapSpacer />}
@@ -289,7 +322,7 @@ export function ThreeLayerArchitecture({ process }: { process: Record<string, un
             />
           </div>
         ))}
-        <ConnectorOverlay cardRefs={cardRefs} count={platforms.length} />
+        <ConnectorOverlay containerRef={containerRef} cardRefs={cardRefs} count={platforms.length} />
       </div>
     </section>
   );
