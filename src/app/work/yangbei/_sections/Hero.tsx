@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { LabelSmall } from "@/components/design-system/Typography";
@@ -11,6 +11,60 @@ import type { YangbeiPlatform } from "../types";
 
 function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
+}
+
+function toHref(url: string) {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
+/**
+ * Live preview of the real 前台 site inside the phone mockup, instead of a
+ * static screenshot — loads it at a real mobile viewport size (375×812,
+ * matching PhoneFrame's own aspect ratio) in a hidden-size iframe, then
+ * scales that whole iframe down with a CSS transform to fit whatever the
+ * frame is actually rendered at (a fluid width, so a hardcoded scale would
+ * drift). `pointer-events-none`: this is a live *preview* window, not a
+ * mini-browser — letting touches reach the iframe at mockup scale would
+ * make precise taps nearly impossible and risks hijacking page-scroll
+ * gestures on mobile.
+ *
+ * Caveat: if the live site ever sends a restrictive
+ * `X-Frame-Options`/`Content-Security-Policy: frame-ancestors` header,
+ * browsers block the embed silently (no JS error fires), and the iframe
+ * just shows blank. There's no reliable way to detect that from here and
+ * fall back to a screenshot — if that happens, the fix is on the embedded
+ * site's own headers.
+ */
+function LivePreviewScreen({ url, alt }: { url: string; alt: string }) {
+  const DEVICE_W = 375;
+  const DEVICE_H = 812;
+  const outerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0);
+
+  useEffect(() => {
+    const el = outerRef.current;
+    if (!el) return;
+    function measure() {
+      if (el) setScale(el.getBoundingClientRect().width / DEVICE_W);
+    }
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div ref={outerRef} className="relative h-full w-full overflow-hidden bg-grey-50">
+      {scale > 0 && (
+        <iframe
+          src={toHref(url)}
+          title={alt}
+          className="pointer-events-none origin-top-left border-0"
+          style={{ width: DEVICE_W, height: DEVICE_H, transform: `scale(${scale})` }}
+        />
+      )}
+    </div>
+  );
 }
 
 /** Desktop ±2° mouse-tracking parallax tilt on the phone mockup. */
@@ -144,6 +198,16 @@ export function Hero({
       )
     ) : undefined;
 
+  // Mobile-only live preview of the real 前台 site (see LivePreviewScreen) —
+  // desktop keeps the static screenshot/video mockup above. Only swapped in
+  // when a live URL is actually set; falls back to the screenshot otherwise.
+  const frontendLiveUrl = frontend?.url;
+  const frontendMobileScreen = frontendLiveUrl ? (
+    <LivePreviewScreen url={frontendLiveUrl} alt={`${title} 前台即時預覽`} />
+  ) : (
+    frontendScreen
+  );
+
   return (
     <section id="hero" className="relative overflow-hidden bg-proj-white">
       {/* Mobile — fits within 100dvh */}
@@ -186,7 +250,7 @@ export function Hero({
         {/* Mockup — flex-1 so it fills remaining space, capped to avoid overflow */}
         <motion.div variants={heroItem} className="flex min-h-0 flex-1 items-center justify-center py-1">
           <div className="h-full max-h-[300px] w-auto" style={{ aspectRatio: "375/812" }}>
-            <PhoneFrame label="前台畫面（上傳截圖後顯示）" screen={frontendScreen} float />
+            <PhoneFrame label="前台畫面（上傳截圖後顯示）" screen={frontendMobileScreen} float />
           </div>
         </motion.div>
       </motion.div>
