@@ -5,6 +5,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import type { YangbeiPlatform as Platform } from "../types";
 
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
 /**
  * Decorative character illustration per platform, keyed by `platform.id`
  * (same ids Hero.tsx and DESKTOP_PLATFORM_IDS already rely on: "frontend",
@@ -28,7 +30,7 @@ function FloatingIllustration({ src, flip }: { src: string; flip: boolean }) {
   const reduceMotion = useReducedMotion();
   return (
     <motion.div
-      className="pointer-events-none absolute -top-9 right-2 z-10 size-20 select-none md:-top-12 md:-right-6 md:size-28"
+      className="pointer-events-none absolute -top-8 right-3 z-10 size-16 select-none sm:-top-10 sm:size-20 md:-top-12 md:-right-6 md:size-28"
       style={{ scaleX: flip ? -1 : 1 }}
       animate={reduceMotion ? {} : { y: [0, -8, 0], rotate: flip ? [2, -2, 2] : [-2, 2, -2] }}
       transition={reduceMotion ? undefined : { duration: 11, repeat: Infinity, ease: "easeInOut" }}
@@ -40,18 +42,73 @@ function FloatingIllustration({ src, flip }: { src: string; flip: boolean }) {
 }
 
 /**
- * Connecting stem between two stacked cards — a short diagonal line that
- * leans toward whichever side the next card is offset to, so the zigzag
- * reads as one continuous path (前台→中台→後台) rather than three unrelated
- * cards. Vertical (no lean) on mobile, where cards stack full-width.
+ * Connecting line between two stacked cards. Drawn with an SVG `line` +
+ * `pathLength` (not a pre-rotated CSS div) so it:
+ * 1. Actually animates "growing" into place as its own trigger scrolls into
+ *    view (`whileInView`), instead of just appearing — this is what makes
+ *    scrolling feel like it's "running the connection out" to the next card.
+ * 2. Renders as a true corner-to-corner diagonal on desktop (via
+ *    `preserveAspectRatio="none"`, stretched to fill its own box) without
+ *    hand-tuned rotate-degree guesswork, and collapses to a plain vertical
+ *    line on mobile where there's no left/right offset to connect.
  */
 function StepConnector({ leanRight }: { leanRight: boolean }) {
+  const reduceMotion = useReducedMotion();
+  const lineMotionProps = {
+    initial: { pathLength: 0 },
+    whileInView: { pathLength: 1 },
+    viewport: { once: true, margin: "-30% 0px -30% 0px" },
+    transition: { duration: reduceMotion ? 0 : 0.7, ease: EASE },
+  };
+
   return (
-    <div className={`flex h-12 md:h-16 ${leanRight ? "justify-start md:pl-16" : "justify-end md:pr-16"} px-6`}>
-      <div
-        className="h-full w-px origin-top bg-gradient-to-b from-primary-orange/35 to-primary-orange/5 md:origin-top"
-        style={{ transform: `rotate(${leanRight ? 14 : -14}deg)` }}
-      />
+    <div className="flex h-16 items-stretch justify-center md:h-24">
+      {/* Mobile: straight vertical stem. */}
+      <svg
+        className="h-full w-px overflow-visible md:hidden"
+        viewBox="0 0 2 100"
+        preserveAspectRatio="none"
+        fill="none"
+        aria-hidden
+      >
+        <motion.line
+          x1="1"
+          y1="0"
+          x2="1"
+          y2="100"
+          vectorEffect="non-scaling-stroke"
+          stroke="var(--color-primary-orange)"
+          strokeOpacity={0.35}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          {...lineMotionProps}
+        />
+      </svg>
+
+      {/* Desktop: diagonal, leaning toward whichever side the next card
+          sits on, so 前台→中台→後台 reads as one continuous zigzag path. */}
+      <div className={`hidden h-full w-full md:flex ${leanRight ? "justify-start pl-[8%]" : "justify-end pr-[8%]"}`}>
+        <svg
+          className="h-full w-28 overflow-visible lg:w-36"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          fill="none"
+          aria-hidden
+        >
+          <motion.line
+            x1={leanRight ? 0 : 100}
+            y1="0"
+            x2={leanRight ? 100 : 0}
+            y2="100"
+            vectorEffect="non-scaling-stroke"
+            stroke="var(--color-primary-orange)"
+            strokeOpacity={0.35}
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            {...lineMotionProps}
+          />
+        </svg>
+      </div>
     </div>
   );
 }
@@ -61,7 +118,11 @@ function PlatformCard({ platform, align }: { platform: Platform; align: "left" |
 
   return (
     <SlideIn direction={align === "left" ? "left" : "right"} viewportMargin="-100px">
-      <div className={`relative md:w-[78%] ${align === "left" ? "md:mr-auto" : "md:ml-auto"}`}>
+      {/* Fixed, content-hugging width on desktop (not a percentage of the
+          section) so the card reads as its own object sitting in open
+          space, same as the reference — not a bar stretched edge to edge.
+          Full-width on mobile, where there's no room to offset left/right. */}
+      <div className={`relative w-full md:w-[380px] lg:w-[420px] ${align === "left" ? "md:mr-auto" : "md:ml-auto"}`}>
         {illustration && <FloatingIllustration src={illustration} flip={align === "right"} />}
 
         <div
@@ -121,9 +182,9 @@ function PlatformCard({ platform, align }: { platform: Platform; align: "left" |
 /**
  * 一套系統，三種角色 — architecture overview.
  * Shows the 3-layer platform (前台/中台/後台) as a scroll-triggered,
- * zig-zagging stack of cards — each platform reveals on its own as it
- * scrolls into view (rather than the whole row animating in together),
- * connected by a diagonal "step" line and topped with its own floating
+ * zig-zagging stack of content-hugging cards — each platform reveals on its
+ * own as it scrolls into view, joined by a diagonal line that draws itself
+ * in as the next card comes into view, and topped with its own floating
  * character illustration.
  * Content from `process.architectureTitle`, `process.architectureSubtitle`, `process.platforms`.
  */
