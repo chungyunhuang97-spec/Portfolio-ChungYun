@@ -23,10 +23,10 @@ function toHref(url: string) {
  * matching PhoneFrame's own aspect ratio) in a hidden-size iframe, then
  * scales that whole iframe down with a CSS transform to fit whatever the
  * frame is actually rendered at (a fluid width, so a hardcoded scale would
- * drift). `pointer-events-none`: this is a live *preview* window, not a
- * mini-browser — letting touches reach the iframe at mockup scale would
- * make precise taps nearly impossible and risks hijacking page-scroll
- * gestures on mobile.
+ * drift). Genuinely interactive (taps/scroll reach the iframe) rather than
+ * a flattened preview, per request -- a transform-scaled iframe still hit-
+ * tests correctly, so a tap lands on the right element inside it even
+ * though everything is shrunk.
  *
  * Caveat: if the live site ever sends a restrictive
  * `X-Frame-Options`/`Content-Security-Policy: frame-ancestors` header,
@@ -59,7 +59,7 @@ function LivePreviewScreen({ url, alt }: { url: string; alt: string }) {
         <iframe
           src={toHref(url)}
           title={alt}
-          className="pointer-events-none origin-top-left border-0"
+          className="origin-top-left border-0"
           style={{ width: DEVICE_W, height: DEVICE_H, transform: `scale(${scale})` }}
         />
       )}
@@ -193,6 +193,7 @@ export function Hero({
           alt={`${title} 前台介面截圖`}
           fill
           sizes="(min-width: 768px) 220px, 170px"
+          quality={90}
           className="object-cover object-top"
         />
       )

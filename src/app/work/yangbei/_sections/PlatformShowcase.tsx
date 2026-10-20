@@ -54,7 +54,11 @@ function PlatformScreen({
   return isVideoUrl(url) ? (
     <video src={url} autoPlay loop muted playsInline className={`h-full w-full ${className}`} />
   ) : (
-    <Image src={url} alt={alt} fill sizes={sizes} className={className} />
+    // quality bumped from Next's default (75) -- same softening seen on the
+    // architecture illustrations showed up here too. Not `unoptimized`
+    // (unlike those small stickers, an admin-uploaded screenshot can be a
+    // multi-MB capture, so resizing is still worth keeping).
+    <Image src={url} alt={alt} fill sizes={sizes} quality={90} className={className} />
   );
 }
 

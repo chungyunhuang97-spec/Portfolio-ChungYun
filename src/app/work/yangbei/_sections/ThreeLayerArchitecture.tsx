@@ -52,7 +52,21 @@ function FloatingIllustration({ src, flip }: { src: string; flip: boolean }) {
 /** One drawn-in connector line, shared by the mobile stem and the desktop
  * measured diagonals — a single `pathLength` tween triggered the moment
  * this particular line scrolls into view, so each connection "runs out" to
- * the next card as you scroll rather than just appearing. */
+ * the next card as you scroll rather than just appearing.
+ *
+ * `margin: "0px 0px -10% 0px"` triggers as soon as the line starts
+ * entering from the *bottom* of the viewport, not only once it's already
+ * well inside it -- the previous `-25% 0px -25% 0px` shrank the trigger
+ * zone in from BOTH edges, so the line didn't start drawing until it was
+ * already mostly on screen. On a slow desktop scroll there was still just
+ * enough runway left to catch the tail of the 0.8s tween; a fast mobile
+ * flick covers that little remaining distance well under 0.8s, so the
+ * line was effectively always seen already-drawn -- reported as "no
+ * animation on mobile". `once: false` (instead of `true`) replays the
+ * draw each time the line re-enters view, since the previous one-shot
+ * version stayed drawn forever after its first trigger, which read as
+ * "missing" on a reverse scroll back up through an already-triggered
+ * line. */
 function DrawnLine({ x1, y1, x2, y2 }: { x1: number | string; y1: number | string; x2: number | string; y2: number | string }) {
   const reduceMotion = useReducedMotion();
   return (
@@ -68,7 +82,7 @@ function DrawnLine({ x1, y1, x2, y2 }: { x1: number | string; y1: number | strin
       strokeLinecap="round"
       initial={{ pathLength: 0 }}
       whileInView={{ pathLength: 1 }}
-      viewport={{ once: true, margin: "-25% 0px -25% 0px" }}
+      viewport={{ once: false, margin: "0px 0px -10% 0px" }}
       transition={{ duration: reduceMotion ? 0 : 0.8, ease: EASE }}
     />
   );
