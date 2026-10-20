@@ -54,7 +54,7 @@ export function Outcomes({ process }: { process: Record<string, unknown> }) {
   return (
     <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-[80px]">
       <SlideIn delay={0.05}>
-        <div className="mb-10 flex flex-col gap-3 md:mb-14">
+        <div className="mb-10 flex flex-col items-center gap-3 text-center md:mb-14">
           <span className="font-nunito text-[13px] font-extrabold tracking-[1px] text-primary-black/40 uppercase">
             Outcomes
           </span>

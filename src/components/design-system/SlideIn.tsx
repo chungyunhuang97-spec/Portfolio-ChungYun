@@ -14,6 +14,7 @@ export function SlideIn({
   delay = 0,
   className,
   viewportMargin = "-80px",
+  onAnimationComplete,
 }: {
   children: ReactNode;
   direction?: "left" | "right" | "up";
@@ -31,6 +32,11 @@ export function SlideIn({
    * content.
    */
   viewportMargin?: string;
+  /** Fires once the entrance tween settles. For a caller that needs this
+   * element's final, resting position (e.g. measuring it for something
+   * else) -- the entrance itself moves it via `transform`, so nothing else
+   * observes when it's actually done. */
+  onAnimationComplete?: () => void;
 }) {
   const offset =
     direction === "left"
@@ -46,6 +52,7 @@ export function SlideIn({
       whileInView={{ opacity: 1, x: 0, y: 0 }}
       viewport={{ once: true, margin: viewportMargin }}
       transition={{ type: "spring", stiffness: 90, damping: 18, delay }}
+      onAnimationComplete={onAnimationComplete}
     >
       {children}
     </motion.div>

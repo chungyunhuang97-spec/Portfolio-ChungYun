@@ -37,7 +37,14 @@ function FloatingIllustration({ src, flip }: { src: string; flip: boolean }) {
       transition={reduceMotion ? undefined : { duration: 11, repeat: Infinity, ease: "easeInOut" }}
       aria-hidden
     >
-      <Image src={src} alt="" fill sizes="112px" className="object-contain drop-shadow-sm" />
+      {/* unoptimized: these are small (~70KB), already-compressed flat-color
+          stickers -- running them through Next's resize+re-encode pipeline
+          for a 112px slot softened edges and flattened color noticeably
+          (visible on closer inspection). Serving the original PNG directly
+          and letting the browser downscale it reads crisper for art like
+          this, and the bandwidth cost of skipping optimization is trivial
+          at this file size. */}
+      <Image src={src} alt="" fill sizes="112px" unoptimized className="object-contain drop-shadow-sm" />
     </motion.div>
   );
 }
@@ -109,19 +116,28 @@ interface LinePoints {
  * the shared container — every card reporting position near (0, 0) and
  * the "diagonal" collapsing into the X of two crossed, wrongly-anchored
  * lines that was reported. `getBoundingClientRect()` isn't fooled by an
- * intervening transform; it's also why the card is re-measured on a short
- * rAF loop after mount (not just once), since this entrance transform
- * animates for a few hundred ms and doesn't fire ResizeObserver (no size
- * change, only position).
+ * intervening transform.
+ *
+ * `settleSignal` bumps once per card, the moment its own SlideIn entrance
+ * (which moves it via `transform`, not a size change ResizeObserver would
+ * catch) finishes — an earlier version instead re-measured on every
+ * animation frame for 1.5s to track that same settle, but updating each
+ * line's endpoints ~90 times/sec fought its OWN `pathLength` draw-in tween
+ * (recomputed on every endpoint change), which is why the line stopped
+ * visibly animating in and just appeared already-drawn. A measurement per
+ * settle event is precise instead of a blind poll, and only ever a small,
+ * fixed number of corrections.
  */
 function ConnectorOverlay({
   containerRef,
   cardRefs,
   count,
+  settleSignal,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   cardRefs: RefObject<(HTMLDivElement | null)[]>;
   count: number;
+  settleSignal: number;
 }) {
   const [lines, setLines] = useState<LinePoints[]>([]);
 
@@ -148,31 +164,15 @@ function ConnectorOverlay({
     }
 
     measure();
-    // SlideIn's entrance (a spring, ~0.6-0.9s to settle) moves each card via
-    // `transform` only — no size change, so ResizeObserver alone won't catch
-    // it. Keep remeasuring on every frame for ~1.5s to track it in, then
-    // fall back to ResizeObserver + resize for anything after that.
-    let rafId: number;
-    let elapsed = 0;
-    let last = performance.now();
-    function tick(now: number) {
-      elapsed += now - last;
-      last = now;
-      measure();
-      if (elapsed < 1500) rafId = requestAnimationFrame(tick);
-    }
-    rafId = requestAnimationFrame(tick);
-
     const ro = new ResizeObserver(measure);
     cardRefs.current.forEach((el) => el && ro.observe(el));
     if (containerRef.current) ro.observe(containerRef.current);
     window.addEventListener("resize", measure);
     return () => {
-      cancelAnimationFrame(rafId);
       ro.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [containerRef, cardRefs, count]);
+  }, [containerRef, cardRefs, count, settleSignal]);
 
   if (lines.length === 0) return null;
 
@@ -189,15 +189,21 @@ function PlatformCard({
   platform,
   align,
   cardRef,
+  onSettled,
 }: {
   platform: Platform;
   align: "left" | "right";
   cardRef: (el: HTMLDivElement | null) => void;
+  onSettled?: () => void;
 }) {
   const illustration = ILLUSTRATIONS[platform.id];
 
   return (
-    <SlideIn direction={align === "left" ? "left" : "right"} viewportMargin="-100px">
+    <SlideIn
+      direction={align === "left" ? "left" : "right"}
+      viewportMargin="-100px"
+      onAnimationComplete={onSettled}
+    >
       {/* Fluid, content-hugging width (a share of the row, capped) on
           desktop so the card reads as its own object in open space rather
           than a bar stretched edge to edge — not a fixed pixel value,
@@ -284,13 +290,16 @@ export function ThreeLayerArchitecture({ process }: { process: Record<string, un
     : [];
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // Bumped once per card as its own entrance settles -- see ConnectorOverlay's
+  // comment for why this replaced a continuous remeasure loop.
+  const [settleSignal, setSettleSignal] = useState(0);
 
   if (platforms.length === 0) return null;
 
   return (
     <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-[80px]">
       <SlideIn delay={0.05}>
-        <div className="mb-10 flex flex-col gap-3 md:mb-14">
+        <div className="mb-10 flex flex-col items-center gap-3 text-center md:mb-14">
           <span className="font-nunito text-[13px] font-extrabold tracking-[1px] text-primary-black/40 uppercase">
             System Architecture
           </span>
@@ -319,10 +328,16 @@ export function ThreeLayerArchitecture({ process }: { process: Record<string, un
               cardRef={(el) => {
                 cardRefs.current[i] = el;
               }}
+              onSettled={() => setSettleSignal((s) => s + 1)}
             />
           </div>
         ))}
-        <ConnectorOverlay containerRef={containerRef} cardRefs={cardRefs} count={platforms.length} />
+        <ConnectorOverlay
+          containerRef={containerRef}
+          cardRefs={cardRefs}
+          count={platforms.length}
+          settleSignal={settleSignal}
+        />
       </div>
     </section>
   );
