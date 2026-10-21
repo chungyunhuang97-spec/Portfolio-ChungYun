@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowsClockwise } from "@phosphor-icons/react/dist/ssr";
 import { MockupSlot } from "@/components/design-system/MockupSlot";
@@ -12,6 +12,51 @@ function FacePlaceholder({ label }: { label: string }) {
     <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-[20px] border-2 border-dashed border-grey-300 bg-grey-50 text-center text-grey-500">
       <p className="font-nunito px-4 text-[11px] font-bold">{label}</p>
     </div>
+  );
+}
+
+/**
+ * A star-shaped paperclip (two slightly offset, open star-wire loops --
+ * the real object has its wire looped around twice, not closed) pinching
+ * the small card to the big one. Pure SVG rather than a photo, so it's a
+ * crisp vector at any size, and the silver gradient sits on the stroke
+ * rather than a flat colour so it reads as bent metal, not a flat icon.
+ * The `id` suffix on the gradient avoids collisions if this card ever
+ * renders twice on one page.
+ */
+function SilverPaperclip({ className }: { className?: string }) {
+  const gradientId = `wedding-silver-clip-${useId()}`;
+  return (
+    <svg viewBox="0 0 100 94" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id={gradientId} x1="8%" y1="0%" x2="92%" y2="100%">
+          <stop offset="0%" stopColor="#f6f6f8" />
+          <stop offset="20%" stopColor="#ffffff" />
+          <stop offset="40%" stopColor="#8f8f99" />
+          <stop offset="55%" stopColor="#dedee2" />
+          <stop offset="75%" stopColor="#a6a6b0" />
+          <stop offset="100%" stopColor="#f2f2f4" />
+        </linearGradient>
+      </defs>
+      {/* Outer loop */}
+      <path
+        d="M49.44,6.07 L49.91,14.05 L60.44,41 L89.34,39.67 L66.97,58.01 L77.17,85.09 L52.81,69.48 L30.21,87.55 L37.53,59.55 L13.36,43.65 L42.25,41.95 L37.85,36.51"
+        fill="none"
+        stroke={`url(#${gradientId})`}
+        strokeWidth={5.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Inner loop -- slightly smaller and rotated, like the second wrap of a real paperclip's wire */}
+      <path
+        d="M52.04,11.05 L51.67,18.04 L57.87,40.29 L80.91,41.72 L61.67,54.48 L67.43,76.84 L49.35,62.48 L29.86,74.87 L37.93,53.24 L20.13,38.53 L43.19,39.52 L39.92,34.49"
+        fill="none"
+        stroke={`url(#${gradientId})`}
+        strokeWidth={5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -116,7 +161,7 @@ export function FlipInvitationCard({
         <motion.div
           animate={{ opacity: bigFlipped ? 0 : 1 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
-          className="absolute top-[8%] right-[6%] aspect-[3/4] w-[36%] [transform-style:preserve-3d] drop-shadow-[0_10px_18px_rgba(0,0,0,0.18)]"
+          className="absolute top-[8%] right-[6%] aspect-[3/4] w-[36%] rotate-[-3deg] drop-shadow-[0_10px_16px_rgba(64,50,42,0.3)]"
         >
           <motion.div
             animate={{ rotateY: smallFlipped ? 180 : 0 }}
@@ -140,6 +185,10 @@ export function FlipInvitationCard({
               )}
             </div>
           </motion.div>
+
+          {/* Pins the card on at a fixed angle, independent of the flip --
+              a real clip wouldn't rotate with the card underneath it. */}
+          <SilverPaperclip className="pointer-events-none absolute -top-[9%] -left-[15%] w-[34%] rotate-[14deg] drop-shadow-[0_4px_6px_rgba(64,50,42,0.4)]" />
         </motion.div>
       )}
 
