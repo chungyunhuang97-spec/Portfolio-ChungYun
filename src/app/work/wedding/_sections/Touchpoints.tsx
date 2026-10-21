@@ -137,18 +137,39 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
     // Static screenshot, not the live-embedded iframe this briefly was --
     // the scaled-down live Framer canvas was reading as broken layout
     // (cramped/overlapping at the ~220px phone-frame width), per Joe. A
-    // plain screenshot inside the phone frame reads cleanly at any size,
-    // and the external "查看連結" button below (see TouchpointCard, no
-    // longer index-02-gated) lets anyone who wants the real interactive
-    // version click through to it instead.
+    // plain screenshot inside the phone frame reads cleanly at any size.
+    //
+    // The notification banner + "查看電子喜帖" button both live in this
+    // visual column now (not the text column -- see TouchpointCard, which
+    // skips its own tag/button block for this index) -- Joe's second-round
+    // ask: the banner should sit below the phone and be allowed to run
+    // wider than it (this wrapper has no max-width of its own, only the
+    // phone does), and the button should only appear once the banner has,
+    // reading as "notification arrives, then here's the way in" rather
+    // than two unrelated pieces of UI in different columns.
     const screen = touchpoint.imageUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={touchpoint.imageUrl} alt={touchpoint.title} className="h-full w-full object-cover" />
     ) : undefined;
     return (
-      <div className="relative mx-auto w-full max-w-[220px]">
-        <PhoneFrame screen={screen} label="電子喜帖畫面 素材製作中" />
+      <div className="mx-auto flex w-full flex-col items-center gap-3">
+        <div className="w-full max-w-[220px]">
+          <PhoneFrame screen={screen} label="電子喜帖畫面 素材製作中" />
+        </div>
         <NotificationPing />
+        {touchpoint.demoUrl && (
+          <SlideIn delay={0.9} viewportMargin="-60px">
+            <a
+              href={touchpoint.demoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-fit items-center gap-2 border-b border-primary-black pb-1 font-nunito text-[14px] font-bold text-primary-black transition-colors hover:border-accent-pink hover:text-accent-pink"
+            >
+              {touchpoint.demoLabel ?? "查看連結"}
+              <ArrowUpRight size={16} weight="bold" />
+            </a>
+          </SlideIn>
+        )}
       </div>
     );
   }
@@ -200,6 +221,10 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
 function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: number }) {
   const reverse = index % 2 === 1;
   const paragraphs = touchpoint.desc.split("\n\n");
+  // 02's layout is custom, per Joe's ask: the tag moves up next to the
+  // title (instead of the bottom block below), and the demo button moves
+  // into the visual column entirely (see TouchpointVisual).
+  const isElectronicInvitation = touchpoint.index === "02";
 
   return (
     <div
@@ -213,18 +238,25 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
 
       <div className="flex flex-1 flex-col gap-4">
         <SlideIn direction={reverse ? "left" : "right"} delay={0.1}>
-          <div className="flex items-baseline gap-3">
-            <span className="font-fredoka text-[32px] leading-none text-accent-pink md:text-[40px]">
-              {touchpoint.index}
-            </span>
-            <div>
-              <h3 className="font-nunito text-[20px] font-bold text-primary-black md:text-[26px]">
-                {touchpoint.title}
-              </h3>
-              <p className="font-nunito text-[11px] font-bold tracking-[0.1em] text-grey-500 uppercase md:text-[12px]">
-                {touchpoint.titleEn} · {touchpoint.time}
-              </p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-baseline gap-3">
+              <span className="font-fredoka text-[32px] leading-none text-accent-pink md:text-[40px]">
+                {touchpoint.index}
+              </span>
+              <div>
+                <h3 className="font-nunito text-[20px] font-bold text-primary-black md:text-[26px]">
+                  {touchpoint.title}
+                </h3>
+                <p className="font-nunito text-[11px] font-bold tracking-[0.1em] text-grey-500 uppercase md:text-[12px]">
+                  {touchpoint.titleEn} · {touchpoint.time}
+                </p>
+              </div>
             </div>
+            {isElectronicInvitation && touchpoint.tech && (
+              <Tag variant="pink" className="w-fit shrink-0">
+                {touchpoint.tech}
+              </Tag>
+            )}
           </div>
         </SlideIn>
 
@@ -257,7 +289,7 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
           </SlideIn>
         )}
 
-        {(touchpoint.tech || touchpoint.demoUrl) && (
+        {!isElectronicInvitation && (touchpoint.tech || touchpoint.demoUrl) && (
           <SlideIn delay={0.4} className="flex flex-col items-start gap-3">
             {touchpoint.tech && (
               <Tag variant="pink" className="w-fit">

@@ -36,6 +36,14 @@ interface HeroStat {
  * - Copy/visual pair no longer spans the full section width edge-to-edge
  *   (was reading as disconnected) -- they now sit together with a fixed
  *   gap instead of being pushed to opposite edges.
+ * - Stats row restyled from bare label/value pairs into the frosted
+ *   rounded pill (`rounded-[40px] border border-black/[0.06] bg-white/60
+ *   backdrop-blur-[6px]`, dot-separated) every other project page's Hero
+ *   already uses for its role/timeframe `MetaPill` -- Joe flagged the old
+ *   plain-text row as inconsistent with the rest of the portfolio.
+ *   Generalized to N stats (dot between every pair) rather than copying
+ *   MetaPill's hardcoded 2-item shape, since this hero's content model is
+ *   3 stats (duration/role/deliverables), not role+timeframe.
  *
  * Breakpoints: this design system targets two breakpoints only (mobile /
  * `md:` desktop — see Typography.tsx's header comment), not the spec's
@@ -138,19 +146,22 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
       {/* Divider -- full width, between main content and the stats row */}
       <div className="h-px w-full bg-grey-100" />
 
-      {/* Stats row */}
+      {/* Stats row -- same frosted-pill treatment as every other project's
+          Hero MetaPill (role/timeframe), generalized to N dot-separated
+          stats instead of a hardcoded pair. */}
       {stats.length > 0 && (
-        <SlideIn delay={0.4} viewportMargin="0px" className="flex flex-wrap gap-6 px-6 py-8 md:gap-10 md:px-[120px]">
-          {stats.map((stat) => (
-            <div key={stat.label} className="flex flex-col gap-1">
-              <span className="font-nunito text-[9px] font-bold tracking-[0.14em] text-grey-600 uppercase md:text-[10px]">
-                {stat.label}
-              </span>
-              <span className="font-nunito text-[14px] font-semibold text-primary-black md:text-[15px]">
-                {stat.value}
-              </span>
-            </div>
-          ))}
+        <SlideIn delay={0.4} viewportMargin="0px" className="px-6 py-8 md:px-[120px]">
+          <div className="font-nunito inline-flex flex-wrap items-center gap-3 rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2.5 text-[12px] backdrop-blur-[6px] md:gap-4">
+            {stats.flatMap((stat, i) => [
+              i > 0 ? (
+                <span key={`dot-${stat.label}`} className="size-[3px] shrink-0 rounded-full bg-grey-300" aria-hidden />
+              ) : null,
+              <div key={stat.label} className="flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-grey-500">{stat.label}</span>
+                <span className="font-semibold text-primary-black">{stat.value}</span>
+              </div>,
+            ])}
+          </div>
         </SlideIn>
       )}
     </section>

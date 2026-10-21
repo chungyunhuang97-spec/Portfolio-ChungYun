@@ -13,24 +13,27 @@ import { EnvelopeSimpleOpen } from "@phosphor-icons/react/dist/ssr";
  * 逐步升溫，呼應接觸點本身「數位 -> 實體 -> 動態影像」的時間順序。
  */
 
-/** 02 電子喜帖 -- 進場後彈出一則像手機推播通知的提示再淡出，呼應「電子
- * 喜帖是數位送達」的即時感，跟 01 的紙本慢動作、03 的實體信件形成對比。
- * 需要 `relative` 的父容器才能正確疊在手機畫面上方（見呼叫端）。 */
+/** 02 電子喜帖 -- 手機畫面下方的推播通知橫幅，呼應「電子喜帖是數位送達」
+ * 的即時感。Joe 的第二輪回饋：原本疊在手機畫面「上面」、彈出後又淡出的
+ * toast 讀起來像一次性裝飾，意義不明；現在改成手機「下面」的橫幅、寬度
+ * 可以超出手機本身（呼叫端的外層容器比手機寬），進場後維持顯示，不再
+ * 淡出 -- 兼任「查看電子喜帖」按鈕的視覺引導，按鈕理所當然接在它下面、
+ * 進場時機也晚於它（見呼叫端的 SlideIn delay），讀起來像「通知先送達，
+ * 才引出可以點進去看的入口」。 */
 export function NotificationPing() {
   const reduceMotion = useReducedMotion();
-  if (reduceMotion) return null;
   return (
     <motion.div
-      initial={{ opacity: 0, y: -14, scale: 0.92 }}
-      whileInView={{ opacity: [0, 1, 1, 0], y: [-14, 0, 0, -6], scale: [0.92, 1, 1, 0.96] }}
+      initial={reduceMotion ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: -14, scale: 0.96 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 2.6, times: [0, 0.18, 0.78, 1], delay: 0.6, ease: "easeInOut" }}
-      className="pointer-events-none absolute inset-x-3 top-3 z-20 flex items-center gap-2 rounded-2xl bg-proj-white/95 px-3 py-2 shadow-[0px_8px_12px_rgba(64,50,42,0.12)] backdrop-blur-sm"
+      transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 160, damping: 16, delay: 0.3 }}
+      className="flex w-full items-center gap-2 rounded-2xl bg-proj-white px-4 py-3 shadow-[0px_8px_12px_rgba(64,50,42,0.08),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
     >
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-pink text-proj-white">
-        <EnvelopeSimpleOpen size={13} weight="fill" />
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-pink text-proj-white">
+        <EnvelopeSimpleOpen size={14} weight="fill" />
       </span>
-      <span className="font-nunito text-[10px] font-bold leading-tight text-primary-black">
+      <span className="font-nunito text-[12px] font-bold leading-tight text-primary-black">
         你收到一封電子喜帖
       </span>
     </motion.div>
