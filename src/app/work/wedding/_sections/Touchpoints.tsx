@@ -7,6 +7,7 @@ import { Tag } from "@/components/design-system/Tag";
 import { MouseTilt } from "@/components/design-system/MouseTilt";
 import { FlipInvitationCard } from "./FlipInvitationCard";
 import { ScaledIframeEmbed } from "./ScaledIframeEmbed";
+import { SigningLine, NotificationPing, PaperLandingWrap, TVPowerOn } from "./TouchpointEffects";
 
 interface Touchpoint {
   index: string;
@@ -154,35 +155,58 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
       <img src={touchpoint.imageUrl} alt={touchpoint.title} className="h-full w-full object-cover" />
     ) : undefined;
     return (
-      <div className="mx-auto w-full max-w-[220px]">
+      <div className="relative mx-auto w-full max-w-[220px]">
         <PhoneFrame screen={screen} label="電子喜帖畫面 素材製作中" />
+        <NotificationPing />
       </div>
     );
   }
 
   if (touchpoint.index === "04") {
-    if (touchpoint.youtubeUrl) return <YouTubeEmbed url={touchpoint.youtubeUrl} />;
-    return <MockupSlot label="婚禮開場影片 素材製作中" aspect="aspect-video" />;
+    if (touchpoint.youtubeUrl) {
+      return (
+        <TVPowerOn>
+          <YouTubeEmbed url={touchpoint.youtubeUrl} />
+        </TVPowerOn>
+      );
+    }
+    return (
+      <TVPowerOn>
+        <MockupSlot label="婚禮開場影片 素材製作中" aspect="aspect-video" />
+      </TVPowerOn>
+    );
   }
 
   if (touchpoint.index === "03") {
     return (
-      <FlipInvitationCard
-        frontComposedImageUrl={touchpoint.frontComposedImageUrl}
-        smallBackComposedImageUrl={touchpoint.smallBackComposedImageUrl}
-        backComposedImageUrl={touchpoint.backComposedImageUrl}
-      />
+      <PaperLandingWrap>
+        <FlipInvitationCard
+          frontComposedImageUrl={touchpoint.frontComposedImageUrl}
+          smallBackComposedImageUrl={touchpoint.smallBackComposedImageUrl}
+          backComposedImageUrl={touchpoint.backComposedImageUrl}
+        />
+      </PaperLandingWrap>
     );
   }
 
   // 結婚書約 (01) tilts toward the cursor on desktop -- Joe's own call,
   // specific to this touchpoint rather than every plain-image one, so it's
   // gated on the index rather than folded into the generic branch below.
-  if (touchpoint.index === "01" && touchpoint.imageUrl) {
+  // The signing-line flourish (see TouchpointEffects.tsx) only makes sense
+  // for this one touchpoint, so it's handled fully here rather than in the
+  // generic imageUrl branch below.
+  if (touchpoint.index === "01") {
     return (
-      <MouseTilt className="block">
-        <UnframedImage src={touchpoint.imageUrl} alt={touchpoint.title} />
-      </MouseTilt>
+      <div className="flex flex-col items-center">
+        {touchpoint.imageUrl ? (
+          <MouseTilt className="block">
+            <UnframedImage src={touchpoint.imageUrl} alt={touchpoint.title} />
+          </MouseTilt>
+        ) : (
+          <MockupSlot label={`${touchpoint.title} 素材製作中`} aspect="aspect-[3/4]" />
+        )}
+        <SigningLine />
+      </div>
     );
   }
 
