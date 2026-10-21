@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowsClockwise } from "@phosphor-icons/react/dist/ssr";
 import { MockupSlot } from "@/components/design-system/MockupSlot";
@@ -12,55 +12,6 @@ function FacePlaceholder({ label }: { label: string }) {
     <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-[20px] border-2 border-dashed border-grey-300 bg-grey-50 text-center text-grey-500">
       <p className="font-nunito px-4 text-[11px] font-bold">{label}</p>
     </div>
-  );
-}
-
-/**
- * A star-shaped paperclip, redrawn to match Joe's own reference photo of
- * the real object pinned to a corkboard: an outer star loop, a smaller
- * offset inner star (the wire's second wrap, not concentric with the
- * first), and -- the detail the earlier version was missing -- a small
- * round hook looping off the top of the outer star, which is the part
- * that actually catches over the top edge of a card stack. Pure SVG
- * rather than the reference photo itself: that photo can't be used
- * as-is (see conversation), but it gave an exact shape/proportion
- * reference to redraw from. The `id` suffix on the gradient avoids
- * collisions if this card ever renders twice on one page.
- *
- * Each loop is drawn TWICE to read as round bent wire rather than a flat
- * grey ribbon: a wider base stroke carries a multi-stop silver gradient
- * (alternating light/dark bands, the way a bent wire catches and loses
- * the light at each bend), then a thin near-white stroke follows the
- * exact same path down the middle -- that bright centre line is what
- * actually sells "shiny metal", since a flat single-gradient stroke just
- * reads as a grey outline no matter how many colour stops it has.
- */
-function SilverPaperclip({ className }: { className?: string }) {
-  const gradientId = `wedding-silver-clip-${useId()}`;
-  const outerPath =
-    "M56,14 A9,9 0 1 1 55,13.3 L42.51,32.15 L53.98,58.71 L82.82,56.37 L61.1,75.49 L72.24,102.19 L47.35,87.44 L25.4,106.29 L31.73,78.06 L7.03,63 L35.83,60.3 L30.58,54.26";
-  const innerPath =
-    "M63.17,33.41 L62.07,40.32 L65.07,58.93 L83.68,61.93 L66.91,70.54 L69.8,89.17 L56.44,75.88 L39.62,84.38 L48.12,67.56 L34.83,54.2 L53.46,57.09 L50.74,51.74";
-  return (
-    <svg viewBox="0 0 92 112" className={className} aria-hidden="true">
-      <defs>
-        <linearGradient id={gradientId} x1="5%" y1="0%" x2="95%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="14%" stopColor="#c6c6cc" />
-          <stop offset="28%" stopColor="#84848d" />
-          <stop offset="44%" stopColor="#e9e9ec" />
-          <stop offset="58%" stopColor="#6c6c75" />
-          <stop offset="76%" stopColor="#d6d6da" />
-          <stop offset="100%" stopColor="#ffffff" />
-        </linearGradient>
-      </defs>
-      <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-        <path d={outerPath} stroke={`url(#${gradientId})`} strokeWidth={2.6} />
-        <path d={outerPath} stroke="#ffffff" strokeOpacity={0.75} strokeWidth={0.8} />
-        <path d={innerPath} stroke={`url(#${gradientId})`} strokeWidth={2.3} />
-        <path d={innerPath} stroke="#ffffff" strokeOpacity={0.75} strokeWidth={0.7} />
-      </g>
-    </svg>
   );
 }
 
@@ -216,8 +167,17 @@ export function FlipInvitationCard({
                 layers together rather than floating beside the small
                 card. Pinned at a fixed angle outside the flip's rotateY
                 chain, since a real clip wouldn't rotate with the card
-                turning underneath it. */}
-            <SilverPaperclip className="pointer-events-none absolute -top-[22%] left-[30%] w-[34%] aspect-[92/112] rotate-[12deg] drop-shadow-[0_3px_5px_rgba(64,50,42,0.4)]" />
+                turning underneath it. Joe's own pre-cut photo of the real
+                clip (public/work/wedding/paperclip-silver.png,
+                879x887 ≈ square) replaces the earlier hand-drawn SVG --
+                real chrome specular highlights read as metal far more
+                convincingly than a gradient ever could. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/work/wedding/paperclip-silver.png"
+              alt=""
+              className="pointer-events-none absolute -top-[14%] left-[27%] w-[38%] aspect-square rotate-[12deg] object-contain drop-shadow-[0_3px_5px_rgba(64,50,42,0.4)]"
+            />
           </motion.div>
         )}
       </motion.div>
