@@ -1,7 +1,5 @@
-import { DisplayHero, BodyLarge, LabelSmall } from "@/components/design-system/Typography";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import type { Project } from "@/lib/types";
-import { DoodleRings, DoodleAirplane } from "./icons";
 
 interface HeroStat {
   label: string;
@@ -9,60 +7,119 @@ interface HeroStat {
 }
 
 /**
- * Section 1 — Hero. White background. Pink (accent-pink) is this
- * project's dominant color — the one token no other case study had
- * claimed yet (see docs/case-study-design-conventions.md's "主導色"
- * rule) — fitting for a wedding brand project.
+ * Section 1 — Hero. Direction C / type-driven, per the wedding hero spec
+ * (full-bleed wedding-yellow top band → centered display title with the
+ * "LANGUAGE" word yellow-filled + black-stroked → divider → bottom row
+ * pairing the project stats with a tagline pill). Replaces this page's
+ * earlier centered/doodle hero with the spec's type-led direction.
  *
- * Content model: `hero` row — title/subtitle/tagline (kicker) +
- * `stats` (the briefing's 3-column Duration/Role/Deliverables overview
- * card, stored as an array here rather than three separate JSON keys so
- * the row stays easy to extend).
+ * Breakpoints: this design system targets two breakpoints only (mobile /
+ * `md:` desktop — see Typography.tsx's header comment), not the spec's
+ * three-tier table, so `md:` here covers both the spec's tablet and
+ * desktop rows.
+ *
+ * Content model: unchanged from before (`hero.title`/`subtitle`/`tagline`/
+ * `stats`), plus two new optional string fields the spec's top band needs
+ * (`hero.meta` for the right-aligned "16 months · 4 media · 1 wedding"
+ * summary, `hero.pill` for the bottom-right tagline pill) — both fall
+ * back to this project's own spec copy when absent.
  */
 export function Hero({ project, hero }: { project: Project; hero: Record<string, unknown> }) {
-  const kicker = (hero.tagline as string) ?? project.category ?? "FREELANCE · BRAND IDENTITY";
-  const title = (hero.title as string) ?? project.title;
-  const subtitle = (hero.subtitle as string) ?? project.subtitle ?? "";
+  const topBandLabel =
+    (hero.tagline as string) ??
+    project.category ??
+    "FREELANCE · BRAND IDENTITY · PRINT · DIGITAL · MOTION";
+  const topBandMeta = (hero.meta as string) ?? "16 MONTHS · 4 MEDIA · 1 WEDDING";
+  const eyebrow = (hero.eyebrow as string) ?? "Case Study — 2025–2026";
+  const tagline = (hero.subtitle as string) ?? project.subtitle ?? "為一場婚禮建立完整的視覺語言系統";
   const stats = Array.isArray(hero.stats) ? (hero.stats as HeroStat[]) : [];
+  const pillText = (hero.pill as string) ?? "No Brief. Just Them.";
+
+  // "ONE LOVE, ONE LANGUAGE" -> line 1 "ONE LOVE,", line 2 "ONE " + the
+  // yellow/stroked last word -- generalized off the comma so a CMS-edited
+  // title still breaks and highlights sensibly.
+  const rawTitle = ((hero.title as string) ?? project.title).toUpperCase();
+  const [firstLine, ...restParts] = rawTitle.split(",").map((part) => part.trim());
+  const secondLine = restParts.join(", ");
+  const secondLineWords = secondLine.split(" ").filter(Boolean);
+  const lastWord = secondLineWords.pop();
+  const secondLineLead = secondLineWords.join(" ");
 
   return (
     <section
       id="hero"
-      className="relative overflow-hidden bg-proj-white px-6 pt-[104px] pb-16 md:px-[120px] md:pt-[200px] md:pb-24"
+      className="relative flex min-h-[100svh] flex-col overflow-hidden bg-proj-white pt-[104px] md:pt-[180px]"
     >
-      <div className="mx-auto flex max-w-[1040px] flex-col items-center gap-10 text-center">
-        <SlideIn delay={0.1} className="flex flex-col items-center gap-5">
-          <LabelSmall className="tracking-[0.15em] text-accent-pink uppercase">{kicker}</LabelSmall>
-          <DisplayHero className="text-primary-black">{title}</DisplayHero>
-          {subtitle && <BodyLarge className="max-w-[46ch] text-grey-600">{subtitle}</BodyLarge>}
-        </SlideIn>
+      {/* Top band -- full-bleed, ignores the page's side padding by design */}
+      <SlideIn viewportMargin="0px">
+        <div className="flex items-center justify-between gap-4 bg-wedding-yellow px-6 py-3 md:px-[120px]">
+          <span className="font-nunito text-[10px] font-bold tracking-[0.16em] text-primary-black uppercase md:text-[11px]">
+            {topBandLabel}
+          </span>
+          <span className="font-nunito hidden text-[10px] text-black/50 md:inline">{topBandMeta}</span>
+        </div>
+      </SlideIn>
 
-        <SlideIn delay={0.2} className="relative flex items-center justify-center py-4">
-          <DoodleRings className="size-[110px] text-accent-pink md:size-[150px]" aria-hidden />
-          <DoodleAirplane
-            className="absolute -top-2 -right-4 size-9 -rotate-6 text-primary-black md:-top-4 md:-right-8 md:size-12"
-            aria-hidden
-          />
+      {/* Main content */}
+      <div className="flex flex-1 flex-col justify-center px-6 py-12 md:px-[120px]">
+        <SlideIn delay={0.1} viewportMargin="0px" className="flex flex-col">
+          <p className="font-nunito mb-3 text-[11px] font-semibold tracking-[0.16em] text-grey-600 uppercase">
+            {eyebrow}
+          </p>
+          <h1 className="font-nunito text-[48px] leading-[0.95] font-black tracking-[-0.03em] text-primary-black uppercase md:text-[clamp(52px,7vw,96px)] md:leading-[0.92]">
+            <span className="block">
+              {firstLine}
+              {restParts.length > 0 ? "," : ""}
+            </span>
+            {secondLine && (
+              <span className="block">
+                {secondLineLead && `${secondLineLead} `}
+                <span
+                  className="text-wedding-yellow"
+                  style={{ WebkitTextStroke: "1.5px var(--color-primary-black)" }}
+                >
+                  {lastWord}
+                </span>
+              </span>
+            )}
+          </h1>
+          {tagline && (
+            <p className="font-nunito mt-2 max-w-[46ch] text-[18px] text-grey-600 italic md:text-[clamp(18px,2.5vw,30px)]">
+              {tagline}
+            </p>
+          )}
         </SlideIn>
+      </div>
 
+      {/* Divider -- full width, between main content and the bottom row */}
+      <div className="h-px w-full bg-grey-100" />
+
+      {/* Bottom row */}
+      <SlideIn
+        delay={0.2}
+        viewportMargin="0px"
+        className="flex flex-wrap items-center justify-between gap-4 px-6 py-8 md:px-[120px]"
+      >
         {stats.length > 0 && (
-          <SlideIn delay={0.3} className="grid w-full max-w-[600px] grid-cols-3 gap-3 md:gap-6">
+          <div className="flex flex-wrap gap-6 md:gap-10">
             {stats.map((stat) => (
-              <div
-                key={stat.label}
-                className="flex flex-col items-center gap-1 rounded-2xl border border-grey-100 bg-proj-white px-3 py-4 shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)] md:py-6"
-              >
-                <span className="font-nunito text-[10px] font-bold tracking-[0.1em] text-accent-pink uppercase md:text-[12px]">
+              <div key={stat.label} className="flex flex-col gap-1">
+                <span className="font-nunito text-[9px] font-bold tracking-[0.14em] text-grey-600 uppercase md:text-[10px]">
                   {stat.label}
                 </span>
-                <span className="font-nunito text-[12px] font-bold text-primary-black md:text-[16px]">
+                <span className="font-nunito text-[14px] font-semibold text-primary-black md:text-[15px]">
                   {stat.value}
                 </span>
               </div>
             ))}
-          </SlideIn>
+          </div>
         )}
-      </div>
+        {pillText && (
+          <span className="font-nunito hidden rounded-full border border-grey-100 px-4 py-1.5 text-[12px] font-medium text-grey-600 md:inline-block">
+            {pillText}
+          </span>
+        )}
+      </SlideIn>
     </section>
   );
 }
