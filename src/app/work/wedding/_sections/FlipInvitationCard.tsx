@@ -97,29 +97,49 @@ export function FlipInvitationCard({
 
       {/* Small card, pinned near the top -- fades out once the big card
           itself has flipped, since it's physically attached to the big
-          card's front face. */}
+          card's front face.
+
+          Split into two nested motion.div's rather than one. The outer
+          one needs `drop-shadow-[...]`, but per the CSS Filter Effects
+          spec any element with a `filter` is forced to render its
+          children as `transform-style: flat` regardless of what
+          `transform-style` it's given -- so with the rotateY flip and
+          the two [backface-visibility:hidden] faces on *that same*
+          element (as this used to be), the 3D space collapsed: the
+          "back" face never actually got hidden, and what showed through
+          was the front face's own content rendered as a flat mirror
+          (confirmed by reproducing it with a minimal repro). The inner
+          wrapper below carries the rotateY animation, the preserve-3d,
+          and the two faces, but no filter of its own, so its 3D space
+          stays intact and backface-visibility works as intended. */}
       {(smallFrontImageUrl || smallBackImageUrl) && (
         <motion.div
-          animate={{ opacity: bigFlipped ? 0 : 1, rotateY: smallFlipped ? 180 : 0 }}
+          animate={{ opacity: bigFlipped ? 0 : 1 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
           className="absolute top-[8%] right-[6%] aspect-[3/4] w-[36%] [transform-style:preserve-3d] drop-shadow-[0_10px_18px_rgba(0,0,0,0.18)]"
         >
-          <div className="absolute inset-0 [backface-visibility:hidden]">
-            {smallFrontImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={smallFrontImageUrl} alt="小卡正面" className="h-full w-full rounded-[8px] object-contain" />
-            ) : (
-              <FacePlaceholder label="小卡正面" />
-            )}
-          </div>
-          <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]">
-            {smallBackImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={smallBackImageUrl} alt="小卡背面" className="h-full w-full rounded-[8px] object-contain" />
-            ) : (
-              <FacePlaceholder label="小卡背面" />
-            )}
-          </div>
+          <motion.div
+            animate={{ rotateY: smallFlipped ? 180 : 0 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className="relative h-full w-full [transform-style:preserve-3d]"
+          >
+            <div className="absolute inset-0 [backface-visibility:hidden]">
+              {smallFrontImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={smallFrontImageUrl} alt="小卡正面" className="h-full w-full rounded-[8px] object-contain" />
+              ) : (
+                <FacePlaceholder label="小卡正面" />
+              )}
+            </div>
+            <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+              {smallBackImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={smallBackImageUrl} alt="小卡背面" className="h-full w-full rounded-[8px] object-contain" />
+              ) : (
+                <FacePlaceholder label="小卡背面" />
+              )}
+            </div>
+          </motion.div>
         </motion.div>
       )}
 
