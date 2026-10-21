@@ -161,22 +161,24 @@ export function FlipInvitationCard({
               </div>
             </motion.div>
 
-            {/* Straddles the seam between the two cards -- its lower half
-                overlaps the small card's top edge, its upper half spills
-                onto the big card behind it, so it reads as pinching both
-                layers together rather than floating beside the small
-                card. Pinned at a fixed angle outside the flip's rotateY
-                chain, since a real clip wouldn't rotate with the card
-                turning underneath it. Joe's own pre-cut photo of the real
-                clip (public/work/wedding/paperclip-silver.png,
-                879x887 ≈ square) replaces the earlier hand-drawn SVG --
-                real chrome specular highlights read as metal far more
-                convincingly than a gradient ever could. */}
+            {/* Sized and placed to match Joe's own reference photo of the
+                physical card pinned to a corkboard (measured off that
+                photo on a pixel grid): only the top ~30% of the clip
+                pokes above the small card's top edge, the rest presses
+                down onto the card itself -- that's what actually reads
+                as "pinching" rather than a decorative sticker floating
+                above the corner. Pinned at a fixed angle outside the
+                flip's rotateY chain, since a real clip wouldn't rotate
+                with the card turning underneath it. Joe's own pre-cut
+                photo of the real clip
+                (public/work/wedding/paperclip-silver.png, 879x887 ≈
+                square) -- real chrome specular highlights read as metal
+                far more convincingly than a gradient ever could. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/work/wedding/paperclip-silver.png"
               alt=""
-              className="pointer-events-none absolute -top-[14%] left-[27%] w-[38%] aspect-square rotate-[12deg] object-contain drop-shadow-[0_3px_5px_rgba(64,50,42,0.4)]"
+              className="pointer-events-none absolute -top-[7%] left-[44%] w-[48%] aspect-square rotate-[12deg] object-contain drop-shadow-[0_4px_6px_rgba(64,50,42,0.45)]"
             />
           </motion.div>
         )}
