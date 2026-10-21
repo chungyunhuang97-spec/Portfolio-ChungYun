@@ -14,18 +14,23 @@ interface HeroStat {
  * Replaces this page's earlier centered/doodle hero with the spec's
  * type-led direction.
  *
- * Revised twice per Joe's review rounds:
+ * Revised across Joe's review rounds:
  * - Dropped the full-bleed yellow top band entirely (redundant with the
  *   tag chips below it).
- * - "LANGUAGE" keeps a hairline black outline (~1px, `-webkit-text-stroke`
- *   strokes a glyph's whole contour including its counters -- there's no
- *   CSS-only way to stroke only the outer silhouette -- but at this width
- *   it reads as a clean thin line rather than the broken/jagged artifact
- *   the original 1.5px stroke produced on this bold weight).
- * - Right-hand visual is a plain photo placeholder (not another App-style
- *   Mockup — every touchpoint below already has its own mockup, so this
- *   slot is reserved for the couple's own photography instead), and the
- *   copy/visual pair no longer spans the full section width edge-to-edge
+ * - "LANGUAGE"'s outline moved off `-webkit-text-stroke` entirely --
+ *   text-stroke strokes a glyph's whole vector path including its
+ *   counters, and on this bold weight that produced the broken/jagged
+ *   triangle artifacts Joe flagged twice, even at 1px. A stacked
+ *   8-direction `text-shadow` fakes the same "outer edge only" outline by
+ *   layering solid filled copies instead of stroking a path, which can't
+ *   self-intersect the way a vector stroke can.
+ * - Right-hand visual is a real `heroImageUrl` media field (falls back to
+ *   a plain photo placeholder — not another App-style Mockup, since every
+ *   touchpoint below already has its own mockup and this slot is reserved
+ *   for the couple's own photography instead). Admin: open this project's
+ *   HERO section, "ADD FIELD" -> key `heroImageUrl`, type Media, to get an
+ *   upload dropzone for it.
+ * - Copy/visual pair no longer spans the full section width edge-to-edge
  *   (was reading as disconnected) -- they now sit together with a fixed
  *   gap instead of being pushed to opposite edges.
  *
@@ -39,6 +44,18 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
   const tagline = (hero.subtitle as string) ?? project.subtitle ?? "為一場婚禮建立完整的視覺語言系統";
   const stats = Array.isArray(hero.stats) ? (hero.stats as HeroStat[]) : [];
   const tagChips = project.tags.length > 0 ? project.tags : ["16 Months", "4 Media", "1 Wedding"];
+  const heroImageUrl = (hero.heroImageUrl as string) || undefined;
+
+  // Stacked 1px-offset copies in every direction read as a thin outer
+  // outline without stroking (and self-intersecting on) the glyph's own
+  // vector path -- see the component doc comment above.
+  const outlineShadow = [
+    [-1, -1], [0, -1], [1, -1],
+    [-1, 0], [1, 0],
+    [-1, 1], [0, 1], [1, 1],
+  ]
+    .map(([x, y]) => `${x}px ${y}px 0 var(--color-primary-black)`)
+    .join(", ");
 
   // "ONE LOVE, ONE LANGUAGE" -> line 1 "ONE LOVE,", line 2 "ONE " + the
   // yellow last word -- generalized off the comma so a CMS-edited title
@@ -70,10 +87,7 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
               {secondLine && (
                 <span className="block">
                   {secondLineLead && `${secondLineLead} `}
-                  <span
-                    className="text-wedding-yellow"
-                    style={{ WebkitTextStroke: "1px var(--color-primary-black)" }}
-                  >
+                  <span className="text-wedding-yellow" style={{ textShadow: outlineShadow }}>
                     {lastWord}
                   </span>
                 </span>
@@ -106,7 +120,14 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
           viewportMargin="0px"
           className="mx-auto w-full max-w-[220px] md:mx-0 md:w-[280px] md:max-w-none md:shrink-0"
         >
-          <MockupSlot aspect="aspect-[3/4]" label="主視覺照片 — 素材待上傳" float />
+          {heroImageUrl ? (
+            <div className="aspect-[3/4] w-full overflow-hidden rounded-[32px]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={heroImageUrl} alt={project.title} className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <MockupSlot aspect="aspect-[3/4]" label="主視覺照片 — 素材待上傳" float />
+          )}
         </SlideIn>
       </div>
 

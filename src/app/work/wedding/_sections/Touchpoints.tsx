@@ -6,6 +6,7 @@ import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 import { Tag } from "@/components/design-system/Tag";
 import { MouseTilt } from "@/components/design-system/MouseTilt";
 import { FlipInvitationCard } from "./FlipInvitationCard";
+import { ScaledIframeEmbed } from "./ScaledIframeEmbed";
 
 interface Touchpoint {
   index: string;
@@ -139,12 +140,7 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
     // "查看電子喜帖" external link below is dropped for this touchpoint
     // (see the demoUrl guard in TouchpointCard).
     const screen = touchpoint.demoUrl ? (
-      <iframe
-        src={touchpoint.demoUrl}
-        title={touchpoint.title}
-        loading="lazy"
-        className="h-full w-full border-0"
-      />
+      <ScaledIframeEmbed src={touchpoint.demoUrl} title={touchpoint.title} />
     ) : touchpoint.imageUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={touchpoint.imageUrl} alt={touchpoint.title} className="h-full w-full object-cover" />
