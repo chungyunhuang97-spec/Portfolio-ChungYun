@@ -16,12 +16,16 @@ function FacePlaceholder({ label }: { label: string }) {
 }
 
 /**
- * A star-shaped paperclip (two offset, open star-wire loops -- the real
- * object has its wire looped around twice, not sitting concentric with
- * itself, so the inner loop is a visibly smaller star shifted off to one
- * side rather than just scaled down in place). Pure SVG rather than a
- * photo, so it's a crisp vector at any size. The `id` suffix on the
- * gradient avoids collisions if this card ever renders twice on one page.
+ * A star-shaped paperclip, redrawn to match Joe's own reference photo of
+ * the real object pinned to a corkboard: an outer star loop, a smaller
+ * offset inner star (the wire's second wrap, not concentric with the
+ * first), and -- the detail the earlier version was missing -- a small
+ * round hook looping off the top of the outer star, which is the part
+ * that actually catches over the top edge of a card stack. Pure SVG
+ * rather than the reference photo itself: that photo can't be used
+ * as-is (see conversation), but it gave an exact shape/proportion
+ * reference to redraw from. The `id` suffix on the gradient avoids
+ * collisions if this card ever renders twice on one page.
  *
  * Each loop is drawn TWICE to read as round bent wire rather than a flat
  * grey ribbon: a wider base stroke carries a multi-stop silver gradient
@@ -34,11 +38,11 @@ function FacePlaceholder({ label }: { label: string }) {
 function SilverPaperclip({ className }: { className?: string }) {
   const gradientId = `wedding-silver-clip-${useId()}`;
   const outerPath =
-    "M41.72,3.18 L42.51,12.15 L53.98,38.71 L82.82,36.37 L61.1,55.49 L72.24,82.19 L47.35,67.44 L25.4,86.29 L31.73,58.06 L7.03,43 L35.83,40.3 L30.58,34.26";
+    "M56,14 A9,9 0 1 1 55,13.3 L42.51,32.15 L53.98,58.71 L82.82,56.37 L61.1,75.49 L72.24,102.19 L47.35,87.44 L25.4,106.29 L31.73,78.06 L7.03,63 L35.83,60.3 L30.58,54.26";
   const innerPath =
-    "M63.17,13.41 L62.07,20.32 L65.07,38.93 L83.68,41.93 L66.91,50.54 L69.8,69.17 L56.44,55.88 L39.62,64.38 L48.12,47.56 L34.83,34.2 L53.46,37.09 L50.74,31.74";
+    "M63.17,33.41 L62.07,40.32 L65.07,58.93 L83.68,61.93 L66.91,70.54 L69.8,89.17 L56.44,75.88 L39.62,84.38 L48.12,67.56 L34.83,54.2 L53.46,57.09 L50.74,51.74";
   return (
-    <svg viewBox="0 0 90 92" className={className} aria-hidden="true">
+    <svg viewBox="0 0 92 112" className={className} aria-hidden="true">
       <defs>
         <linearGradient id={gradientId} x1="5%" y1="0%" x2="95%" y2="100%">
           <stop offset="0%" stopColor="#ffffff" />
@@ -213,7 +217,7 @@ export function FlipInvitationCard({
                 card. Pinned at a fixed angle outside the flip's rotateY
                 chain, since a real clip wouldn't rotate with the card
                 turning underneath it. */}
-            <SilverPaperclip className="pointer-events-none absolute -top-[16%] -left-[10%] w-[42%] rotate-[10deg] drop-shadow-[0_3px_5px_rgba(64,50,42,0.4)]" />
+            <SilverPaperclip className="pointer-events-none absolute -top-[22%] left-[30%] w-[34%] aspect-[92/112] rotate-[12deg] drop-shadow-[0_3px_5px_rgba(64,50,42,0.4)]" />
           </motion.div>
         )}
       </motion.div>
