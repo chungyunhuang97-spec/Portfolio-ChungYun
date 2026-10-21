@@ -4,6 +4,7 @@ import { SectionKicker } from "@/components/design-system/SectionKicker";
 import { MockupSlot } from "@/components/design-system/MockupSlot";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 import { Tag } from "@/components/design-system/Tag";
+import { MouseTilt } from "@/components/design-system/MouseTilt";
 import { FlipInvitationCard } from "./FlipInvitationCard";
 
 interface Touchpoint {
@@ -16,7 +17,7 @@ interface Touchpoint {
   tech?: string;
   demoUrl?: string;
   demoLabel?: string;
-  // Admin-uploaded/pasted media -- `imageUrl`/`frontImageUrl`/
+  // Admin-uploaded/pasted media -- `imageUrl`/`frontComposedImageUrl`/
   // `backImageUrl` are named so the generic admin ContentEditor (see
   // ContentEditor.tsx's MEDIA_KEY_PATTERN) auto-detects them as nested
   // media fields inside this array and renders an AdminMediaDropzone for
@@ -28,10 +29,14 @@ interface Touchpoint {
   // dropzone, which better matches what it actually is.
   imageUrl?: string;
   youtubeUrl?: string;
-  frontImageUrl?: string;
+  // `frontComposedImageUrl`/`smallBackComposedImageUrl` are flat exports
+  // from Joe's own design tool -- big card + small card + the real
+  // paperclip baked into one photo per state, not separate layers
+  // composited live (see FlipInvitationCard's doc comment for why that
+  // changed). `backImageUrl` is the big card's own back, unchanged.
+  frontComposedImageUrl?: string;
+  smallBackComposedImageUrl?: string;
   backImageUrl?: string;
-  smallFrontImageUrl?: string;
-  smallBackImageUrl?: string;
 }
 
 const CARD_SHADOW = "shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]";
@@ -121,9 +126,9 @@ function YouTubeEmbed({ url }: { url: string }) {
  * a project with no media yet), so the page keeps reading as intentional
  * while assets trickle in and never needs a layout change once they do.
  * Index 03 (紙本喜帖) is the exception — it has its own interactive
- * FlipInvitationCard rather than a static image/placeholder, since the
- * real object has three states (card front+back, small pinned card
- * front+back) a flat image can't show on its own.
+ * FlipInvitationCard rather than a single static image/placeholder,
+ * cycling between three separate flat photos (one per real-object state)
+ * instead of one.
  */
 function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
   if (touchpoint.index === "02") {
@@ -146,11 +151,21 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
   if (touchpoint.index === "03") {
     return (
       <FlipInvitationCard
-        frontImageUrl={touchpoint.frontImageUrl}
+        frontComposedImageUrl={touchpoint.frontComposedImageUrl}
+        smallBackComposedImageUrl={touchpoint.smallBackComposedImageUrl}
         backImageUrl={touchpoint.backImageUrl}
-        smallFrontImageUrl={touchpoint.smallFrontImageUrl}
-        smallBackImageUrl={touchpoint.smallBackImageUrl}
       />
+    );
+  }
+
+  // 結婚書約 (01) tilts toward the cursor on desktop -- Joe's own call,
+  // specific to this touchpoint rather than every plain-image one, so it's
+  // gated on the index rather than folded into the generic branch below.
+  if (touchpoint.index === "01" && touchpoint.imageUrl) {
+    return (
+      <MouseTilt className="block">
+        <UnframedImage src={touchpoint.imageUrl} alt={touchpoint.title} />
+      </MouseTilt>
     );
   }
 
@@ -244,8 +259,8 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
  *
  * Content model: `process.touchpoints` — array of
  * `{index, title, titleEn, time, desc, highlights, tech?, demoUrl?,
- * demoLabel?, imageUrl?, youtubeUrl?, frontImageUrl?, backImageUrl?,
- * smallFrontImageUrl?, smallBackImageUrl?}`. The media fields are
+ * demoLabel?, imageUrl?, youtubeUrl?, frontComposedImageUrl?,
+ * smallBackComposedImageUrl?, backImageUrl?}`. The media fields are
  * optional and admin-editable (see TouchpointVisual).
  */
 export function Touchpoints({ process }: { process: Record<string, unknown> }) {

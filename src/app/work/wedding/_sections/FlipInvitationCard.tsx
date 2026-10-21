@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowsClockwise } from "@phosphor-icons/react/dist/ssr";
 import { MockupSlot } from "@/components/design-system/MockupSlot";
+import { MouseTilt } from "@/components/design-system/MouseTilt";
 
 type FlipState = 0 | 1 | 2;
 
@@ -16,180 +17,105 @@ function FacePlaceholder({ label }: { label: string }) {
 }
 
 interface FlipInvitationCardProps {
-  frontImageUrl?: string;
+  /** Big card front + small card front + the real paperclip, all one flat
+   * photo/export -- baked together in Joe's own design tool rather than
+   * composited live (see conversation: live-compositing a separate clip
+   * overlay over separate card layers never read as convincingly "real"
+   * at small render sizes, however much the clip graphic itself was
+   * tuned). */
+  frontComposedImageUrl?: string;
+  /** Same big card front + clip, but with the small card showing its back
+   * (the 回文/info side) instead. */
+  smallBackComposedImageUrl?: string;
+  /** The big card's own back -- unchanged from before, since the small
+   * card (and clip) aren't part of this face at all. */
   backImageUrl?: string;
-  smallFrontImageUrl?: string;
-  smallBackImageUrl?: string;
 }
 
 /**
- * Click-to-flip presentation of the print invitation's three real states
- * (大卡小卡皆正面 → 小卡翻面露出回文 → 大卡翻面露出背面), composited from
- * 4 photographed faces rather than a video/GIF or an AI-generated render
- * — real CSS 3D transforms over real photos keep every line of text on
- * the card crisp (nothing is regenerated or re-rasterized through a
- * video codec), which was the whole risk with the Google Flow idea.
- * Tap-to-advance (not autoplay or hover) per Joe's explicit call — this
- * section's own signature motif, not reused from any other touchpoint on
- * the page.
+ * Click-to-cycle presentation of the print invitation's three real states
+ * (大卡小卡皆正面 → 小卡翻面露出回文 → 大卡翻面露出背面). Previously this
+ * assembled every state live from 4 separate photographed faces plus a
+ * CSS-positioned paperclip overlay -- a real `transform-style:preserve-3d`
+ * flip per card, with the clip as a floating absolutely-positioned image
+ * on top. That fought CSS the whole way (a `filter` on the wrong element
+ * silently flattens its children's 3D space and breaks
+ * `backface-visibility`; a clip sized as a fraction of the card reads as
+ * convincing "pinching" at a 360px test width and as illegible scribble at
+ * the ~220px the card actually renders at in the grid) and, per Joe, never
+ * actually looked like the real object no matter how the clip was tuned.
  *
- * `state` cycles 0 → 1 → 2 → 0 on each tap:
- *   0: big card front + small card front (resting state)
- *   1: big card front + small card flipped to its back (the 回文)
- *   2: big card flipped to its back (small card fades out — it's pinned
- *      to the front face, so there's nothing to show it against)
+ * Now there are three flat, pre-composited images (the clip baked in by
+ * Joe's own design tool, pixel-perfect, at whatever size it's displayed)
+ * and this component just swaps between them -- no live layering, no
+ * separate clip element, no backface-visibility/preserve-3d/filter
+ * interactions to get wrong.
  *
- * Standard CSS flip-card technique: a `perspective`-bearing wrapper, a
- * `rotateY`-animated `transform-style: preserve-3d` layer per card, and
- * two `backface-visibility: hidden` faces inside it (the back face
- * pre-rotated 180deg so it only becomes visible once its parent reaches
- * 180deg) -- framer-motion drives the parent's rotation, the static
- * Tailwind arbitrary-property classes on the two face children never
- * animate themselves, so the two don't fight over the `transform` style.
+ * `state` cycles 0 → 1 → 2 → 0 on each tap; each transition swaps the
+ * `<img>` via AnimatePresence with a rotateY-out/rotateY-in pair, which
+ * reads as the card flipping even though (for the 0↔1 transition
+ * especially) it's really just two different flat photos -- the big
+ * card's own geometry doesn't actually change between those two, only
+ * the small card's area does, but animating the swap as a flip rather
+ * than a crossfade keeps all three transitions feeling consistent.
+ *
+ * Wrapped in `MouseTilt` so the whole card tilts toward the cursor on
+ * desktop, independent of the click-driven flip (see MouseTilt's own
+ * doc comment for why those two rotateY sources don't fight each other).
  */
 export function FlipInvitationCard({
-  frontImageUrl,
+  frontComposedImageUrl,
+  smallBackComposedImageUrl,
   backImageUrl,
-  smallFrontImageUrl,
-  smallBackImageUrl,
 }: FlipInvitationCardProps) {
   const [state, setState] = useState<FlipState>(0);
 
-  const hasAnyMedia = Boolean(frontImageUrl || backImageUrl || smallFrontImageUrl || smallBackImageUrl);
+  const hasAnyMedia = Boolean(frontComposedImageUrl || smallBackComposedImageUrl || backImageUrl);
   if (!hasAnyMedia) {
     return <MockupSlot label="紙本喜帖 素材製作中" aspect="aspect-[3/4]" />;
   }
 
-  const bigFlipped = state === 2;
-  const smallFlipped = state >= 1;
-  const resting = state === 0;
+  const faces: { src?: string; alt: string; placeholder: string }[] = [
+    { src: frontComposedImageUrl, alt: "紙本喜帖正面（含小卡正面）", placeholder: "正面 素材製作中" },
+    { src: smallBackComposedImageUrl, alt: "紙本喜帖正面（小卡翻至背面）", placeholder: "小卡背面 素材製作中" },
+    { src: backImageUrl, alt: "紙本喜帖背面", placeholder: "背面 素材製作中" },
+  ];
   const nextHint = state === 0 ? "點擊查看小卡背面" : state === 1 ? "點擊查看大卡背面" : "點擊返回正面";
+  const current = faces[state];
 
   return (
-    <button
-      type="button"
-      onClick={() => setState((s) => ((s + 1) % 3) as FlipState)}
-      aria-label={nextHint}
-      className="group relative block aspect-[3/4] w-full cursor-pointer [perspective:1600px]"
-    >
-      {/* Big card + small card + clip float together as one pinned
-          object, not a flat pasted-on image -- a slow, tiny, looping
-          rotate/y drift (only while resting; collapsed back to 0 the
-          moment a flip starts, so it never fights the flip's own
-          rotateY) is what actually reads as "hanging and swaying"
-          rather than static. This wrapper (not the button) is also
-          what carries [perspective]'s shared 3D space down to both
-          cards' own rotateY flips below -- it has no `filter`, so
-          unlike the small card's own wrapper (see below) it never
-          needs the two-layer split to keep preserve-3d intact. */}
-      <motion.div
-        animate={resting ? { rotate: [-1.4, 1.4, -1.4], y: [0, -6, 0] } : { rotate: 0, y: 0 }}
-        transition={
-          resting
-            ? { duration: 5.5, repeat: Infinity, ease: "easeInOut" }
-            : { duration: 0.4, ease: "easeOut" }
-        }
-        className="absolute inset-0 [transform-style:preserve-3d]"
+    <MouseTilt className="block">
+      <button
+        type="button"
+        onClick={() => setState((s) => ((s + 1) % 3) as FlipState)}
+        aria-label={nextHint}
+        className="group relative block aspect-[3/4] w-full cursor-pointer [perspective:1600px] [transform-style:preserve-3d]"
       >
-        {/* Big card */}
-        <motion.div
-          animate={{ rotateY: bigFlipped ? 180 : 0 }}
-          transition={{ duration: 0.6, ease: "easeInOut" }}
-          className="absolute inset-0 [transform-style:preserve-3d]"
-        >
-          <div className="absolute inset-0 [backface-visibility:hidden]">
-            {frontImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={frontImageUrl} alt="紙本喜帖正面" className="h-full w-full object-contain" />
-            ) : (
-              <FacePlaceholder label="正面 素材製作中" />
-            )}
-          </div>
-          <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]">
-            {backImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={backImageUrl} alt="紙本喜帖背面" className="h-full w-full object-contain" />
-            ) : (
-              <FacePlaceholder label="背面 素材製作中" />
-            )}
-          </div>
-        </motion.div>
-
-        {/* Small card, pinned near the top -- fades out once the big card
-            itself has flipped, since it's physically attached to the big
-            card's front face.
-
-            Split into two nested motion.div's rather than one. The outer
-            one needs `drop-shadow-[...]`, but per the CSS Filter Effects
-            spec any element with a `filter` is forced to render its
-            children as `transform-style: flat` regardless of what
-            `transform-style` it's given -- so with the rotateY flip and
-            the two [backface-visibility:hidden] faces on *that same*
-            element (as this used to be), the 3D space collapsed: the
-            "back" face never actually got hidden, and what showed through
-            was the front face's own content rendered as a flat mirror
-            (confirmed by reproducing it with a minimal repro). The inner
-            wrapper below carries the rotateY animation, the preserve-3d,
-            and the two faces, but no filter of its own, so its 3D space
-            stays intact and backface-visibility works as intended. */}
-        {(smallFrontImageUrl || smallBackImageUrl) && (
+        <AnimatePresence mode="wait">
           <motion.div
-            animate={{ opacity: bigFlipped ? 0 : 1 }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="absolute top-[8%] right-[6%] aspect-[3/4] w-[36%] drop-shadow-[0_10px_16px_rgba(64,50,42,0.3)]"
+            key={state}
+            initial={{ rotateY: -90, opacity: 0 }}
+            animate={{ rotateY: 0, opacity: 1 }}
+            exit={{ rotateY: 90, opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className="absolute inset-0 [backface-visibility:hidden]"
           >
-            <motion.div
-              animate={{ rotateY: smallFlipped ? 180 : 0 }}
-              transition={{ duration: 0.5, ease: "easeInOut" }}
-              className="relative h-full w-full [transform-style:preserve-3d]"
-            >
-              <div className="absolute inset-0 [backface-visibility:hidden]">
-                {smallFrontImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={smallFrontImageUrl} alt="小卡正面" className="h-full w-full rounded-[8px] object-contain" />
-                ) : (
-                  <FacePlaceholder label="小卡正面" />
-                )}
-              </div>
-              <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]">
-                {smallBackImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={smallBackImageUrl} alt="小卡背面" className="h-full w-full rounded-[8px] object-contain" />
-                ) : (
-                  <FacePlaceholder label="小卡背面" />
-                )}
-              </div>
-            </motion.div>
-
-            {/* Sized and placed to match Joe's own reference photo of the
-                physical card pinned to a corkboard (measured off that
-                photo on a pixel grid): only the top ~30% of the clip
-                pokes above the small card's top edge, the rest presses
-                down onto the card itself -- that's what actually reads
-                as "pinching" rather than a decorative sticker floating
-                above the corner. Pinned at a fixed angle outside the
-                flip's rotateY chain, since a real clip wouldn't rotate
-                with the card turning underneath it. Joe's own pre-cut
-                photo of the real clip
-                (public/work/wedding/paperclip-silver.png, 879x887 ≈
-                square) -- real chrome specular highlights read as metal
-                far more convincingly than a gradient ever could. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/work/wedding/paperclip-silver.png"
-              alt=""
-              className="pointer-events-none absolute -top-[7%] left-[44%] w-[48%] aspect-square rotate-[12deg] object-contain drop-shadow-[0_4px_6px_rgba(64,50,42,0.45)]"
-            />
+            {current.src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={current.src} alt={current.alt} className="h-full w-full object-contain" />
+            ) : (
+              <FacePlaceholder label={current.placeholder} />
+            )}
           </motion.div>
-        )}
-      </motion.div>
+        </AnimatePresence>
 
-      {/* Discoverability hint -- tap-to-flip isn't a default web pattern,
-          so without this nothing signals the card is interactive. */}
-      <span className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary-black/70 px-3 py-1.5 font-nunito text-[11px] font-bold text-proj-white backdrop-blur-sm transition-opacity group-active:opacity-60">
-        <ArrowsClockwise size={14} weight="bold" />
-        {nextHint}
-      </span>
-    </button>
+        {/* Discoverability hint -- tap-to-flip isn't a default web pattern,
+            so without this nothing signals the card is interactive. */}
+        <span className="pointer-events-none absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary-black/70 px-3 py-1.5 font-nunito text-[11px] font-bold text-proj-white backdrop-blur-sm transition-opacity group-active:opacity-60">
+          <ArrowsClockwise size={14} weight="bold" />
+          {nextHint}
+        </span>
+      </button>
+    </MouseTilt>
   );
 }
