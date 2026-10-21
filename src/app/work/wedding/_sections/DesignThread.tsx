@@ -1,6 +1,5 @@
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { SectionKicker } from "@/components/design-system/SectionKicker";
-import { DoodleHeartStitch } from "./icons";
 
 interface ThreadItem {
   touchpoint: string;
@@ -19,6 +18,11 @@ interface ThreadItem {
  *
  * Content model: `outcome` row — `heading`, `text` (intro), `items`
  * (array of `{touchpoint, decision, origin}`).
+ *
+ * The intro used to end in a dashed heart-stitch doodle (`icons.tsx`'s
+ * `DoodleHeartStitch`) standing in for "一條隱藏的脈絡" -- Joe flagged it
+ * as ugly, so it's gone; `icons.tsx` had no other export, so it's deleted
+ * too rather than left as a dead file.
  */
 export function DesignThread({ outcome }: { outcome: Record<string, unknown> }) {
   const heading = (outcome.heading as string) ?? "One Thread, Four Forms";
@@ -38,7 +42,6 @@ export function DesignThread({ outcome }: { outcome: Record<string, unknown> }) 
               {text}
             </p>
           )}
-          <DoodleHeartStitch className="h-6 w-28 text-accent-pink" aria-hidden />
         </SlideIn>
 
         <div className="flex flex-col divide-y divide-grey-100 rounded-2xl border border-grey-100 bg-proj-white shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]">
@@ -57,7 +60,11 @@ export function DesignThread({ outcome }: { outcome: Record<string, unknown> }) 
             <SlideIn
               key={item.touchpoint}
               delay={i * 0.06}
-              className="grid grid-cols-1 gap-2 px-6 py-5 md:grid-cols-[1fr_1.4fr_1.4fr] md:items-center md:gap-4 md:py-4"
+              // Mobile is a single stacked column (grid-cols-1) -- centered
+              // (Joe's ask: left-aligned text in a full-width card left the
+              // right half looking empty). Desktop's real 3-column table
+              // stays left-aligned, which is what a table should do.
+              className="grid grid-cols-1 gap-2 px-6 py-5 text-center md:grid-cols-[1fr_1.4fr_1.4fr] md:items-center md:gap-4 md:py-4 md:text-left"
             >
               <span className="font-nunito text-[15px] font-bold text-primary-black md:text-[16px]">
                 {item.touchpoint}

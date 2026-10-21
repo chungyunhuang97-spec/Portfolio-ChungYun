@@ -221,9 +221,11 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
 function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: number }) {
   const reverse = index % 2 === 1;
   const paragraphs = touchpoint.desc.split("\n\n");
-  // 02's layout is custom, per Joe's ask: the tag moves up next to the
-  // title (instead of the bottom block below), and the demo button moves
-  // into the visual column entirely (see TouchpointVisual).
+  // 02's layout is custom, per Joe's ask: the tag moves out of the bottom
+  // block into its own row right under the title (not inline beside the
+  // title -- that cramped the title on mobile and forced an awkward wrap),
+  // and the demo button moves into the visual column entirely (see
+  // TouchpointVisual).
   const isElectronicInvitation = touchpoint.index === "02";
 
   return (
@@ -238,27 +240,28 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
 
       <div className="flex flex-1 flex-col gap-4">
         <SlideIn direction={reverse ? "left" : "right"} delay={0.1}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-baseline gap-3">
-              <span className="font-fredoka text-[32px] leading-none text-accent-pink md:text-[40px]">
-                {touchpoint.index}
-              </span>
-              <div>
-                <h3 className="font-nunito text-[20px] font-bold text-primary-black md:text-[26px]">
-                  {touchpoint.title}
-                </h3>
-                <p className="font-nunito text-[11px] font-bold tracking-[0.1em] text-grey-500 uppercase md:text-[12px]">
-                  {touchpoint.titleEn} · {touchpoint.time}
-                </p>
-              </div>
+          <div className="flex items-baseline gap-3">
+            <span className="font-fredoka text-[32px] leading-none text-accent-pink md:text-[40px]">
+              {touchpoint.index}
+            </span>
+            <div>
+              <h3 className="font-nunito text-[20px] font-bold text-primary-black md:text-[26px]">
+                {touchpoint.title}
+              </h3>
+              <p className="font-nunito text-[11px] font-bold tracking-[0.1em] text-grey-500 uppercase md:text-[12px]">
+                {touchpoint.titleEn} · {touchpoint.time}
+              </p>
             </div>
-            {isElectronicInvitation && touchpoint.tech && (
-              <Tag variant="pink" className="w-fit shrink-0">
-                {touchpoint.tech}
-              </Tag>
-            )}
           </div>
         </SlideIn>
+
+        {isElectronicInvitation && touchpoint.tech && (
+          <SlideIn delay={0.15}>
+            <Tag variant="pink" className="w-fit">
+              {touchpoint.tech}
+            </Tag>
+          </SlideIn>
+        )}
 
         {paragraphs.length > 0 && (
           <SlideIn delay={0.2} className="flex flex-col gap-4">
