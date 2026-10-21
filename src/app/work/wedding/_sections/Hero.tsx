@@ -10,19 +10,24 @@ interface HeroStat {
 
 /**
  * Section 1 — Hero. Direction C / type-driven, per the wedding hero spec
- * (full-bleed wedding-yellow top band → eyebrow + display title → tagline
- * + tag chips → divider → stats row). Replaces this page's earlier
- * centered/doodle hero with the spec's type-led direction.
+ * (eyebrow + display title → tagline + tag chips → divider → stats row).
+ * Replaces this page's earlier centered/doodle hero with the spec's
+ * type-led direction.
  *
- * Revised per Joe's first-pass review: no stroke on "LANGUAGE" (plain
- * yellow fill only), the top band's right-side summary moved down into a
- * `Tag` chip row under the tagline -- same `project.tags` + `<Tag
- * variant="pink">` pattern every other case-study Hero uses (see tct's
- * Hero badge row) instead of inventing new plain-text styling -- the
- * bottom-right tagline pill removed outright -- and a `MockupSlot` filling
- * the copy block's right-hand whitespace on desktop (no real photography
- * exists for this project yet, same placeholder convention as every other
- * case-study Hero until the CMS media upload is filled in).
+ * Revised twice per Joe's review rounds:
+ * - Dropped the full-bleed yellow top band entirely (redundant with the
+ *   tag chips below it).
+ * - "LANGUAGE" keeps a hairline black outline (~1px, `-webkit-text-stroke`
+ *   strokes a glyph's whole contour including its counters -- there's no
+ *   CSS-only way to stroke only the outer silhouette -- but at this width
+ *   it reads as a clean thin line rather than the broken/jagged artifact
+ *   the original 1.5px stroke produced on this bold weight).
+ * - Right-hand visual is a plain photo placeholder (not another App-style
+ *   Mockup — every touchpoint below already has its own mockup, so this
+ *   slot is reserved for the couple's own photography instead), and the
+ *   copy/visual pair no longer spans the full section width edge-to-edge
+ *   (was reading as disconnected) -- they now sit together with a fixed
+ *   gap instead of being pushed to opposite edges.
  *
  * Breakpoints: this design system targets two breakpoints only (mobile /
  * `md:` desktop — see Typography.tsx's header comment), not the spec's
@@ -30,10 +35,6 @@ interface HeroStat {
  * desktop rows.
  */
 export function Hero({ project, hero }: { project: Project; hero: Record<string, unknown> }) {
-  const topBandLabel =
-    (hero.tagline as string) ??
-    project.category ??
-    "FREELANCE · BRAND IDENTITY · PRINT · DIGITAL · MOTION";
   const eyebrow = (hero.eyebrow as string) ?? "Case Study — 2025–2026";
   const tagline = (hero.subtitle as string) ?? project.subtitle ?? "為一場婚禮建立完整的視覺語言系統";
   const stats = Array.isArray(hero.stats) ? (hero.stats as HeroStat[]) : [];
@@ -54,17 +55,8 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
       id="hero"
       className="relative flex min-h-[100svh] flex-col overflow-hidden bg-proj-white pt-[104px] md:pt-[180px]"
     >
-      {/* Top band -- full-bleed, ignores the page's side padding by design */}
-      <SlideIn viewportMargin="0px">
-        <div className="bg-wedding-yellow px-6 py-3 md:px-[120px]">
-          <span className="font-nunito text-[10px] font-bold tracking-[0.16em] text-primary-black uppercase md:text-[11px]">
-            {topBandLabel}
-          </span>
-        </div>
-      </SlideIn>
-
-      {/* Main content -- copy left, mockup placeholder right (desktop); stacked on mobile */}
-      <div className="flex flex-1 flex-col justify-center gap-10 px-6 py-12 md:flex-row md:items-center md:justify-between md:gap-12 md:px-[120px]">
+      {/* Main content -- copy left, photo placeholder right (desktop); stacked on mobile */}
+      <div className="flex flex-1 flex-col justify-center gap-10 px-6 py-12 md:flex-row md:items-center md:gap-16 md:px-[120px]">
         <div className="flex flex-col md:max-w-[640px]">
           <SlideIn delay={0.1} viewportMargin="0px" className="flex flex-col">
             <p className="font-nunito mb-3 text-[11px] font-semibold tracking-[0.16em] text-grey-600 uppercase">
@@ -78,7 +70,12 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
               {secondLine && (
                 <span className="block">
                   {secondLineLead && `${secondLineLead} `}
-                  <span className="text-wedding-yellow">{lastWord}</span>
+                  <span
+                    className="text-wedding-yellow"
+                    style={{ WebkitTextStroke: "1px var(--color-primary-black)" }}
+                  >
+                    {lastWord}
+                  </span>
                 </span>
               )}
             </h1>
@@ -109,7 +106,7 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
           viewportMargin="0px"
           className="mx-auto w-full max-w-[220px] md:mx-0 md:w-[280px] md:max-w-none md:shrink-0"
         >
-          <MockupSlot aspect="aspect-[3/4]" label="主視覺 Mockup — 素材待上傳" float />
+          <MockupSlot aspect="aspect-[3/4]" label="主視覺照片 — 素材待上傳" float />
         </SlideIn>
       </div>
 

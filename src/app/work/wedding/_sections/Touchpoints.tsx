@@ -133,7 +133,19 @@ function YouTubeEmbed({ url }: { url: string }) {
  */
 function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
   if (touchpoint.index === "02") {
-    const screen = touchpoint.imageUrl ? (
+    // Live-embedded rather than a static screenshot -- visitors can
+    // actually play through the paper-airplane unlock inside the phone
+    // frame instead of just looking at a picture of it, so the separate
+    // "查看電子喜帖" external link below is dropped for this touchpoint
+    // (see the demoUrl guard in TouchpointCard).
+    const screen = touchpoint.demoUrl ? (
+      <iframe
+        src={touchpoint.demoUrl}
+        title={touchpoint.title}
+        loading="lazy"
+        className="h-full w-full border-0"
+      />
+    ) : touchpoint.imageUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={touchpoint.imageUrl} alt={touchpoint.title} className="h-full w-full object-cover" />
     ) : undefined;
@@ -190,62 +202,76 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
         <TouchpointVisual touchpoint={touchpoint} />
       </SlideIn>
 
-      <SlideIn direction={reverse ? "left" : "right"} delay={0.1} className="flex flex-1 flex-col gap-4">
-        <div className="flex items-baseline gap-3">
-          <span className="font-fredoka text-[32px] leading-none text-accent-pink md:text-[40px]">
-            {touchpoint.index}
-          </span>
-          <div>
-            <h3 className="font-nunito text-[20px] font-bold text-primary-black md:text-[26px]">
-              {touchpoint.title}
-            </h3>
-            <p className="font-nunito text-[11px] font-bold tracking-[0.1em] text-grey-500 uppercase md:text-[12px]">
-              {touchpoint.titleEn} · {touchpoint.time}
-            </p>
+      <div className="flex flex-1 flex-col gap-4">
+        <SlideIn direction={reverse ? "left" : "right"} delay={0.1}>
+          <div className="flex items-baseline gap-3">
+            <span className="font-fredoka text-[32px] leading-none text-accent-pink md:text-[40px]">
+              {touchpoint.index}
+            </span>
+            <div>
+              <h3 className="font-nunito text-[20px] font-bold text-primary-black md:text-[26px]">
+                {touchpoint.title}
+              </h3>
+              <p className="font-nunito text-[11px] font-bold tracking-[0.1em] text-grey-500 uppercase md:text-[12px]">
+                {touchpoint.titleEn} · {touchpoint.time}
+              </p>
+            </div>
           </div>
-        </div>
+        </SlideIn>
 
-        {paragraphs.map((paragraph) => (
-          <p
-            key={paragraph.slice(0, 12)}
-            className="font-nunito text-[14px] leading-[22px] text-grey-700 md:text-[16px] md:leading-[26px]"
-          >
-            {paragraph}
-          </p>
-        ))}
+        {paragraphs.length > 0 && (
+          <SlideIn delay={0.2} className="flex flex-col gap-4">
+            {paragraphs.map((paragraph) => (
+              <p
+                key={paragraph.slice(0, 12)}
+                className="font-nunito text-[14px] leading-[22px] text-grey-700 md:text-[16px] md:leading-[26px]"
+              >
+                {paragraph}
+              </p>
+            ))}
+          </SlideIn>
+        )}
 
         {touchpoint.highlights.length > 0 && (
-          <ul className="flex flex-col gap-2">
-            {touchpoint.highlights.map((item) => (
-              <li
-                key={item}
-                className="flex items-start gap-2 font-nunito text-[13px] leading-[20px] text-grey-600 md:text-[14px]"
+          <SlideIn delay={0.3}>
+            <ul className="flex flex-col gap-2">
+              {touchpoint.highlights.map((item) => (
+                <li
+                  key={item}
+                  className="flex items-start gap-2 font-nunito text-[13px] leading-[20px] text-grey-600 md:text-[14px]"
+                >
+                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-accent-pink" aria-hidden />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </SlideIn>
+        )}
+
+        {(touchpoint.tech || (touchpoint.demoUrl && touchpoint.index !== "02")) && (
+          <SlideIn delay={0.4} className="flex flex-col items-start gap-3">
+            {touchpoint.tech && (
+              <Tag variant="pink" className="w-fit">
+                {touchpoint.tech}
+              </Tag>
+            )}
+
+            {/* index 02 embeds demoUrl live in its phone frame (see
+                TouchpointVisual) instead of linking out to it */}
+            {touchpoint.demoUrl && touchpoint.index !== "02" && (
+              <a
+                href={touchpoint.demoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex w-fit items-center gap-2 border-b border-primary-black pb-1 font-nunito text-[14px] font-bold text-primary-black transition-colors hover:border-accent-pink hover:text-accent-pink"
               >
-                <span className="mt-2 size-1.5 shrink-0 rounded-full bg-accent-pink" aria-hidden />
-                {item}
-              </li>
-            ))}
-          </ul>
+                {touchpoint.demoLabel ?? "查看連結"}
+                <ArrowUpRight size={16} weight="bold" />
+              </a>
+            )}
+          </SlideIn>
         )}
-
-        {touchpoint.tech && (
-          <Tag variant="pink" className="w-fit">
-            {touchpoint.tech}
-          </Tag>
-        )}
-
-        {touchpoint.demoUrl && (
-          <a
-            href={touchpoint.demoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-flex w-fit items-center gap-2 border-b border-primary-black pb-1 font-nunito text-[14px] font-bold text-primary-black transition-colors hover:border-accent-pink hover:text-accent-pink"
-          >
-            {touchpoint.demoLabel ?? "查看連結"}
-            <ArrowUpRight size={16} weight="bold" />
-          </a>
-        )}
-      </SlideIn>
+      </div>
     </div>
   );
 }
