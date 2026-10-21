@@ -55,13 +55,16 @@ interface FlipInvitationCardProps {
  * separate clip element, no backface-visibility/preserve-3d/filter
  * interactions to get wrong.
  *
- * `state` cycles 0 → 1 → 2 → 0 on each tap; each transition swaps the
- * `<img>` via AnimatePresence with a rotateY-out/rotateY-in pair, which
- * reads as the card flipping even though (for the 0↔1 transition
- * especially) it's really just two different flat photos -- the big
- * card's own geometry doesn't actually change between those two, only
- * the small card's area does, but animating the swap as a flip rather
- * than a crossfade keeps all three transitions feeling consistent.
+ * `state` cycles 0 → 1 → 2 → 0 on each tap, swapping the `<img>` via
+ * AnimatePresence. The 0↔1 transition only touches the small card -- the
+ * big card's own pixels are identical between those two photos -- so it
+ * crossfades rather than flips; flipping the *whole* image there read as
+ * the big card turning over for no reason, when nothing about it actually
+ * changed. Only the 1→2 and 2→0 transitions (the big card genuinely
+ * turning to its own back, and back again) get the rotateY-out/rotateY-in
+ * flip. `state` and `isBigFlip` (which kind the in-flight transition is)
+ * are kept in one `useState` and updated together from the same click, so
+ * they're never a render apart from each other.
  *
  * Wrapped in `MouseTilt` so the whole card tilts toward the cursor on
  * desktop, independent of the click-driven flip (see MouseTilt's own
@@ -72,7 +75,10 @@ export function FlipInvitationCard({
   smallBackComposedImageUrl,
   backComposedImageUrl,
 }: FlipInvitationCardProps) {
-  const [state, setState] = useState<FlipState>(0);
+  const [{ state, isBigFlip }, setFlip] = useState<{ state: FlipState; isBigFlip: boolean }>({
+    state: 0,
+    isBigFlip: false,
+  });
 
   const hasAnyMedia = Boolean(frontComposedImageUrl || smallBackComposedImageUrl || backComposedImageUrl);
   if (!hasAnyMedia) {
@@ -87,21 +93,28 @@ export function FlipInvitationCard({
   const nextHint = state === 0 ? "點擊查看小卡背面" : state === 1 ? "點擊查看大卡背面" : "點擊返回正面";
   const current = faces[state];
 
+  function handleClick() {
+    setFlip(({ state: s }) => {
+      const next = ((s + 1) % 3) as FlipState;
+      return { state: next, isBigFlip: s === 2 || next === 2 };
+    });
+  }
+
   return (
     <MouseTilt className="block">
       <button
         type="button"
-        onClick={() => setState((s) => ((s + 1) % 3) as FlipState)}
+        onClick={handleClick}
         aria-label={nextHint}
         className="group relative block aspect-[3/4] w-full cursor-pointer [perspective:1600px] [transform-style:preserve-3d]"
       >
         <AnimatePresence mode="wait">
           <motion.div
             key={state}
-            initial={{ rotateY: -90, opacity: 0 }}
-            animate={{ rotateY: 0, opacity: 1 }}
-            exit={{ rotateY: 90, opacity: 0 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
+            initial={isBigFlip ? { rotateY: -90, opacity: 0 } : { opacity: 0 }}
+            animate={isBigFlip ? { rotateY: 0, opacity: 1 } : { opacity: 1 }}
+            exit={isBigFlip ? { rotateY: 90, opacity: 0 } : { opacity: 0 }}
+            transition={{ duration: isBigFlip ? 0.4 : 0.25, ease: "easeInOut" }}
             className="absolute inset-0 [backface-visibility:hidden]"
           >
             {current.src ? (
