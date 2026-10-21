@@ -55,6 +55,14 @@ interface HeroStat {
  *   that first screen at all -- see `HeroPhotoReveal` for how it reveals
  *   its full, uncropped frame as the visitor scrolls to it instead of
  *   ever being statically cropped.
+ * - That split also meant the first screen no longer has a photo on the
+ *   right to balance the text column -- once it was alone, Joe flagged
+ *   the left-aligned block as lopsided, so title/tagline/tags/stats are
+ *   now centered as one group instead. The title also went from `md:max-
+ *   w-[640px]` (needed when a photo column sat beside it) to no width cap
+ *   + `whitespace-nowrap` per line, which is also what fixed it rendering
+ *   as 3 lines instead of 2 -- line 2 ("ONE LANGUAGE") was soft-wrapping
+ *   inside its own span at that width.
  *
  * Breakpoints: this design system targets two breakpoints only (mobile /
  * `md:` desktop — see Typography.tsx's header comment), not the spec's
@@ -94,20 +102,30 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
     <section id="hero" className="relative overflow-hidden bg-proj-white">
       {/* First screen -- title/tagline/tags/stats only, no photo, so this
           block alone always fits min-h-[100svh] regardless of the photo
-          below it (see HeroPhotoReveal). */}
-      <div className="flex min-h-[100svh] flex-col justify-center gap-10 px-6 pt-[104px] pb-10 md:gap-16 md:px-[120px] md:pt-[180px]">
-        <div className="flex flex-col md:max-w-[640px]">
-          <SlideIn delay={0.1} viewportMargin="0px" className="flex flex-col">
+          below it (see HeroPhotoReveal). Centered -- with the photo gone
+          from this screen entirely, a left-aligned text column read as
+          lopsided (all the weight on one side, the right half empty), so
+          Joe asked for everything here -- title, tagline, tags, stats --
+          centered as one block instead. */}
+      <div className="flex min-h-[100svh] flex-col items-center justify-center gap-10 px-6 pt-[104px] pb-10 text-center md:gap-16 md:px-[120px] md:pt-[180px]">
+        <div className="flex flex-col items-center">
+          <SlideIn delay={0.1} viewportMargin="0px" className="flex flex-col items-center">
             <p className="font-nunito mb-3 text-[11px] font-semibold tracking-[0.16em] text-grey-600 uppercase">
               {eyebrow}
             </p>
+            {/* `whitespace-nowrap` on each line -- same convention Metro's
+                Hero uses for its own big single-line headline. Without it
+                "ONE LANGUAGE" (line 2) could still soft-wrap into "ONE" +
+                "LANGUAGE" on their own lines at this font size, reading as
+                3 lines total instead of the intended 2 -- exactly what Joe
+                flagged as too cramped/tall. */}
             <h1 className="font-nunito text-[48px] leading-[0.95] font-black tracking-[-0.03em] text-primary-black uppercase md:text-[clamp(52px,7vw,96px)] md:leading-[0.92]">
-              <span className="block">
+              <span className="block whitespace-nowrap">
                 {firstLine}
                 {restParts.length > 0 ? "," : ""}
               </span>
               {secondLine && (
-                <span className="block">
+                <span className="block whitespace-nowrap">
                   {secondLineLead && `${secondLineLead} `}
                   <span className="text-wedding-yellow" style={{ textShadow: outlineShadow }}>
                     {lastWord}
@@ -126,7 +144,7 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
           )}
 
           {tagChips.length > 0 && (
-            <SlideIn delay={0.3} viewportMargin="0px" className="mt-5 flex flex-wrap gap-3">
+            <SlideIn delay={0.3} viewportMargin="0px" className="mt-5 flex flex-wrap items-center justify-center gap-3">
               {tagChips.map((tag) => (
                 <Tag key={tag} variant="pink">
                   {tag}
@@ -143,8 +161,8 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
             Hero MetaPill (role/timeframe), generalized to N dot-separated
             stats instead of a hardcoded pair. */}
         {stats.length > 0 && (
-          <SlideIn delay={0.4} viewportMargin="0px">
-            <div className="font-nunito inline-flex flex-wrap items-center gap-3 rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2.5 text-[12px] backdrop-blur-[6px] md:gap-4">
+          <SlideIn delay={0.4} viewportMargin="0px" className="flex justify-center">
+            <div className="font-nunito inline-flex flex-wrap items-center justify-center gap-3 rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2.5 text-[12px] backdrop-blur-[6px] md:gap-4">
               {stats.flatMap((stat, i) => [
                 i > 0 ? (
                   <span key={`dot-${stat.label}`} className="size-[3px] shrink-0 rounded-full bg-grey-300" aria-hidden />
