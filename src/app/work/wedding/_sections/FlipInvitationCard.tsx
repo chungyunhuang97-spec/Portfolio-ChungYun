@@ -27,9 +27,11 @@ interface FlipInvitationCardProps {
   /** Same big card front + clip, but with the small card showing its back
    * (the 回文/info side) instead. */
   smallBackComposedImageUrl?: string;
-  /** The big card's own back -- unchanged from before, since the small
-   * card (and clip) aren't part of this face at all. */
-  backImageUrl?: string;
+  /** The big card's own back + the clip, baked in the same way -- the clip
+   * stays part of every exported state (it's a continuous physical object
+   * pinned to the card, so it's still there once the card's turned over),
+   * not just the two front-facing ones. */
+  backComposedImageUrl?: string;
 }
 
 /**
@@ -45,9 +47,11 @@ interface FlipInvitationCardProps {
  * the ~220px the card actually renders at in the grid) and, per Joe, never
  * actually looked like the real object no matter how the clip was tuned.
  *
- * Now there are three flat, pre-composited images (the clip baked in by
- * Joe's own design tool, pixel-perfect, at whatever size it's displayed)
- * and this component just swaps between them -- no live layering, no
+ * Now there are three flat, pre-composited images -- one per real-object
+ * state, the clip baked into all three by Joe's own design tool (it's a
+ * continuous physical object, so it's still in frame once the card's
+ * flipped to its back too) -- and this component just swaps between them,
+ * pixel-perfect at whatever size it's displayed. No live layering, no
  * separate clip element, no backface-visibility/preserve-3d/filter
  * interactions to get wrong.
  *
@@ -66,19 +70,19 @@ interface FlipInvitationCardProps {
 export function FlipInvitationCard({
   frontComposedImageUrl,
   smallBackComposedImageUrl,
-  backImageUrl,
+  backComposedImageUrl,
 }: FlipInvitationCardProps) {
   const [state, setState] = useState<FlipState>(0);
 
-  const hasAnyMedia = Boolean(frontComposedImageUrl || smallBackComposedImageUrl || backImageUrl);
+  const hasAnyMedia = Boolean(frontComposedImageUrl || smallBackComposedImageUrl || backComposedImageUrl);
   if (!hasAnyMedia) {
     return <MockupSlot label="紙本喜帖 素材製作中" aspect="aspect-[3/4]" />;
   }
 
   const faces: { src?: string; alt: string; placeholder: string }[] = [
-    { src: frontComposedImageUrl, alt: "紙本喜帖正面（含小卡正面）", placeholder: "正面 素材製作中" },
-    { src: smallBackComposedImageUrl, alt: "紙本喜帖正面（小卡翻至背面）", placeholder: "小卡背面 素材製作中" },
-    { src: backImageUrl, alt: "紙本喜帖背面", placeholder: "背面 素材製作中" },
+    { src: frontComposedImageUrl, alt: "紙本喜帖正面（含小卡正面與迴紋針）", placeholder: "正面 素材製作中" },
+    { src: smallBackComposedImageUrl, alt: "紙本喜帖正面（小卡翻至背面，含迴紋針）", placeholder: "小卡背面 素材製作中" },
+    { src: backComposedImageUrl, alt: "紙本喜帖背面（含迴紋針）", placeholder: "背面 素材製作中" },
   ];
   const nextHint = state === 0 ? "點擊查看小卡背面" : state === 1 ? "點擊查看大卡背面" : "點擊返回正面";
   const current = faces[state];

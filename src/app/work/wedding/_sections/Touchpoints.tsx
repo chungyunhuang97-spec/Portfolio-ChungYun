@@ -29,14 +29,15 @@ interface Touchpoint {
   // dropzone, which better matches what it actually is.
   imageUrl?: string;
   youtubeUrl?: string;
-  // `frontComposedImageUrl`/`smallBackComposedImageUrl` are flat exports
-  // from Joe's own design tool -- big card + small card + the real
-  // paperclip baked into one photo per state, not separate layers
-  // composited live (see FlipInvitationCard's doc comment for why that
-  // changed). `backImageUrl` is the big card's own back, unchanged.
+  // `frontComposedImageUrl`/`smallBackComposedImageUrl`/
+  // `backComposedImageUrl` are flat exports from Joe's own design tool --
+  // big/small card + the real paperclip baked into one photo per state
+  // (the clip stays in frame in all three, including the back one, since
+  // it's a continuous physical object), not separate layers composited
+  // live (see FlipInvitationCard's doc comment for why that changed).
   frontComposedImageUrl?: string;
   smallBackComposedImageUrl?: string;
-  backImageUrl?: string;
+  backComposedImageUrl?: string;
 }
 
 const CARD_SHADOW = "shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]";
@@ -153,7 +154,7 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
       <FlipInvitationCard
         frontComposedImageUrl={touchpoint.frontComposedImageUrl}
         smallBackComposedImageUrl={touchpoint.smallBackComposedImageUrl}
-        backImageUrl={touchpoint.backImageUrl}
+        backComposedImageUrl={touchpoint.backComposedImageUrl}
       />
     );
   }
@@ -260,7 +261,7 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
  * Content model: `process.touchpoints` — array of
  * `{index, title, titleEn, time, desc, highlights, tech?, demoUrl?,
  * demoLabel?, imageUrl?, youtubeUrl?, frontComposedImageUrl?,
- * smallBackComposedImageUrl?, backImageUrl?}`. The media fields are
+ * smallBackComposedImageUrl?, backComposedImageUrl?}`. The media fields are
  * optional and admin-editable (see TouchpointVisual).
  */
 export function Touchpoints({ process }: { process: Record<string, unknown> }) {
