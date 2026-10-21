@@ -1,6 +1,7 @@
 import { Tag } from "@/components/design-system/Tag";
 import { MockupSlot } from "@/components/design-system/MockupSlot";
 import { SlideIn } from "@/components/design-system/SlideIn";
+import { HeroPhotoReveal } from "./HeroPhotoReveal";
 import type { Project } from "@/lib/types";
 
 interface HeroStat {
@@ -27,15 +28,11 @@ interface HeroStat {
  *   (cardinal + diagonal); the diagonals doubled up at every corner and
  *   read as too thick at this font-black weight/size, so it's now just
  *   the 4 cardinal directions.
- * - Right-hand visual is a real `heroImageUrl` media field (falls back to
- *   a plain photo placeholder — not another App-style Mockup, since every
- *   touchpoint below already has its own mockup and this slot is reserved
- *   for the couple's own photography instead). Admin: open this project's
- *   HERO section, "ADD FIELD" -> key `heroImageUrl`, type Media, to get an
- *   upload dropzone for it.
- * - Copy/visual pair no longer spans the full section width edge-to-edge
- *   (was reading as disconnected) -- they now sit together with a fixed
- *   gap instead of being pushed to opposite edges.
+ * - `heroImageUrl` media field -- a real photo of the couple, not another
+ *   App-style Mockup, since every touchpoint below already has its own
+ *   mockup and this slot is reserved for the couple's own photography
+ *   instead. Admin: open this project's HERO section, "ADD FIELD" -> key
+ *   `heroImageUrl`, type Media, to get an upload dropzone for it.
  * - Stats row restyled from bare label/value pairs into the frosted
  *   rounded pill (`rounded-[40px] border border-black/[0.06] bg-white/60
  *   backdrop-blur-[6px]`, dot-separated) every other project page's Hero
@@ -44,6 +41,20 @@ interface HeroStat {
  *   Generalized to N stats (dot between every pair) rather than copying
  *   MetaPill's hardcoded 2-item shape, since this hero's content model is
  *   3 stats (duration/role/deliverables), not role+timeframe.
+ * - Once Joe actually had a real photo to test (a desaturated street
+ *   candid of the couple, color kept only in the bouquet, hand-drawn
+ *   stars/ring doodles scattered across the full ~1.94:1 frame), the
+ *   original side-by-side layout (copy left, photo in a 3:4 box right)
+ *   turned out to fight the photo's own shape -- cropping a landscape
+ *   shot into a portrait box lost most of the doodles and all of the
+ *   street context, cutting into art direction Joe had already finished.
+ *   Rebuilt as two stacked pieces instead: a `min-h-[100svh]` block with
+ *   everything EXCEPT the photo (title/tagline/tags/stats -- Joe's ask:
+ *   those should still read as a complete first screen on their own),
+ *   followed by the photo as a full-bleed band that isn't forced to fit
+ *   that first screen at all -- see `HeroPhotoReveal` for how it reveals
+ *   its full, uncropped frame as the visitor scrolls to it instead of
+ *   ever being statically cropped.
  *
  * Breakpoints: this design system targets two breakpoints only (mobile /
  * `md:` desktop — see Typography.tsx's header comment), not the spec's
@@ -80,12 +91,11 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
   const secondLineLead = secondLineWords.join(" ");
 
   return (
-    <section
-      id="hero"
-      className="relative flex min-h-[100svh] flex-col overflow-hidden bg-proj-white pt-[104px] md:pt-[180px]"
-    >
-      {/* Main content -- copy left, photo placeholder right (desktop); stacked on mobile */}
-      <div className="flex flex-1 flex-col justify-center gap-10 px-6 py-12 md:flex-row md:items-center md:gap-16 md:px-[120px]">
+    <section id="hero" className="relative overflow-hidden bg-proj-white">
+      {/* First screen -- title/tagline/tags/stats only, no photo, so this
+          block alone always fits min-h-[100svh] regardless of the photo
+          below it (see HeroPhotoReveal). */}
+      <div className="flex min-h-[100svh] flex-col justify-center gap-10 px-6 pt-[104px] pb-10 md:gap-16 md:px-[120px] md:pt-[180px]">
         <div className="flex flex-col md:max-w-[640px]">
           <SlideIn delay={0.1} viewportMargin="0px" className="flex flex-col">
             <p className="font-nunito mb-3 text-[11px] font-semibold tracking-[0.16em] text-grey-600 uppercase">
@@ -126,43 +136,39 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
           )}
         </div>
 
-        <SlideIn
-          direction="right"
-          delay={0.15}
-          viewportMargin="0px"
-          className="mx-auto w-full max-w-[220px] md:mx-0 md:w-[280px] md:max-w-none md:shrink-0"
-        >
-          {heroImageUrl ? (
-            <div className="aspect-[3/4] w-full overflow-hidden rounded-[32px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={heroImageUrl} alt={project.title} className="h-full w-full object-cover" />
+        {/* Divider -- full width, between the title block and the stats row */}
+        <div className="h-px w-full bg-grey-100" />
+
+        {/* Stats row -- same frosted-pill treatment as every other project's
+            Hero MetaPill (role/timeframe), generalized to N dot-separated
+            stats instead of a hardcoded pair. */}
+        {stats.length > 0 && (
+          <SlideIn delay={0.4} viewportMargin="0px">
+            <div className="font-nunito inline-flex flex-wrap items-center gap-3 rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2.5 text-[12px] backdrop-blur-[6px] md:gap-4">
+              {stats.flatMap((stat, i) => [
+                i > 0 ? (
+                  <span key={`dot-${stat.label}`} className="size-[3px] shrink-0 rounded-full bg-grey-300" aria-hidden />
+                ) : null,
+                <div key={stat.label} className="flex items-center gap-1.5 whitespace-nowrap">
+                  <span className="text-grey-500">{stat.label}</span>
+                  <span className="font-semibold text-primary-black">{stat.value}</span>
+                </div>,
+              ])}
             </div>
-          ) : (
-            <MockupSlot aspect="aspect-[3/4]" label="主視覺照片 — 素材待上傳" float />
-          )}
-        </SlideIn>
+          </SlideIn>
+        )}
       </div>
 
-      {/* Divider -- full width, between main content and the stats row */}
-      <div className="h-px w-full bg-grey-100" />
-
-      {/* Stats row -- same frosted-pill treatment as every other project's
-          Hero MetaPill (role/timeframe), generalized to N dot-separated
-          stats instead of a hardcoded pair. */}
-      {stats.length > 0 && (
-        <SlideIn delay={0.4} viewportMargin="0px" className="px-6 py-8 md:px-[120px]">
-          <div className="font-nunito inline-flex flex-wrap items-center gap-3 rounded-[40px] border border-black/[0.06] bg-white/60 px-5 py-2.5 text-[12px] backdrop-blur-[6px] md:gap-4">
-            {stats.flatMap((stat, i) => [
-              i > 0 ? (
-                <span key={`dot-${stat.label}`} className="size-[3px] shrink-0 rounded-full bg-grey-300" aria-hidden />
-              ) : null,
-              <div key={stat.label} className="flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-grey-500">{stat.label}</span>
-                <span className="font-semibold text-primary-black">{stat.value}</span>
-              </div>,
-            ])}
-          </div>
-        </SlideIn>
+      {/* Photo -- full-bleed band below the first screen, not constrained
+          to fit it. Real photo scroll-zooms out to its full frame (see
+          HeroPhotoReveal); unset falls back to a plain placeholder band,
+          no scroll effect since there's nothing yet to reveal. */}
+      {heroImageUrl ? (
+        <HeroPhotoReveal src={heroImageUrl} alt={project.title} />
+      ) : (
+        <div className="px-6 pb-16 md:px-[120px]">
+          <MockupSlot aspect="aspect-[16/9]" label="主視覺照片 — 素材待上傳" />
+        </div>
       )}
     </section>
   );
