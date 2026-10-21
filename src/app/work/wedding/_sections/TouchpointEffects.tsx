@@ -5,36 +5,13 @@ import { motion, useReducedMotion } from "framer-motion";
 import { EnvelopeSimpleOpen } from "@phosphor-icons/react/dist/ssr";
 
 /**
- * 四個接觸點各自的「招牌動效」(見 docs/case-study-design-conventions.md
- * 個性層 #1) -- 每個接觸點用一個跟內容意義綁定、彼此不重複的動效，疊加在
- * 共用的 SlideIn 進場之上，而不是取代它。四個效果合在一起也畫出一條隱性
- * 的故事線：書約先「落定」才被「簽下」-> 電子喜帖像手機通知一樣「送達」
- * -> 紙本喜帖像一封信「落到桌上」還帶點彈跳 -> 開場影片像老電視「開機」，
- * 從書面文件的靜態一路動態升級到婚禮當天影像的最高潮，呼應四個接觸點本身
- * 「書面 -> 數位 -> 實體 -> 動態影像」的真實時間順序。
+ * 接觸點各自的「招牌動效」(見 docs/case-study-design-conventions.md
+ * 個性層 #1) -- 跟內容意義綁定、彼此不重複的動效，疊加在共用的 SlideIn
+ * 進場之上，而不是取代它。01 結婚書約刻意不加任何疊加動效（曾經試過一道
+ * 簽名筆劃，Joe 看了覺得意義不明，拿掉了）-- 02 電子喜帖的「送達」通知
+ * -> 03 紙本喜帖的「落到桌上」彈跳 -> 04 開場影片的「電視開機」，三個效果
+ * 逐步升溫，呼應接觸點本身「數位 -> 實體 -> 動態影像」的時間順序。
  */
-
-/** 01 結婚書約 -- 進場完成後才畫出一道簽名筆劃，讀起來像「文件先落定，
- * 接著才被簽下」，而不是跟卡片同時動。筆劃不蓋在真實素材照片上面（參考
- * UnframedImage 的教訓：裝飾不該疊加在已經完稿的實拍素材上），獨立放在
- * 圖片下方。 */
-export function SigningLine() {
-  const reduceMotion = useReducedMotion();
-  return (
-    <svg viewBox="0 0 200 36" className="mt-3 h-[26px] w-[150px] text-accent-pink" fill="none" aria-hidden>
-      <motion.path
-        d="M6 26 C 26 8, 42 32, 62 16 S 92 4, 112 22 S 146 8, 172 20"
-        stroke="currentColor"
-        strokeWidth={2.5}
-        strokeLinecap="round"
-        initial={{ pathLength: 0, opacity: 0 }}
-        whileInView={{ pathLength: 1, opacity: 1 }}
-        viewport={{ once: true, margin: "-40px" }}
-        transition={reduceMotion ? { duration: 0 } : { duration: 0.9, ease: "easeInOut", delay: 0.5 }}
-      />
-    </svg>
-  );
-}
 
 /** 02 電子喜帖 -- 進場後彈出一則像手機推播通知的提示再淡出，呼應「電子
  * 喜帖是數位送達」的即時感，跟 01 的紙本慢動作、03 的實體信件形成對比。

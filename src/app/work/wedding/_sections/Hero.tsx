@@ -21,9 +21,12 @@ interface HeroStat {
  *   text-stroke strokes a glyph's whole vector path including its
  *   counters, and on this bold weight that produced the broken/jagged
  *   triangle artifacts Joe flagged twice, even at 1px. A stacked
- *   8-direction `text-shadow` fakes the same "outer edge only" outline by
- *   layering solid filled copies instead of stroking a path, which can't
- *   self-intersect the way a vector stroke can.
+ *   `text-shadow` fakes the same "outer edge only" outline by layering
+ *   solid filled copies instead of stroking a path, which can't
+ *   self-intersect the way a vector stroke can. Originally 8 directions
+ *   (cardinal + diagonal); the diagonals doubled up at every corner and
+ *   read as too thick at this font-black weight/size, so it's now just
+ *   the 4 cardinal directions.
  * - Right-hand visual is a real `heroImageUrl` media field (falls back to
  *   a plain photo placeholder — not another App-style Mockup, since every
  *   touchpoint below already has its own mockup and this slot is reserved
@@ -46,13 +49,14 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
   const tagChips = project.tags.length > 0 ? project.tags : ["16 Months", "4 Media", "1 Wedding"];
   const heroImageUrl = (hero.heroImageUrl as string) || undefined;
 
-  // Stacked 1px-offset copies in every direction read as a thin outer
+  // 4 cardinal 1px-offset copies (no diagonal corners) read as a thin outer
   // outline without stroking (and self-intersecting on) the glyph's own
-  // vector path -- see the component doc comment above.
+  // vector path -- see the component doc comment above. The diagonal
+  // corners an 8-direction stack would add double up at every corner and
+  // read as a noticeably thicker outline at this font-black weight/size;
+  // dropping them is what Joe asked for when he flagged it as too thick.
   const outlineShadow = [
-    [-1, -1], [0, -1], [1, -1],
-    [-1, 0], [1, 0],
-    [-1, 1], [0, 1], [1, 1],
+    [0, -1], [0, 1], [-1, 0], [1, 0],
   ]
     .map(([x, y]) => `${x}px ${y}px 0 var(--color-primary-black)`)
     .join(", ");

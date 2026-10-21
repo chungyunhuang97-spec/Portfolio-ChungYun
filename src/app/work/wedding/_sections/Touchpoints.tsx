@@ -6,8 +6,7 @@ import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 import { Tag } from "@/components/design-system/Tag";
 import { MouseTilt } from "@/components/design-system/MouseTilt";
 import { FlipInvitationCard } from "./FlipInvitationCard";
-import { ScaledIframeEmbed } from "./ScaledIframeEmbed";
-import { SigningLine, NotificationPing, PaperLandingWrap, TVPowerOn } from "./TouchpointEffects";
+import { NotificationPing, PaperLandingWrap, TVPowerOn } from "./TouchpointEffects";
 
 interface Touchpoint {
   index: string;
@@ -135,22 +134,14 @@ function YouTubeEmbed({ url }: { url: string }) {
  */
 function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
   if (touchpoint.index === "02") {
-    // Live-embedded rather than a static screenshot -- visitors can
-    // actually play through the paper-airplane unlock inside the phone
-    // frame instead of just looking at a picture of it, so the separate
-    // "查看電子喜帖" external link below is dropped for this touchpoint
-    // (see the demoUrl guard in TouchpointCard).
-    //
-    // nativeHeight=680 (not ScaledIframeEmbed's 812 default) -- Joe's
-    // actual Framer canvas renders shorter than a full 375x812 iPhone
-    // viewport, so requesting the full 812 left blank page background
-    // (plus the Framer watermark, which pins to the VIEWPORT bottom
-    // rather than the design's own bottom edge) showing as unnatural
-    // whitespace under the illustration. If this is still off once Joe
-    // sees it live, it's this one number to retune.
-    const screen = touchpoint.demoUrl ? (
-      <ScaledIframeEmbed src={touchpoint.demoUrl} title={touchpoint.title} nativeHeight={680} />
-    ) : touchpoint.imageUrl ? (
+    // Static screenshot, not the live-embedded iframe this briefly was --
+    // the scaled-down live Framer canvas was reading as broken layout
+    // (cramped/overlapping at the ~220px phone-frame width), per Joe. A
+    // plain screenshot inside the phone frame reads cleanly at any size,
+    // and the external "查看連結" button below (see TouchpointCard, no
+    // longer index-02-gated) lets anyone who wants the real interactive
+    // version click through to it instead.
+    const screen = touchpoint.imageUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={touchpoint.imageUrl} alt={touchpoint.title} className="h-full w-full object-cover" />
     ) : undefined;
@@ -192,21 +183,11 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
   // 結婚書約 (01) tilts toward the cursor on desktop -- Joe's own call,
   // specific to this touchpoint rather than every plain-image one, so it's
   // gated on the index rather than folded into the generic branch below.
-  // The signing-line flourish (see TouchpointEffects.tsx) only makes sense
-  // for this one touchpoint, so it's handled fully here rather than in the
-  // generic imageUrl branch below.
-  if (touchpoint.index === "01") {
+  if (touchpoint.index === "01" && touchpoint.imageUrl) {
     return (
-      <div className="flex flex-col items-center">
-        {touchpoint.imageUrl ? (
-          <MouseTilt className="block">
-            <UnframedImage src={touchpoint.imageUrl} alt={touchpoint.title} />
-          </MouseTilt>
-        ) : (
-          <MockupSlot label={`${touchpoint.title} 素材製作中`} aspect="aspect-[3/4]" />
-        )}
-        <SigningLine />
-      </div>
+      <MouseTilt className="block">
+        <UnframedImage src={touchpoint.imageUrl} alt={touchpoint.title} />
+      </MouseTilt>
     );
   }
 
@@ -276,7 +257,7 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
           </SlideIn>
         )}
 
-        {(touchpoint.tech || (touchpoint.demoUrl && touchpoint.index !== "02")) && (
+        {(touchpoint.tech || touchpoint.demoUrl) && (
           <SlideIn delay={0.4} className="flex flex-col items-start gap-3">
             {touchpoint.tech && (
               <Tag variant="pink" className="w-fit">
@@ -284,9 +265,7 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
               </Tag>
             )}
 
-            {/* index 02 embeds demoUrl live in its phone frame (see
-                TouchpointVisual) instead of linking out to it */}
-            {touchpoint.demoUrl && touchpoint.index !== "02" && (
+            {touchpoint.demoUrl && (
               <a
                 href={touchpoint.demoUrl}
                 target="_blank"
