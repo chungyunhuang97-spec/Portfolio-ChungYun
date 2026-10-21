@@ -139,8 +139,16 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
     // frame instead of just looking at a picture of it, so the separate
     // "查看電子喜帖" external link below is dropped for this touchpoint
     // (see the demoUrl guard in TouchpointCard).
+    //
+    // nativeHeight=680 (not ScaledIframeEmbed's 812 default) -- Joe's
+    // actual Framer canvas renders shorter than a full 375x812 iPhone
+    // viewport, so requesting the full 812 left blank page background
+    // (plus the Framer watermark, which pins to the VIEWPORT bottom
+    // rather than the design's own bottom edge) showing as unnatural
+    // whitespace under the illustration. If this is still off once Joe
+    // sees it live, it's this one number to retune.
     const screen = touchpoint.demoUrl ? (
-      <ScaledIframeEmbed src={touchpoint.demoUrl} title={touchpoint.title} />
+      <ScaledIframeEmbed src={touchpoint.demoUrl} title={touchpoint.title} nativeHeight={680} />
     ) : touchpoint.imageUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={touchpoint.imageUrl} alt={touchpoint.title} className="h-full w-full object-cover" />
