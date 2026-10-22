@@ -2,6 +2,7 @@ import { Tag } from "@/components/design-system/Tag";
 import { MockupSlot } from "@/components/design-system/MockupSlot";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { HeroPhotoReveal } from "./HeroPhotoReveal";
+import { HeroLayeredPhoto } from "./HeroLayeredPhoto";
 import type { Project } from "@/lib/types";
 
 interface HeroStat {
@@ -55,6 +56,17 @@ interface HeroStat {
  *   that first screen at all -- see `HeroPhotoReveal` for how it reveals
  *   its full, uncropped frame as the visitor scrolls to it instead of
  *   ever being statically cropped.
+ * - Direction C from Joe's layered-hero-photo proposal: once the photo is
+ *   available as three separate layers -- background plate, star/doodle
+ *   overlay, person cutout -- `HeroLayeredPhoto` composites them with
+ *   independent scroll parallax (every device) plus a desktop-only pointer
+ *   tilt, carrying over the same zoom-out reveal `HeroPhotoReveal`
+ *   established. Needs all three of `heroBackgroundImageUrl`, `heroStarsImageUrl`,
+ *   `heroCutoutImageUrl`; falls back to the flat `heroImageUrl` +
+ *   `HeroPhotoReveal` path when any of the three is missing, so an
+ *   in-progress upload never breaks the section. Admin: open this
+ *   project's HERO section, "ADD FIELD" for each of the three keys above,
+ *   type Media.
  * - That split also meant the first screen no longer has a photo on the
  *   right to balance the text column -- once it was alone, Joe flagged
  *   the left-aligned block as lopsided, so title/tagline/tags/stats are
@@ -75,6 +87,10 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
   const stats = Array.isArray(hero.stats) ? (hero.stats as HeroStat[]) : [];
   const tagChips = project.tags.length > 0 ? project.tags : ["16 Months", "4 Media", "1 Wedding"];
   const heroImageUrl = (hero.heroImageUrl as string) || undefined;
+  const heroBackgroundImageUrl = (hero.heroBackgroundImageUrl as string) || undefined;
+  const heroStarsImageUrl = (hero.heroStarsImageUrl as string) || undefined;
+  const heroCutoutImageUrl = (hero.heroCutoutImageUrl as string) || undefined;
+  const hasLayeredPhoto = Boolean(heroBackgroundImageUrl && heroStarsImageUrl && heroCutoutImageUrl);
 
   // 4 cardinal 1px-offset copies (no diagonal corners) read as a thin outer
   // outline without stroking (and self-intersecting on) the glyph's own
@@ -178,10 +194,20 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
       </div>
 
       {/* Photo -- full-bleed band below the first screen, not constrained
-          to fit it. Real photo scroll-zooms out to its full frame (see
-          HeroPhotoReveal); unset falls back to a plain placeholder band,
-          no scroll effect since there's nothing yet to reveal. */}
-      {heroImageUrl ? (
+          to fit it. Three-layer composite (background/stars/cutout) scroll-
+          + pointer-parallaxes as one piece when all three layers are
+          uploaded (see HeroLayeredPhoto); a single flat photo falls back to
+          the plain scroll-zoom reveal (see HeroPhotoReveal); unset falls
+          back to a placeholder band, no scroll effect since there's
+          nothing yet to reveal. */}
+      {hasLayeredPhoto ? (
+        <HeroLayeredPhoto
+          backgroundSrc={heroBackgroundImageUrl!}
+          starsSrc={heroStarsImageUrl!}
+          cutoutSrc={heroCutoutImageUrl!}
+          alt={project.title}
+        />
+      ) : heroImageUrl ? (
         <HeroPhotoReveal src={heroImageUrl} alt={project.title} />
       ) : (
         <div className="px-6 pb-16 md:px-[120px]">
