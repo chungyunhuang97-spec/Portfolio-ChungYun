@@ -13,14 +13,13 @@ import { EnvelopeSimpleOpen } from "@phosphor-icons/react/dist/ssr";
  * 逐步升溫，呼應接觸點本身「數位 -> 實體 -> 動態影像」的時間順序。
  */
 
-/** 02 電子喜帖 -- 手機畫面下方的推播通知橫幅，呼應「電子喜帖是數位送達」
- * 的即時感。Joe 的第二輪回饋：原本疊在手機畫面「上面」、彈出後又淡出的
- * toast 讀起來像一次性裝飾，意義不明；現在改成手機「下面」的橫幅、寬度
- * 可以超出手機本身（呼叫端的外層容器比手機寬），進場後維持顯示，不再
- * 淡出 -- 兼任「查看電子喜帖」按鈕的視覺引導，按鈕理所當然接在它下面、
- * 進場時機也晚於它（見呼叫端的 SlideIn delay），讀起來像「通知先送達，
- * 才引出可以點進去看的入口」。 */
-export function NotificationPing() {
+/** 02 電子喜帖 -- 疊在手機截圖畫面「上面」的推播通知膠囊，呼應「電子喜帖是
+ * 數位送達」的即時感 -- 依 Figma 改版：原本是手機「下面」、寬度可超出手機
+ * 本身的白色橫幅卡片；現在的參考設計把它收成一顆貼著手機螢幕下半部的小
+ * 膠囊（白底、陰影、粉色圓形信封 icon），跟「查看電子喜帖」按鈕一起疊在
+ * 螢幕截圖上，讀起來像手機本身彈出的系統通知，而不是版面上另一塊獨立卡
+ * 片。呼叫端用 `className` 控制絕對定位的垂直位置（見 Touchpoints.tsx）。 */
+export function NotificationPing({ className = "" }: { className?: string }) {
   const reduceMotion = useReducedMotion();
   return (
     <motion.div
@@ -28,12 +27,12 @@ export function NotificationPing() {
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, margin: "-60px" }}
       transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 160, damping: 16, delay: 0.3 }}
-      className="flex w-full items-center gap-2 rounded-2xl bg-proj-white px-4 py-3 shadow-[0px_8px_12px_rgba(64,50,42,0.08),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
+      className={`absolute inset-x-0 z-10 mx-auto flex w-fit items-center gap-2 rounded-xl bg-proj-white px-3 py-2 shadow-[0px_2px_4px_rgba(9,9,9,0.2)] ${className}`}
     >
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-pink text-proj-white">
-        <EnvelopeSimpleOpen size={14} weight="fill" />
+      <span className="flex size-5 shrink-0 items-center justify-center rounded-[10px] bg-accent-pink text-proj-white">
+        <EnvelopeSimpleOpen size={10} weight="fill" />
       </span>
-      <span className="font-nunito text-[12px] font-bold leading-tight text-primary-black">
+      <span className="font-nunito text-[12px] font-bold leading-tight whitespace-nowrap text-grey-800">
         你收到一封電子喜帖
       </span>
     </motion.div>

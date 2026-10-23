@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-type TagVariant = "orange" | "pink" | "outline" | "blue";
+type TagVariant = "orange" | "pink" | "outline" | "blue" | "cream";
 
 const VARIANT_CLASSES: Record<TagVariant, string> = {
   orange: "bg-primary-orange text-proj-white",
@@ -11,6 +11,10 @@ const VARIANT_CLASSES: Record<TagVariant, string> = {
   // purely additive, existing "orange"/"pink"/"outline" usages elsewhere
   // (Nest Stay, Metro) are untouched.
   blue: "bg-secondary-blue text-proj-white",
+  // Wedding Hero's skill-badge row ("UI設計" / "網站開發" / ...) per Figma --
+  // pale cream pill with a hairline border, legible both overlaid on the
+  // desktop Hero photo and on mobile's plain white background.
+  cream: "border border-grey-100 bg-wedding-cream text-grey-800",
 };
 
 /**

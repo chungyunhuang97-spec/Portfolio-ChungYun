@@ -1,9 +1,8 @@
-import { ArrowUpRight, Warning } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight, ArrowUpRight, Warning } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { SectionKicker } from "@/components/design-system/SectionKicker";
 import { MockupSlot } from "@/components/design-system/MockupSlot";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
-import { Tag } from "@/components/design-system/Tag";
 import { MouseTilt } from "@/components/design-system/MouseTilt";
 import { FlipInvitationCard } from "./FlipInvitationCard";
 import { NotificationPing, PaperLandingWrap, TVPowerOn } from "./TouchpointEffects";
@@ -57,7 +56,7 @@ function UnframedImage({ src, alt }: { src: string; alt: string }) {
   return (
     <div className="aspect-[3/4] w-full">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} className="h-full w-full object-contain" />
+      <img src={src} alt={alt} className="h-full w-full rounded-[12px] object-contain" />
     </div>
   );
 }
@@ -139,34 +138,34 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
     // (cramped/overlapping at the ~220px phone-frame width), per Joe. A
     // plain screenshot inside the phone frame reads cleanly at any size.
     //
-    // The notification banner + "查看電子喜帖" button both live in this
-    // visual column now (not the text column -- see TouchpointCard, which
-    // skips its own tag/button block for this index) -- Joe's second-round
-    // ask: the banner should sit below the phone and be allowed to run
-    // wider than it (this wrapper has no max-width of its own, only the
-    // phone does), and the button should only appear once the banner has,
-    // reading as "notification arrives, then here's the way in" rather
-    // than two unrelated pieces of UI in different columns.
+    // Per Figma, the "你收到一封電子喜帖" notification and the "查看電子喜帖"
+    // button both sit OVERLAID directly on the phone's own screenshot, near
+    // its bottom edge, instead of living below the phone as a separate
+    // banner/link (this section's previous treatment) -- reads as the
+    // phone itself surfacing a system notification rather than unrelated
+    // page furniture under it.
     const screen = touchpoint.imageUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={touchpoint.imageUrl} alt={touchpoint.title} className="h-full w-full object-cover" />
     ) : undefined;
     return (
-      <div className="mx-auto flex w-full flex-col items-center gap-3">
-        <div className="w-full max-w-[220px]">
-          <PhoneFrame screen={screen} label="電子喜帖畫面 素材製作中" />
-        </div>
-        <NotificationPing />
+      <div className="relative mx-auto w-full max-w-[220px]">
+        <PhoneFrame screen={screen} label="電子喜帖畫面 素材製作中" />
+        <NotificationPing className="bottom-[21%]" />
         {touchpoint.demoUrl && (
-          <SlideIn delay={0.9} viewportMargin="-60px">
+          <SlideIn
+            delay={0.9}
+            viewportMargin="-60px"
+            className="absolute inset-x-0 bottom-[6%] z-10 flex justify-center"
+          >
             <a
               href={touchpoint.demoUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex w-fit items-center gap-2 border-b border-primary-black pb-1 font-nunito text-[14px] font-bold text-primary-black transition-colors hover:border-accent-pink hover:text-accent-pink"
+              className="inline-flex w-fit items-center gap-1.5 rounded-xl bg-accent-pink px-3 py-2.5 font-nunito text-[11px] font-bold whitespace-nowrap text-proj-white shadow-[0px_2px_6px_rgba(255,91,192,0.4)] transition-transform hover:scale-105"
             >
-              {touchpoint.demoLabel ?? "查看連結"}
-              <ArrowUpRight size={16} weight="bold" />
+              {touchpoint.demoLabel ?? "查看電子喜帖"}
+              <ArrowRight size={14} weight="bold" />
             </a>
           </SlideIn>
         )}
@@ -221,12 +220,11 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
 function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: number }) {
   const reverse = index % 2 === 1;
   const paragraphs = touchpoint.desc.split("\n\n");
-  // 02's layout is custom, per Joe's ask: the tag moves out of the bottom
-  // block into its own row right under the title (not inline beside the
-  // title -- that cramped the title on mobile and forced an awkward wrap),
-  // and the demo button moves into the visual column entirely (see
-  // TouchpointVisual).
-  const isElectronicInvitation = touchpoint.index === "02";
+  // Meta row combines translated label / date range / (optional) tech as
+  // one dot-separated inline row per Figma, instead of a separate pink
+  // Tag pill underneath -- 02 (電子喜帖) is the only touchpoint with a
+  // `tech` value today, but this applies generically wherever it's set.
+  const metaParts = [touchpoint.titleEn, touchpoint.time, touchpoint.tech].filter(Boolean);
 
   return (
     <div
@@ -240,35 +238,35 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
 
       <div className="flex flex-1 flex-col gap-4">
         <SlideIn direction={reverse ? "left" : "right"} delay={0.1}>
-          <div className="flex items-baseline gap-3">
-            <span className="font-fredoka text-[32px] leading-none text-accent-pink md:text-[40px]">
+          <div className="flex items-center gap-3 md:gap-4">
+            <span className="font-fredoka text-[56px] leading-none text-accent-pink md:text-[72px]">
               {touchpoint.index}
             </span>
-            <div>
-              <h3 className="font-nunito text-[20px] font-bold text-primary-black md:text-[26px]">
+            <div className="flex flex-col gap-1">
+              <h3 className="font-nunito text-[20px] font-bold text-primary-black md:text-[28px]">
                 {touchpoint.title}
               </h3>
-              <p className="font-nunito text-[11px] font-bold tracking-[0.1em] text-grey-500 uppercase md:text-[12px]">
-                {touchpoint.titleEn} · {touchpoint.time}
+              <p className="font-nunito flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] font-bold text-grey-500">
+                {metaParts.map((part, i) => (
+                  <span key={part} className="flex items-center gap-2">
+                    {i > 0 && <span className="size-[3px] rounded-full bg-grey-300" aria-hidden />}
+                    {part}
+                  </span>
+                ))}
               </p>
             </div>
           </div>
         </SlideIn>
 
-        {isElectronicInvitation && touchpoint.tech && (
-          <SlideIn delay={0.15}>
-            <Tag variant="pink" className="w-fit">
-              {touchpoint.tech}
-            </Tag>
-          </SlideIn>
-        )}
-
         {paragraphs.length > 0 && (
-          <SlideIn delay={0.2} className="flex flex-col gap-4">
+          <SlideIn
+            delay={0.2}
+            className="flex flex-col gap-3 rounded-[10px] border-l-[3px] border-accent-pink bg-accent-pink/5 p-4"
+          >
             {paragraphs.map((paragraph) => (
               <p
                 key={paragraph.slice(0, 12)}
-                className="font-nunito text-[14px] leading-[22px] text-grey-700 md:text-[16px] md:leading-[26px]"
+                className="font-nunito text-[14px] leading-[22px] text-grey-700 md:text-[16px] md:leading-[24px]"
               >
                 {paragraph}
               </p>
@@ -277,40 +275,32 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
         )}
 
         {touchpoint.highlights.length > 0 && (
-          <SlideIn delay={0.3}>
-            <ul className="flex flex-col gap-2">
-              {touchpoint.highlights.map((item) => (
-                <li
-                  key={item}
-                  className="flex items-start gap-2 font-nunito text-[13px] leading-[20px] text-grey-600 md:text-[14px]"
-                >
-                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-accent-pink" aria-hidden />
-                  {item}
-                </li>
-              ))}
-            </ul>
+          <SlideIn delay={0.3} className="flex flex-wrap gap-2">
+            {touchpoint.highlights.map((item) => (
+              <span
+                key={item}
+                className="font-nunito rounded-full border border-accent-pink bg-[#fff0f9] px-3 py-1 text-[13px] text-accent-pink md:text-[14px]"
+              >
+                {item}
+              </span>
+            ))}
           </SlideIn>
         )}
 
-        {!isElectronicInvitation && (touchpoint.tech || touchpoint.demoUrl) && (
-          <SlideIn delay={0.4} className="flex flex-col items-start gap-3">
-            {touchpoint.tech && (
-              <Tag variant="pink" className="w-fit">
-                {touchpoint.tech}
-              </Tag>
-            )}
-
-            {touchpoint.demoUrl && (
-              <a
-                href={touchpoint.demoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex w-fit items-center gap-2 border-b border-primary-black pb-1 font-nunito text-[14px] font-bold text-primary-black transition-colors hover:border-accent-pink hover:text-accent-pink"
-              >
-                {touchpoint.demoLabel ?? "查看連結"}
-                <ArrowUpRight size={16} weight="bold" />
-              </a>
-            )}
+        {/* 02's demoUrl already renders as the pink "查看電子喜帖" button
+            overlaid on the phone screenshot (see TouchpointVisual) -- showing
+            it again here would duplicate the same link in the text column. */}
+        {touchpoint.index !== "02" && touchpoint.demoUrl && (
+          <SlideIn delay={0.4}>
+            <a
+              href={touchpoint.demoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex w-fit items-center gap-2 border-b border-primary-black pb-1 font-nunito text-[14px] font-bold text-primary-black transition-colors hover:border-accent-pink hover:text-accent-pink"
+            >
+              {touchpoint.demoLabel ?? "查看連結"}
+              <ArrowUpRight size={16} weight="bold" />
+            </a>
           </SlideIn>
         )}
       </div>

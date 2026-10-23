@@ -148,9 +148,12 @@ export function FlipInvitationCard({
         </AnimatePresence>
 
         {/* Discoverability hint -- tap-to-flip isn't a default web pattern,
-            so without this nothing signals the card is interactive. */}
-        <span className="pointer-events-none absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary-black/70 px-3 py-1.5 font-nunito text-[11px] font-bold text-proj-white backdrop-blur-sm transition-opacity group-active:opacity-60">
-          <ArrowsClockwise size={14} weight="bold" />
+            so without this nothing signals the card is interactive. Per
+            Figma: a white rounded pill with a soft drop-shadow sitting near
+            the card's bottom edge (not the black blurred pill this used to
+            be). */}
+        <span className="pointer-events-none absolute bottom-[9%] left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-xl bg-proj-white px-2.5 py-2 font-nunito text-[12px] font-bold text-grey-800 shadow-[0px_2px_4px_rgba(9,9,9,0.2)] transition-opacity group-active:opacity-60">
+          <ArrowsClockwise size={16} weight="bold" />
           {nextHint}
         </span>
       </button>
