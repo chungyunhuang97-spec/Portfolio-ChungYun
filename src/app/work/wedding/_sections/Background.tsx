@@ -23,7 +23,7 @@ export function Background({ overview }: { overview: Record<string, unknown> }) 
   const paragraphs = text.split("\n\n");
 
   return (
-    <section className="bg-grey-50 px-6 py-16 md:px-[120px] md:py-24">
+    <section className="bg-wedding-cream px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[760px] flex-col items-center gap-6 text-center">
         <SlideIn className="flex flex-col items-center gap-3">
           <SectionKicker color="pink">BACKGROUND</SectionKicker>

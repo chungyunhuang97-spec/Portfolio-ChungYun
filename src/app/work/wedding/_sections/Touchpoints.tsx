@@ -217,6 +217,19 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
   return <MockupSlot label={`${touchpoint.title} 素材製作中`} aspect="aspect-[3/4]" />;
 }
 
+/**
+ * Per Figma, mobile and desktop don't just reflow the same stack -- they
+ * read in genuinely different ORDERS: mobile goes header -> highlight tags
+ * (horizontally scrollable) -> mockup -> description, while desktop groups
+ * header/description/tags/demo into one text column beside a separate
+ * mockup column (alternating sides per `reverse`). A flex layout can't
+ * express both without either duplicating the mockup (bad -- 02's phone
+ * overlay, 03's flip-card click state, and 04's YouTube iframe would each
+ * mount twice) or nesting the text pieces in a way that fights mobile's
+ * different order. CSS Grid with named `grid-template-areas` solves both
+ * at once: every piece is a single grid item, placed by breakpoint-
+ * specific area names, so nothing in the DOM is duplicated.
+ */
 function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: number }) {
   const reverse = index % 2 === 1;
   const paragraphs = touchpoint.desc.split("\n\n");
@@ -225,85 +238,96 @@ function TouchpointCard({ touchpoint, index }: { touchpoint: Touchpoint; index: 
   // Tag pill underneath -- 02 (電子喜帖) is the only touchpoint with a
   // `tech` value today, but this applies generically wherever it's set.
   const metaParts = [touchpoint.titleEn, touchpoint.time, touchpoint.tech].filter(Boolean);
+  // Full, static class strings per branch (not built by interpolating a
+  // sub-value into a shared template) -- Tailwind's build-time scanner
+  // matches literal class-name substrings in the source file, so a class
+  // name assembled from a runtime JS variable wouldn't be found/generated.
+  const desktopGridClass = reverse
+    ? "md:grid-cols-[1fr_320px] md:[grid-template-areas:'header_mockup'_'description_mockup'_'tags_mockup'_'demo_mockup']"
+    : "md:grid-cols-[320px_1fr] md:[grid-template-areas:'mockup_header'_'mockup_description'_'mockup_tags'_'mockup_demo']";
 
   return (
     <div
-      className={`flex flex-col gap-8 md:flex-row md:items-center md:gap-14 ${
-        reverse ? "md:flex-row-reverse" : ""
-      }`}
+      className={`grid grid-cols-1 gap-4 [grid-template-areas:'header'_'tags'_'mockup'_'description'_'demo'] md:items-center md:gap-x-14 md:gap-y-4 ${desktopGridClass}`}
     >
-      <SlideIn direction={reverse ? "right" : "left"} className="w-full md:w-[320px] md:shrink-0">
+      <SlideIn direction={reverse ? "right" : "left"} className="[grid-area:mockup]">
         <TouchpointVisual touchpoint={touchpoint} />
       </SlideIn>
 
-      <div className="flex flex-1 flex-col gap-4">
-        <SlideIn direction={reverse ? "left" : "right"} delay={0.1}>
-          <div className="flex items-center gap-3 md:gap-4">
-            <span className="font-fredoka text-[56px] leading-none text-accent-pink md:text-[72px]">
-              {touchpoint.index}
-            </span>
-            <div className="flex flex-col gap-1">
-              <h3 className="font-nunito text-[20px] font-bold text-primary-black md:text-[28px]">
-                {touchpoint.title}
-              </h3>
-              <p className="font-nunito flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] font-bold text-grey-500">
-                {metaParts.map((part, i) => (
-                  <span key={part} className="flex items-center gap-2">
-                    {i > 0 && <span className="size-[3px] rounded-full bg-grey-300" aria-hidden />}
-                    {part}
-                  </span>
-                ))}
-              </p>
-            </div>
+      <SlideIn direction={reverse ? "left" : "right"} delay={0.1} className="[grid-area:header]">
+        <div className="flex items-center gap-3 md:gap-4">
+          <span className="font-fredoka text-[56px] leading-none text-accent-pink md:text-[72px]">
+            {touchpoint.index}
+          </span>
+          <div className="flex flex-col gap-1">
+            <h3 className="font-nunito text-[20px] font-bold text-primary-black md:text-[28px]">
+              {touchpoint.title}
+            </h3>
+            <p className="font-nunito flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] font-bold text-grey-500">
+              {metaParts.map((part, i) => (
+                <span key={part} className="flex items-center gap-2">
+                  {i > 0 && <span className="size-[3px] rounded-full bg-grey-300" aria-hidden />}
+                  {part}
+                </span>
+              ))}
+            </p>
           </div>
-        </SlideIn>
+        </div>
+      </SlideIn>
 
-        {paragraphs.length > 0 && (
-          <SlideIn
-            delay={0.2}
-            className="flex flex-col gap-3 rounded-[10px] border-l-[3px] border-accent-pink bg-accent-pink/5 p-4"
-          >
-            {paragraphs.map((paragraph) => (
-              <p
-                key={paragraph.slice(0, 12)}
-                className="font-nunito text-[14px] leading-[22px] text-grey-700 md:text-[16px] md:leading-[24px]"
-              >
-                {paragraph}
-              </p>
-            ))}
-          </SlideIn>
-        )}
-
-        {touchpoint.highlights.length > 0 && (
-          <SlideIn delay={0.3} className="flex flex-wrap gap-2">
-            {touchpoint.highlights.map((item) => (
-              <span
-                key={item}
-                className="font-nunito rounded-full border border-accent-pink bg-[#fff0f9] px-3 py-1 text-[13px] text-accent-pink md:text-[14px]"
-              >
-                {item}
-              </span>
-            ))}
-          </SlideIn>
-        )}
-
-        {/* 02's demoUrl already renders as the pink "查看電子喜帖" button
-            overlaid on the phone screenshot (see TouchpointVisual) -- showing
-            it again here would duplicate the same link in the text column. */}
-        {touchpoint.index !== "02" && touchpoint.demoUrl && (
-          <SlideIn delay={0.4}>
-            <a
-              href={touchpoint.demoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex w-fit items-center gap-2 border-b border-primary-black pb-1 font-nunito text-[14px] font-bold text-primary-black transition-colors hover:border-accent-pink hover:text-accent-pink"
+      {paragraphs.length > 0 && (
+        <SlideIn
+          delay={0.2}
+          className="[grid-area:description] flex flex-col gap-3 rounded-[10px] border-l-[3px] border-accent-pink bg-accent-pink/5 p-4"
+        >
+          {paragraphs.map((paragraph) => (
+            <p
+              key={paragraph.slice(0, 12)}
+              className="font-nunito text-[14px] leading-[22px] text-grey-700 md:text-[16px] md:leading-[24px]"
             >
-              {touchpoint.demoLabel ?? "查看連結"}
-              <ArrowUpRight size={16} weight="bold" />
-            </a>
-          </SlideIn>
-        )}
-      </div>
+              {paragraph}
+            </p>
+          ))}
+        </SlideIn>
+      )}
+
+      {touchpoint.highlights.length > 0 && (
+        // Mobile: a single horizontally-scrollable row (Joe's ask -- "tag
+        // 那一列是可以向右滑去查看全部的"), full-bleed past the card's own
+        // padding via negative margin so the scroll area isn't visually
+        // clipped at the card edge. Desktop: wraps onto multiple lines
+        // instead, matching Figma's desktop Key Points layout.
+        <SlideIn
+          delay={0.3}
+          className="[grid-area:tags] -mx-6 flex gap-2 overflow-x-auto px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden"
+        >
+          {touchpoint.highlights.map((item) => (
+            <span
+              key={item}
+              className="font-nunito shrink-0 rounded-full border border-accent-pink bg-[#fff0f9] px-3 py-1 text-[13px] whitespace-nowrap text-accent-pink md:text-[14px]"
+            >
+              {item}
+            </span>
+          ))}
+        </SlideIn>
+      )}
+
+      {/* 02's demoUrl already renders as the pink "查看電子喜帖" button
+          overlaid on the phone screenshot (see TouchpointVisual) -- showing
+          it again here would duplicate the same link in the text column. */}
+      {touchpoint.index !== "02" && touchpoint.demoUrl && (
+        <SlideIn delay={0.4} className="[grid-area:demo]">
+          <a
+            href={touchpoint.demoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex w-fit items-center gap-2 border-b border-primary-black pb-1 font-nunito text-[14px] font-bold text-primary-black transition-colors hover:border-accent-pink hover:text-accent-pink"
+          >
+            {touchpoint.demoLabel ?? "查看連結"}
+            <ArrowUpRight size={16} weight="bold" />
+          </a>
+        </SlideIn>
+      )}
     </div>
   );
 }
@@ -332,8 +356,11 @@ export function Touchpoints({ process }: { process: Record<string, unknown> }) {
         <SlideIn className="flex flex-col items-center gap-3 text-center">
           <SectionKicker color="pink">TOUCHPOINTS</SectionKicker>
           <h2 className="font-nunito text-[22px] font-bold text-primary-black md:text-[36px]">
-            四個接觸點，一套語言
+            從結婚書約到婚禮開場影片，歷時 16 個月
           </h2>
+          <p className="font-nunito text-[16px] font-bold text-accent-pink md:text-[28px]">
+            跨越 4 種媒介，沒有 brief，只有對人的理解。
+          </p>
         </SlideIn>
 
         <div className="flex flex-col gap-16 md:gap-20">

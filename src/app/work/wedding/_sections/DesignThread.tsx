@@ -32,7 +32,7 @@ export function DesignThread({ outcome }: { outcome: Record<string, unknown> }) 
   if (items.length === 0) return null;
 
   return (
-    <section className="bg-grey-50 px-6 py-16 md:px-[120px] md:py-24">
+    <section className="bg-wedding-cream px-6 py-16 md:px-[120px] md:py-24">
       <div className="mx-auto flex max-w-[860px] flex-col gap-10 md:gap-14">
         <SlideIn className="flex flex-col items-center gap-4 text-center">
           <SectionKicker color="pink">DESIGN THREAD</SectionKicker>
