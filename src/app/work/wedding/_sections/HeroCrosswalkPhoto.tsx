@@ -83,7 +83,10 @@ const DESKTOP_BREAKOUT_SCALE = 1512 / 1082;
 // own height-fraction sizing rather than sharing desktop's aspect-ratio
 // approach.
 const MOBILE_HEIGHT_SVH = (403.164 / 844) * 100;
-const MOBILE_RADIUS_PX = 14;
+// Full-bleed, square corners on mobile -- Joe's explicit ask ("手機版的
+// 部分請不要有圓角，讓它90度滿版就好"), overriding Figma's own 14.42px
+// mobile card radius.
+const MOBILE_RADIUS_PX = 0;
 const MOBILE_BREAKOUT_SCALE = 1.06;
 
 // A full-bleed-width, fixed-vh-height box (mobile) is inevitably wider
