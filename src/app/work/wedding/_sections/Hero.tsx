@@ -118,15 +118,14 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
           Mobile's title/photo/stats+badges are three stacked blocks;
           desktop's title/stats/badges are hidden here (`md:hidden` below --
           they render as the photo's own `overlay` instead), so the only
-          visible desktop child is the photo itself, which HeroCrosswalkPhoto
-          now sizes by its own fraction of the viewport HEIGHT rather than
-          an aspect-ratio derived from width -- see that component's doc
-          comment for why an aspect-ratio-driven height fell well short of
-          100vh on normal desktop windows and let the overlay overflow the
-          photo's box. `justify-center` + `gap-6` absorbs whatever slack is
-          left once the visible block(s)' own height is subtracted, rather
-          than requiring exact-sum paddings that would be fragile to any
-          later copy/sizing change. */}
+          visible desktop child is HeroCrosswalkPhoto, whose own root
+          stretches (`md:flex-1`) to fill whatever height this 100svh
+          wrapper leaves it -- the card inside keeps Figma's own inset
+          proportions (71.56% width, its own aspect ratio) rather than
+          filling that full height itself; see that component's doc
+          comment for the full reasoning. `justify-center` + `gap-6`
+          still does the mobile centering/spacing (desktop's one `flex-1`
+          child leaves no slack for it to act on). */}
       <div className="flex min-h-[100svh] flex-col justify-center gap-6 pt-[104px] pb-10 md:pt-[140px] md:pb-10">
         {/* Mobile only -- title block in normal flow above the photo (see
             component doc comment for why this isn't overlaid like desktop). */}
