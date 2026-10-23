@@ -113,21 +113,30 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
 
   return (
     <section id="hero" className="relative overflow-hidden bg-proj-white">
-      {/* Mobile only -- title block in normal flow above the photo (see
-          component doc comment for why this isn't overlaid like desktop). */}
-      <div className="flex flex-col gap-2 px-6 pt-[104px] text-left md:hidden">
-        <SlideIn delay={0.1}>
-          <p className="font-nunito text-[14px] font-extrabold text-[#999]">{eyebrow}</p>
-        </SlideIn>
-        <SlideIn delay={0.15}>
-          <h1 className="font-nunito text-[32px] leading-[1.2] font-bold text-grey-800">{title}</h1>
-        </SlideIn>
-        <SlideIn delay={0.2}>
-          <p className="font-nunito text-[14px] leading-[21px] text-grey-600">{tagline}</p>
-        </SlideIn>
-      </div>
+      {/* Mobile: the whole hero (title block / photo / stats+badges) fills
+          one viewport, same as Figma's "mb-EVA 婚禮" frame (393×844 — a
+          full phone screen); `justify-center` + `gap-6` absorbs whatever
+          slack is left once the photo's own fixed svh height (see
+          HeroCrosswalkPhoto) is subtracted, rather than the three blocks
+          only taking up their natural (shorter) content height. Desktop
+          drops back to plain block flow -- its own pt-[140px] spacing
+          already approximates a full first screen via the overlaid photo
+          itself, with no separate mobile-style wrapper needed. */}
+      <div className="flex min-h-[100svh] flex-col justify-center gap-6 pt-[104px] pb-10 md:block md:min-h-0 md:gap-0 md:pt-[140px] md:pb-0">
+        {/* Mobile only -- title block in normal flow above the photo (see
+            component doc comment for why this isn't overlaid like desktop). */}
+        <div className="flex flex-col gap-2 px-6 text-left md:hidden">
+          <SlideIn delay={0.1}>
+            <p className="font-nunito text-[14px] font-extrabold text-[#999]">{eyebrow}</p>
+          </SlideIn>
+          <SlideIn delay={0.15}>
+            <h1 className="font-nunito text-[32px] leading-[1.2] font-bold text-grey-800">{title}</h1>
+          </SlideIn>
+          <SlideIn delay={0.2}>
+            <p className="font-nunito text-[14px] leading-[21px] text-grey-600">{tagline}</p>
+          </SlideIn>
+        </div>
 
-      <div className="pt-6 md:pt-[140px]">
         {hasCrosswalkPhoto ? (
           <HeroCrosswalkPhoto
             backgroundSrc={heroBackgroundImageUrl!}
@@ -142,16 +151,16 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
             <MockupSlot aspect="aspect-[1082/559]" label="主視覺照片 — 素材待上傳" />
           </div>
         )}
-      </div>
 
-      {/* Mobile only -- stats pill + skill badges in normal flow below the photo. */}
-      <div className="flex flex-col items-center gap-6 px-6 pt-8 pb-16 md:hidden">
-        <SlideIn delay={0.1}>
-          <HeroStatsPill stats={stats} />
-        </SlideIn>
-        <SlideIn delay={0.2}>
-          <HeroBadgeRow tags={tagChips} />
-        </SlideIn>
+        {/* Mobile only -- stats pill + skill badges in normal flow below the photo. */}
+        <div className="flex flex-col items-center gap-6 px-6 md:hidden">
+          <SlideIn delay={0.1}>
+            <HeroStatsPill stats={stats} />
+          </SlideIn>
+          <SlideIn delay={0.2}>
+            <HeroBadgeRow tags={tagChips} />
+          </SlideIn>
+        </div>
       </div>
     </section>
   );

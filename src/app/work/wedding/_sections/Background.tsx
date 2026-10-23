@@ -2,17 +2,21 @@ import { SlideIn } from "@/components/design-system/SlideIn";
 import { SectionKicker } from "@/components/design-system/SectionKicker";
 
 /**
- * Section 2 — Project Background ("No Brief. Just Them."). Continuous
- * narrative pacing for this whole page (not full-screen slides) — a
- * single 16-month story across four media reads closer to Nest Stay/
- * Piiluu's pacing than Metro's argument-by-argument slides (see
- * docs/case-study-design-conventions.md's "敘事節奏" rule).
+ * Section 2 — Project Background. Continuous narrative pacing for this
+ * whole page (not full-screen slides) — a single 16-month story across
+ * four media reads closer to Nest Stay/Piiluu's pacing than Metro's
+ * argument-by-argument slides (see docs/case-study-design-conventions.md's
+ * "敘事節奏" rule).
  *
- * Content model: `overview` row — `heading` + `text` (paragraphs joined
- * by a blank line).
+ * Content model: `overview` row — `heading` + `subheading` (optional,
+ * per Figma: a second, slightly smaller statement line right under the
+ * main heading -- "每一個決定的出發點都是「人」，不是「風格」" -- distinct
+ * from the body paragraphs below it) + `text` (paragraphs joined by a
+ * blank line).
  */
 export function Background({ overview }: { overview: Record<string, unknown> }) {
   const heading = (overview.heading as string) ?? "No Brief. Just Them.";
+  const subheading = overview.subheading as string | undefined;
   const text = overview.text as string | undefined;
 
   if (!text) return null;
@@ -24,6 +28,11 @@ export function Background({ overview }: { overview: Record<string, unknown> }) 
         <SlideIn className="flex flex-col items-center gap-3">
           <SectionKicker color="pink">BACKGROUND</SectionKicker>
           <h2 className="font-nunito text-[22px] font-bold text-primary-black md:text-[36px]">{heading}</h2>
+          {subheading && (
+            <p className="font-nunito text-[16px] leading-[24px] font-semibold text-grey-600 md:text-[28px] md:leading-[39px] md:font-bold">
+              {subheading}
+            </p>
+          )}
         </SlideIn>
 
         <div className="flex flex-col gap-4">

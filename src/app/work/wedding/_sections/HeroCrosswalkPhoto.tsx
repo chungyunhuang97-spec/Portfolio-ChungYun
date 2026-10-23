@@ -56,13 +56,24 @@ interface Metrics {
 const DESKTOP_METRICS: Metrics = { restScale: 1082 / 1512, radiusPx: 20 };
 const MOBILE_METRICS: Metrics = { restScale: 0.92, radiusPx: 14 };
 
+// Mobile's Figma frame ("mb-EVA 婚禮") sizes its Cover Photo by a fixed
+// height (403.164px) inside an 844px-tall hero screen, with the photo
+// itself wider than the viewport and cropped by the frame's own
+// overflow -- i.e. the photo's proportions on mobile come from the
+// hero's own vertical budget, not from the photo asset's aspect ratio
+// the way desktop's inset card works. `object-cover` on a fixed-height,
+// full-width box reproduces that same crop responsively, so mobile gets
+// its own height-driven sizing (403.164 / 844 of the hero's own 100svh)
+// instead of sharing desktop's `aspectRatio`.
+const MOBILE_HEIGHT_SVH = (403.164 / 844) * 100;
+
 interface HeroCrosswalkPhotoProps {
   backgroundSrc: string;
   cutoutSrc: string;
   alt: string;
   /** Desktop-only text overlaid on the photo -- see component doc comment. */
   overlay?: ReactNode;
-  /** Aspect ratio of the photo at its full-bleed (post-breakout) size. */
+  /** Desktop aspect ratio of the photo at its full-bleed (post-breakout) size -- mobile uses its own height-based sizing instead, see MOBILE_HEIGHT_SVH above. */
   aspectRatio?: string;
 }
 
@@ -86,6 +97,7 @@ export function HeroCrosswalkPhoto({
     return () => mq.removeEventListener("change", onChange);
   }, []);
   const metrics = isDesktop ? DESKTOP_METRICS : MOBILE_METRICS;
+  const wrapperStyle = isDesktop ? { aspectRatio } : { height: `${MOBILE_HEIGHT_SVH}svh` };
 
   const { scrollYProgress } = useScroll({ target: wrapRef, offset: ["start start", "end start"] });
 
@@ -97,7 +109,7 @@ export function HeroCrosswalkPhoto({
 
   if (reduceMotion) {
     return (
-      <div className="relative w-full" style={{ aspectRatio }}>
+      <div className="relative w-full" style={wrapperStyle}>
         <div
           className="absolute inset-0 overflow-hidden"
           style={{ transform: `scale(${metrics.restScale})`, borderRadius: metrics.radiusPx }}
@@ -111,7 +123,7 @@ export function HeroCrosswalkPhoto({
   }
 
   return (
-    <div ref={wrapRef} className="relative w-full" style={{ aspectRatio }}>
+    <div ref={wrapRef} className="relative w-full" style={wrapperStyle}>
       {/* The photo card itself -- scale/radius animate here. `overlay`
           deliberately lives OUTSIDE this div (see below) rather than
           nested inside it: Figma has the Hero's text as an independent

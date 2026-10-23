@@ -80,7 +80,7 @@ export default async function WeddingPage() {
 
   return (
     <DoorReveal>
-      <Navbar backHref="/" />
+      <Navbar />
       <main className="font-nunito bg-proj-white">
         <Hero project={data.project} hero={data.hero} />
         <Background overview={data.overview} />
