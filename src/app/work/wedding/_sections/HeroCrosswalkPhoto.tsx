@@ -56,16 +56,34 @@ interface Metrics {
 const DESKTOP_METRICS: Metrics = { restScale: 1082 / 1512, radiusPx: 20 };
 const MOBILE_METRICS: Metrics = { restScale: 0.92, radiusPx: 14 };
 
-// Mobile's Figma frame ("mb-EVA 婚禮") sizes its Cover Photo by a fixed
-// height (403.164px) inside an 844px-tall hero screen, with the photo
-// itself wider than the viewport and cropped by the frame's own
-// overflow -- i.e. the photo's proportions on mobile come from the
-// hero's own vertical budget, not from the photo asset's aspect ratio
-// the way desktop's inset card works. `object-cover` on a fixed-height,
-// full-width box reproduces that same crop responsively, so mobile gets
-// its own height-driven sizing (403.164 / 844 of the hero's own 100svh)
-// instead of sharing desktop's `aspectRatio`.
+// Both Figma frames are literally named/sized as one full screen -- desktop
+// "Hero / 100vh · 1024" (photo 559px inside a 1024px-tall frame) and mobile
+// "mb-EVA 婚禮" (photo 403.164px inside an 844px-tall frame). An
+// `aspectRatio`-derived height (this component's first version, desktop
+// only) ties the photo's height to the viewport's WIDTH, which produced a
+// noticeably-short-of-100vh hero on normal desktop windows (width/1.94 is
+// nowhere near a typical viewport's height) and let the overlay's
+// title/tagline/stats/badges overflow past the photo's own box since there
+// wasn't enough room for them. Sizing both breakpoints by their own
+// fraction of the viewport's HEIGHT instead -- same technique for both,
+// just different fractions -- ties the photo to the dimension that
+// actually determines whether the hero reads as "one screen" and gives the
+// overlay the vertical room the Figma frame's own proportions intended.
+const DESKTOP_HEIGHT_SVH = (559 / 1024) * 100;
 const MOBILE_HEIGHT_SVH = (403.164 / 844) * 100;
+
+// A full-bleed-width, fixed-vh-height box is inevitably WIDER than the
+// photo's own ~1.94 natural aspect on typical desktop screens (e.g.
+// 1920×1080 at 54.6svh tall works out to roughly a 3.25:1 box) -- there's
+// no height formula that satisfies "100vh hero" and "no extra horizontal
+// crop" at once once the viewport is wider than the photo is tall enough
+// for, so `object-cover` is going to trim some width on most screens
+// regardless. The couple sit right-of-center in the source composition
+// (see the Figma reference), so the crop is biased the same way via
+// `object-position` instead of centering it -- losing some empty asphalt
+// off the left edge first, rather than risking the couple themselves
+// clipping off the right edge on a wide crop.
+const PHOTO_OBJECT_POSITION = "70% center";
 
 interface HeroCrosswalkPhotoProps {
   backgroundSrc: string;
@@ -73,17 +91,9 @@ interface HeroCrosswalkPhotoProps {
   alt: string;
   /** Desktop-only text overlaid on the photo -- see component doc comment. */
   overlay?: ReactNode;
-  /** Desktop aspect ratio of the photo at its full-bleed (post-breakout) size -- mobile uses its own height-based sizing instead, see MOBILE_HEIGHT_SVH above. */
-  aspectRatio?: string;
 }
 
-export function HeroCrosswalkPhoto({
-  backgroundSrc,
-  cutoutSrc,
-  alt,
-  overlay,
-  aspectRatio = "1082 / 559",
-}: HeroCrosswalkPhotoProps) {
+export function HeroCrosswalkPhoto({ backgroundSrc, cutoutSrc, alt, overlay }: HeroCrosswalkPhotoProps) {
   const reduceMotion = useReducedMotion();
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -97,7 +107,8 @@ export function HeroCrosswalkPhoto({
     return () => mq.removeEventListener("change", onChange);
   }, []);
   const metrics = isDesktop ? DESKTOP_METRICS : MOBILE_METRICS;
-  const wrapperStyle = isDesktop ? { aspectRatio } : { height: `${MOBILE_HEIGHT_SVH}svh` };
+  const heightSvh = isDesktop ? DESKTOP_HEIGHT_SVH : MOBILE_HEIGHT_SVH;
+  const wrapperStyle = { height: `${heightSvh}svh` };
 
   const { scrollYProgress } = useScroll({ target: wrapRef, offset: ["start start", "end start"] });
 
@@ -114,8 +125,19 @@ export function HeroCrosswalkPhoto({
           className="absolute inset-0 overflow-hidden"
           style={{ transform: `scale(${metrics.restScale})`, borderRadius: metrics.radiusPx }}
         >
-          <img src={backgroundSrc} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" />
-          <img src={cutoutSrc} alt={alt} className="absolute inset-0 h-full w-full object-cover" />
+          <img
+            src={backgroundSrc}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: PHOTO_OBJECT_POSITION }}
+          />
+          <img
+            src={cutoutSrc}
+            alt={alt}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: PHOTO_OBJECT_POSITION }}
+          />
         </div>
         {overlay && <div className="absolute inset-0 flex flex-col items-center justify-center">{overlay}</div>}
       </div>
@@ -142,12 +164,13 @@ export function HeroCrosswalkPhoto({
           src={backgroundSrc}
           alt=""
           aria-hidden
+          style={{ objectPosition: PHOTO_OBJECT_POSITION }}
           className="absolute inset-0 h-full w-full object-cover"
         />
         <motion.img
           src={cutoutSrc}
           alt={alt}
-          style={{ x: cutoutX }}
+          style={{ x: cutoutX, objectPosition: PHOTO_OBJECT_POSITION }}
           className="absolute inset-0 h-full w-full object-cover drop-shadow-[0_24px_40px_rgba(0,0,0,0.18)]"
         />
       </motion.div>

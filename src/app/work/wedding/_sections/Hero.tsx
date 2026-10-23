@@ -113,16 +113,21 @@ export function Hero({ project, hero }: { project: Project; hero: Record<string,
 
   return (
     <section id="hero" className="relative overflow-hidden bg-proj-white">
-      {/* Mobile: the whole hero (title block / photo / stats+badges) fills
-          one viewport, same as Figma's "mb-EVA 婚禮" frame (393×844 — a
-          full phone screen); `justify-center` + `gap-6` absorbs whatever
-          slack is left once the photo's own fixed svh height (see
-          HeroCrosswalkPhoto) is subtracted, rather than the three blocks
-          only taking up their natural (shorter) content height. Desktop
-          drops back to plain block flow -- its own pt-[140px] spacing
-          already approximates a full first screen via the overlaid photo
-          itself, with no separate mobile-style wrapper needed. */}
-      <div className="flex min-h-[100svh] flex-col justify-center gap-6 pt-[104px] pb-10 md:block md:min-h-0 md:gap-0 md:pt-[140px] md:pb-0">
+      {/* Both breakpoints: the whole hero fills one viewport, same as
+          Figma's own frames ("Hero / 100vh · 1024" / "mb-EVA 婚禮" 393×844).
+          Mobile's title/photo/stats+badges are three stacked blocks;
+          desktop's title/stats/badges are hidden here (`md:hidden` below --
+          they render as the photo's own `overlay` instead), so the only
+          visible desktop child is the photo itself, which HeroCrosswalkPhoto
+          now sizes by its own fraction of the viewport HEIGHT rather than
+          an aspect-ratio derived from width -- see that component's doc
+          comment for why an aspect-ratio-driven height fell well short of
+          100vh on normal desktop windows and let the overlay overflow the
+          photo's box. `justify-center` + `gap-6` absorbs whatever slack is
+          left once the visible block(s)' own height is subtracted, rather
+          than requiring exact-sum paddings that would be fragile to any
+          later copy/sizing change. */}
+      <div className="flex min-h-[100svh] flex-col justify-center gap-6 pt-[104px] pb-10 md:pt-[140px] md:pb-10">
         {/* Mobile only -- title block in normal flow above the photo (see
             component doc comment for why this isn't overlaid like desktop). */}
         <div className="flex flex-col gap-2 px-6 text-left md:hidden">
