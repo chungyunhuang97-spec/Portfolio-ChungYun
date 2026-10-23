@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 
 /**
@@ -64,11 +64,10 @@ const CUTOUT_RANGE: [number, number] = [0, 0.4];
 const OVERLAY_FADE_RANGE: [number, number] = [0.15, 0.38];
 const BREAKOUT_RANGE: [number, number] = [0.45, 0.95];
 
-// Figma's desktop card: 1082px wide inside a 1512px-wide canvas (71.56%),
-// its own 1082/559 aspect ratio deciding the height -- see component doc
-// comment for why this (not a viewport-height fraction) is what actually
-// reproduces Figma's numbers.
-const DESKTOP_WIDTH_PERCENT = (1082 / 1512) * 100;
+// Figma's desktop card: 1082px wide inside a 1512px-wide canvas (71.56%,
+// baked directly into CARD_CLASS below), its own 1082/559 aspect ratio
+// deciding the height -- see component doc comment for why this (not a
+// viewport-height fraction) is what actually reproduces Figma's numbers.
 const DESKTOP_RADIUS_PX = 20;
 // Scales the card back up toward (1512/1082 ≈ 1.40) the full section
 // width on breakout -- the inverse of its own rest-width ratio, so it
@@ -80,9 +79,8 @@ const DESKTOP_BREAKOUT_SCALE = 1512 / 1082;
 // height (403.164px) inside an 844px-tall hero screen, with the photo
 // itself wider than the viewport and cropped by the frame's own overflow
 // -- a different mechanism than desktop's inset card, so mobile keeps its
-// own height-fraction sizing rather than sharing desktop's aspect-ratio
-// approach.
-const MOBILE_HEIGHT_SVH = (403.164 / 844) * 100;
+// own height-fraction sizing (47.77%, baked directly into CARD_CLASS
+// below) rather than sharing desktop's aspect-ratio approach.
 // Full-bleed, square corners on mobile -- Joe's explicit ask ("手機版的
 // 部分請不要有圓角，讓它90度滿版就好"), overriding Figma's own 14.42px
 // mobile card radius.
@@ -99,6 +97,23 @@ const MOBILE_BREAKOUT_SCALE = 1.06;
 // the left edge first, rather than risking the couple clipping off the
 // right edge.
 const PHOTO_OBJECT_POSITION = "70% center";
+
+// Static Tailwind classes (not a JS-computed inline style switched on an
+// `isDesktop` media-query check) -- width/height/aspect-ratio are real CSS
+// media queries here, resolved by the browser at first paint same as any
+// other responsive layout, not dependent on a client-only `useEffect`
+// running after hydration. An earlier version read `matchMedia` into
+// state and applied the two shapes via inline `style`; since that state's
+// initial render (both on the server, which has no `window`, and
+// apparently in practice on some clients too) defaulted to the mobile
+// shape, a direct page load could render -- and stay stuck showing --
+// the mobile (full-bleed, height-only) sizing on a desktop viewport until
+// something forced a resize/matchMedia re-evaluation (e.g. toggling
+// devtools' device toolbar). `radiusPx`/`breakoutScale` below still come
+// from that same `isDesktop` state, but only affect the scroll-driven
+// breakout animation much further down the page, not what's on screen at
+// first paint, so that part is safe to leave JS-driven.
+const CARD_CLASS = "relative w-full overflow-hidden h-[47.7682svh] md:h-auto md:w-[71.5608%] md:aspect-[1082/559]";
 
 interface HeroCrosswalkPhotoProps {
   backgroundSrc: string;
@@ -124,9 +139,6 @@ export function HeroCrosswalkPhoto({ backgroundSrc, cutoutSrc, alt, overlay }: H
 
   const radiusPx = isDesktop ? DESKTOP_RADIUS_PX : MOBILE_RADIUS_PX;
   const breakoutScale = isDesktop ? DESKTOP_BREAKOUT_SCALE : MOBILE_BREAKOUT_SCALE;
-  const cardStyle: CSSProperties = isDesktop
-    ? { width: `${DESKTOP_WIDTH_PERCENT}%`, aspectRatio: "1082 / 559" }
-    : { width: "100%", height: `${MOBILE_HEIGHT_SVH}svh` };
 
   const { scrollYProgress } = useScroll({ target: wrapRef, offset: ["start start", "end start"] });
 
@@ -139,7 +151,7 @@ export function HeroCrosswalkPhoto({ backgroundSrc, cutoutSrc, alt, overlay }: H
   if (reduceMotion) {
     return (
       <div ref={wrapRef} className="relative flex w-full items-center justify-center md:flex-1">
-        <div className="relative overflow-hidden" style={{ ...cardStyle, borderRadius: radiusPx }}>
+        <div className={CARD_CLASS} style={{ borderRadius: radiusPx }}>
           <img
             src={backgroundSrc}
             alt=""
@@ -165,10 +177,7 @@ export function HeroCrosswalkPhoto({ backgroundSrc, cutoutSrc, alt, overlay }: H
 
   return (
     <div ref={wrapRef} className="relative flex w-full items-center justify-center md:flex-1">
-      <motion.div
-        className="relative overflow-hidden"
-        style={{ ...cardStyle, scale: cardScale, borderRadius: radius }}
-      >
+      <motion.div className={CARD_CLASS} style={{ scale: cardScale, borderRadius: radius }}>
         <motion.img
           src={backgroundSrc}
           alt=""
