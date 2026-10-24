@@ -61,55 +61,76 @@ interface Props {
   videoUrl?: string;
   highlights: string[];
   color: string;
+  /** Mirrors the layout: video on the right, copy on the left. Used for
+   * 中台 so the three sections alternate (左-右-左) down the page instead of
+   * repeating the same side three times in a row. Mobile always stacks
+   * video-then-copy regardless, per the RWD spec (影片寬度 100% on top). */
+  reverse?: boolean;
 }
 
 /**
- * One reusable "視角" walkthrough: a short intro, a 16:9 video (or upload
- * placeholder), and a row of design-highlight callouts. Reused three times
- * from page.tsx for 前台/中台/後台, each passed its own copy, video URL and
- * highlights so this component itself carries no platform-specific content.
+ * One reusable "視角" walkthrough: a 16:9 video (or upload placeholder) on
+ * one side, its label/description/highlights on the other — alternating
+ * sides across the three instances (see `reverse`). Each side slides in
+ * from its own edge on scroll (SlideIn is whileInView-triggered), so the
+ * video and the copy arrive from opposite directions instead of together.
+ * Reused three times from page.tsx for 前台/中台/後台, each passed its own
+ * copy, video URL and highlights so this component carries no
+ * platform-specific content itself.
  */
-export function YangbeiVideoSection({ index, label, description, videoUrl, highlights, color }: Props) {
+export function YangbeiVideoSection({
+  index,
+  label,
+  description,
+  videoUrl,
+  highlights,
+  color,
+  reverse = false,
+}: Props) {
   return (
-    <section className="bg-proj-white px-6 py-16 md:px-[120px] md:py-[80px]">
-      <SlideIn delay={0.05}>
-        <div className="mx-auto mb-8 flex max-w-[720px] flex-col items-center gap-3 text-center md:mb-12">
-          <span className="font-nunito text-[13px] font-extrabold tracking-[1px] uppercase" style={{ color }}>
-            {index} — {label}
-          </span>
-          <p className="font-nunito text-[14px] leading-[22px] text-grey-600 md:text-[16px] md:leading-[26px]">
-            {description}
-          </p>
-        </div>
-      </SlideIn>
-
-      <SlideIn delay={0.1}>
-        <div className="mx-auto max-w-[920px]">
+    <section className="overflow-hidden bg-proj-white px-6 py-16 md:px-[120px] md:py-[80px]">
+      <div
+        className={`mx-auto flex max-w-[1200px] flex-col gap-8 md:items-center md:gap-14 ${
+          reverse ? "md:flex-row-reverse" : "md:flex-row"
+        }`}
+      >
+        <SlideIn direction={reverse ? "right" : "left"} className="w-full md:w-[56%] md:shrink-0">
           <VideoFrame videoUrl={videoUrl} label={label} color={color} />
+        </SlideIn>
 
-          {highlights.length > 0 && (
-            <div className="mt-6 flex flex-col gap-2.5 md:flex-row md:flex-wrap md:justify-center md:gap-3">
-              {highlights.map((feat) => (
-                <div
-                  key={feat}
-                  className="flex items-center gap-3 rounded-xl border border-grey-100 bg-grey-50 px-4 py-3"
-                >
-                  <span
-                    className="flex size-6 shrink-0 items-center justify-center rounded-full"
-                    style={{ backgroundColor: `${color}1A`, color }}
-                    aria-hidden
+        <SlideIn direction={reverse ? "left" : "right"} delay={0.1} className="w-full md:flex-1">
+          <div className="flex flex-col gap-4 md:gap-5">
+            <span className="font-nunito text-[13px] font-extrabold tracking-[1px] uppercase" style={{ color }}>
+              {index} — {label}
+            </span>
+            <p className="font-nunito text-[14px] leading-[22px] text-grey-600 md:text-[16px] md:leading-[26px]">
+              {description}
+            </p>
+
+            {highlights.length > 0 && (
+              <ul className="flex flex-col gap-2.5 pt-1">
+                {highlights.map((feat) => (
+                  <li
+                    key={feat}
+                    className="flex items-center gap-3 rounded-xl border border-grey-100 bg-grey-50 px-4 py-3"
                   >
-                    <Check size={13} weight="bold" />
-                  </span>
-                  <span className="font-nunito text-[13px] font-medium text-primary-black md:text-[14px]">
-                    {feat}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </SlideIn>
+                    <span
+                      className="flex size-6 shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: `${color}1A`, color }}
+                      aria-hidden
+                    >
+                      <Check size={13} weight="bold" />
+                    </span>
+                    <span className="font-nunito text-[13px] font-medium text-primary-black md:text-[14px]">
+                      {feat}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </SlideIn>
+      </div>
     </section>
   );
 }

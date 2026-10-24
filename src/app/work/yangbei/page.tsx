@@ -94,6 +94,7 @@ export default async function YangbeiPage() {
           videoUrl={data.process.instructor_video_url as string | undefined}
           highlights={highlightsOf("instructor_highlights")}
           color={byId("instructor")?.color ?? "#0D21FF"}
+          reverse
         />
         <YangbeiTransitionCard text="整體資料與帳號，由誰統籌管理？" />
         <YangbeiVideoSection
