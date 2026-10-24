@@ -8,12 +8,41 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const listVariants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
+  show: { transition: { staggerChildren: 0.1, delayChildren: 0.35 } },
 };
 
 const itemVariants = {
   hidden: { opacity: 0, x: 16 },
   show: { opacity: 1, x: 0, transition: { duration: 0.45, ease: EASE } },
+};
+
+/** Eyebrow → big title → description, staggered so the title gets its own
+ * beat (a spring "pop") instead of arriving flattened into the same fade as
+ * everything around it — the one piece of text this section most wants the
+ * eye to land on first. */
+const headerVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.12 } },
+};
+
+const eyebrowVariants = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } },
+};
+
+const titleVariants = {
+  hidden: { opacity: 0, y: 18, scale: 0.94 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: "spring" as const, stiffness: 170, damping: 15 },
+  },
+};
+
+const descVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } },
 };
 
 /**
@@ -33,8 +62,11 @@ function VideoFrame({ videoUrl, label, color }: { videoUrl?: string; label: stri
   if (!videoUrl) {
     return (
       <div
-        className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-2xl"
-        style={{ background: `linear-gradient(160deg, ${color}14 0%, ${color}05 100%)` }}
+        className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-2xl border shadow-[0px_8px_12px_rgba(64,50,42,0.06),0px_1.5px_1.5px_rgba(64,50,42,0.04)]"
+        style={{
+          background: `linear-gradient(160deg, ${color}26 0%, ${color}0D 100%)`,
+          borderColor: `${color}1F`,
+        }}
       >
         <FilmSlate size={32} weight="light" style={{ color: `${color}99` }} />
         <span className="font-nunito text-[13px] font-medium" style={{ color: `${color}99` }}>
@@ -102,11 +134,11 @@ export function YangbeiVideoSection({
 }: Props) {
   return (
     <section
-      className="overflow-hidden px-6 py-16 md:px-[120px] md:py-[80px]"
-      style={{ background: `linear-gradient(180deg, ${color}12 0%, ${color}00 55%)` }}
+      className="flex min-h-[100dvh] flex-col justify-center overflow-hidden px-6 py-16 md:px-[120px] md:py-[80px]"
+      style={{ backgroundColor: `${color}0D` }}
     >
       <div
-        className={`mx-auto flex max-w-[1200px] flex-col gap-8 md:items-center md:gap-14 ${
+        className={`mx-auto flex w-full max-w-[1200px] flex-col gap-8 md:items-center md:gap-14 ${
           reverse ? "md:flex-row-reverse" : "md:flex-row"
         }`}
       >
@@ -124,13 +156,35 @@ export function YangbeiVideoSection({
           viewportMargin="0px"
           className="w-full md:flex-1"
         >
-          <div className="flex flex-col gap-4 md:gap-5">
-            <span className="font-nunito text-[13px] font-extrabold tracking-[1px] uppercase" style={{ color }}>
-              {index} — {label}
-            </span>
-            <p className="font-nunito text-[14px] leading-[22px] text-grey-600 md:text-[16px] md:leading-[26px]">
-              {description}
-            </p>
+          <div className="flex flex-col gap-5 md:gap-6">
+            <motion.div
+              variants={headerVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "0px 0px -10% 0px" }}
+              className="flex flex-col gap-2.5 md:gap-3"
+            >
+              <motion.span
+                variants={eyebrowVariants}
+                className="font-nunito text-[13px] font-extrabold tracking-[1.5px] uppercase"
+                style={{ color }}
+              >
+                {`SECTION ${index}`}
+              </motion.span>
+              <motion.h2
+                variants={titleVariants}
+                className="font-nunito text-[30px] leading-[40px] font-bold md:text-[40px] md:leading-[50px]"
+                style={{ color }}
+              >
+                {label}
+              </motion.h2>
+              <motion.p
+                variants={descVariants}
+                className="font-nunito text-[14px] leading-[22px] text-grey-600 md:text-[16px] md:leading-[26px]"
+              >
+                {description}
+              </motion.p>
+            </motion.div>
 
             {highlights.length > 0 && (
               <motion.ul
