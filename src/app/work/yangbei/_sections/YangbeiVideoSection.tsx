@@ -1,7 +1,20 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { Check, FilmSlate } from "@phosphor-icons/react/dist/ssr";
+
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+const listVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: 16 },
+  show: { opacity: 1, x: 0, transition: { duration: 0.45, ease: EASE } },
+};
 
 /**
  * Recognizes a YouTube or Vimeo link and returns its embeddable iframe URL.
@@ -88,17 +101,29 @@ export function YangbeiVideoSection({
   reverse = false,
 }: Props) {
   return (
-    <section className="overflow-hidden bg-proj-white px-6 py-16 md:px-[120px] md:py-[80px]">
+    <section
+      className="overflow-hidden px-6 py-16 md:px-[120px] md:py-[80px]"
+      style={{ background: `linear-gradient(180deg, ${color}12 0%, ${color}00 55%)` }}
+    >
       <div
         className={`mx-auto flex max-w-[1200px] flex-col gap-8 md:items-center md:gap-14 ${
           reverse ? "md:flex-row-reverse" : "md:flex-row"
         }`}
       >
-        <SlideIn direction={reverse ? "right" : "left"} className="w-full md:w-[56%] md:shrink-0">
+        <SlideIn
+          direction={reverse ? "right" : "left"}
+          viewportMargin="0px"
+          className="w-full md:w-[56%] md:shrink-0"
+        >
           <VideoFrame videoUrl={videoUrl} label={label} color={color} />
         </SlideIn>
 
-        <SlideIn direction={reverse ? "left" : "right"} delay={0.1} className="w-full md:flex-1">
+        <SlideIn
+          direction={reverse ? "left" : "right"}
+          delay={0.1}
+          viewportMargin="0px"
+          className="w-full md:flex-1"
+        >
           <div className="flex flex-col gap-4 md:gap-5">
             <span className="font-nunito text-[13px] font-extrabold tracking-[1px] uppercase" style={{ color }}>
               {index} — {label}
@@ -108,10 +133,17 @@ export function YangbeiVideoSection({
             </p>
 
             {highlights.length > 0 && (
-              <ul className="flex flex-col gap-2.5 pt-1">
+              <motion.ul
+                className="flex flex-col gap-2.5 pt-1"
+                variants={listVariants}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, margin: "0px 0px -10% 0px" }}
+              >
                 {highlights.map((feat) => (
-                  <li
+                  <motion.li
                     key={feat}
+                    variants={itemVariants}
                     className="flex items-center gap-3 rounded-xl border border-grey-100 bg-grey-50 px-4 py-3"
                   >
                     <span
@@ -124,9 +156,9 @@ export function YangbeiVideoSection({
                     <span className="font-nunito text-[13px] font-medium text-primary-black md:text-[14px]">
                       {feat}
                     </span>
-                  </li>
+                  </motion.li>
                 ))}
-              </ul>
+              </motion.ul>
             )}
           </div>
         </SlideIn>
