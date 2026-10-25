@@ -169,13 +169,19 @@ export function Hero({
 
   // Hero mockup — a phone screenshot of 前台 (not a desktop/browser
   // capture): the registration flow's actual users are residents signing
-  // up on their phones, so a phone mockup represents real usage. Falls
-  // back to the generic hero.mockup_media_url if no platform screenshot is
-  // set yet. Same single mockup on both breakpoints (just a different
-  // size) — it used to be a three-device row on mobile only, which no
-  // longer matched the desktop version after that switched to one phone.
+  // up on their phones, so a phone mockup represents real usage.
+  // `hero.mockup_media_url` (this section's own, dedicated field) wins when
+  // set; `platforms[0].screenshot_url` is only a fallback for when Hero
+  // hasn't been given its own image yet. It used to be the other way
+  // around, which meant uploading something into the yangbei video
+  // walkthrough's 前台 slot (which also writes platforms[0].screenshot_url,
+  // see page.tsx's videoUrlOf fallback) silently overrode whatever had been
+  // uploaded here, even after Hero's own field was set. Same single mockup
+  // on both breakpoints (just a different size) — it used to be a
+  // three-device row on mobile only, which no longer matched the desktop
+  // version after that switched to one phone.
   const frontend = platforms.find((p) => p.id === "frontend");
-  const frontendShotUrl = frontend?.screenshot_url || mediaUrl;
+  const frontendShotUrl = mediaUrl || frontend?.screenshot_url;
   const frontendScreen =
     frontendShotUrl && frontendShotUrl.length > 0 ? (
       isVideoUrl(frontendShotUrl) ? (
