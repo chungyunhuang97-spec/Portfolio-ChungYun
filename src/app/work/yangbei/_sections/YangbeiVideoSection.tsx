@@ -14,6 +14,18 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 // just reading) isn't stuck on the intro forever.
 const INTRO_SCROLL_THRESHOLD_PX = 28;
 const INTRO_FALLBACK_MS = 6000;
+// How long the intro is guaranteed to stay visible before ANY scroll can
+// dismiss it. Without this, a single continuous scroll gesture that
+// carries the visitor down into this section's intro (the normal way
+// they'd arrive at 02/03 after reading 01) still has momentum in flight
+// the instant `introInView` flips true — that leftover momentum alone
+// easily covers the threshold before the person has even registered the
+// intro is on screen, so it reveals the content immediately and the intro
+// never visibly appears at all. Scroll deltas are ignored until this grace
+// window has passed, and the baseline position used to measure "did they
+// scroll more" is reset once it has, so it's the next scroll input that
+// counts, not whatever was already carrying them here.
+const INTRO_GRACE_MS = 550;
 
 const introVariants = {
   hidden: { opacity: 0 },
@@ -208,20 +220,26 @@ export function YangbeiVideoSection({
   // (momentum settled mid-read) so the section can't get stuck open.
   useEffect(() => {
     if (!transitionText || showContent || !introInView) return;
-    const startY = window.scrollY;
+    let armed = false;
+    let baselineY = window.scrollY;
 
     function reveal() {
       setShowContent(true);
       window.removeEventListener("scroll", onScroll);
     }
     function onScroll() {
-      if (Math.abs(window.scrollY - startY) > INTRO_SCROLL_THRESHOLD_PX) reveal();
+      if (armed && Math.abs(window.scrollY - baselineY) > INTRO_SCROLL_THRESHOLD_PX) reveal();
     }
 
     window.addEventListener("scroll", onScroll, { passive: true });
+    const armTimer = setTimeout(() => {
+      armed = true;
+      baselineY = window.scrollY;
+    }, INTRO_GRACE_MS);
     const fallback = setTimeout(reveal, INTRO_FALLBACK_MS);
     return () => {
       window.removeEventListener("scroll", onScroll);
+      clearTimeout(armTimer);
       clearTimeout(fallback);
     };
   }, [transitionText, showContent, introInView]);
