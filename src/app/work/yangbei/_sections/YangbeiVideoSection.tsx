@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
-import { Check, FilmSlate } from "@phosphor-icons/react/dist/ssr";
+import { CaretDown, Check, FilmSlate } from "@phosphor-icons/react/dist/ssr";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -111,6 +111,13 @@ interface Props {
    * repeating the same side three times in a row. Mobile always stacks
    * video-then-copy regardless, per the RWD spec (影片寬度 100% on top). */
   reverse?: boolean;
+  /** A one-line narrative bridge from whatever came before, shown at the
+   * top of this same section (same background, same color identity)
+   * instead of as a separate grey band sandwiched between two differently
+   * -tinted sections — that previous standalone-card version read as an
+   * abrupt interruption rather than part of the chapter it was leading
+   * into. */
+  transitionText?: string;
 }
 
 /**
@@ -131,12 +138,27 @@ export function YangbeiVideoSection({
   highlights,
   color,
   reverse = false,
+  transitionText,
 }: Props) {
   return (
     <section
       className="flex min-h-[100dvh] flex-col justify-center overflow-hidden px-6 py-16 md:px-[120px] md:py-[80px]"
       style={{ backgroundColor: `${color}0D` }}
     >
+      {transitionText && (
+        <SlideIn viewportMargin="0px" className="mx-auto mb-10 w-full max-w-[640px] md:mb-14">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <p
+              className="font-nunito text-[16px] leading-[26px] font-semibold italic md:text-[20px] md:leading-[30px]"
+              style={{ color: `${color}CC` }}
+            >
+              {transitionText}
+            </p>
+            <CaretDown size={16} weight="bold" style={{ color: `${color}66` }} aria-hidden />
+          </div>
+        </SlideIn>
+      )}
+
       <div
         className={`mx-auto flex w-full max-w-[1200px] flex-col gap-8 md:items-center md:gap-14 ${
           reverse ? "md:flex-row-reverse" : "md:flex-row"

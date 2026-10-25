@@ -8,7 +8,6 @@ import { Hero } from "./_sections/Hero";
 import { WhyThisProject } from "./_sections/WhyThisProject";
 import { YangbeiSystemRoles } from "./_sections/YangbeiSystemRoles";
 import { YangbeiVideoSection } from "./_sections/YangbeiVideoSection";
-import { YangbeiTransitionCard } from "./_sections/YangbeiTransitionCard";
 import { AIWorkflow } from "./_sections/AIWorkflow";
 import { Outcomes } from "./_sections/Outcomes";
 import { Closing } from "./_sections/Closing";
@@ -27,13 +26,14 @@ import type { YangbeiPlatform } from "./types";
 //
 // Section ordering mirrors the narrative arc:
 //   Hero → WhyThisProject → YangbeiSystemRoles
-//   → YangbeiVideoSection(01 前台) → YangbeiTransitionCard
-//   → YangbeiVideoSection(02 中台) → YangbeiTransitionCard
+//   → YangbeiVideoSection(01 前台) → YangbeiVideoSection(02 中台)
 //   → YangbeiVideoSection(03 後台) → AIWorkflow → Outcomes → Closing
 //
 // The three video walkthroughs read their own video URL + highlights off
 // `process.{frontend,instructor,admin}_{video_url,highlights}` — each
-// independently CMS-editable.
+// independently CMS-editable. Each section also carries its own
+// `transitionText` narrative bridge, rendered inside that same section (same
+// background/color) rather than as a separate interstitial section.
 
 export const revalidate = 60;
 
@@ -85,8 +85,8 @@ export default async function YangbeiPage() {
           videoUrl={data.process.frontend_video_url as string | undefined}
           highlights={highlightsOf("frontend_highlights")}
           color={byId("frontend")?.color ?? "#FF520D"}
+          transitionText="住戶眼中的報名流程，長什麼樣子？"
         />
-        <YangbeiTransitionCard text="這些報名資料，講師要怎麼管理？" />
         <YangbeiVideoSection
           index="02"
           label="中台：講師視角"
@@ -95,8 +95,8 @@ export default async function YangbeiPage() {
           highlights={highlightsOf("instructor_highlights")}
           color={byId("instructor")?.color ?? "#0D21FF"}
           reverse
+          transitionText="這些報名資料，講師要怎麼管理？"
         />
-        <YangbeiTransitionCard text="整體資料與帳號，由誰統籌管理？" />
         <YangbeiVideoSection
           index="03"
           label="後台：管理員視角"
@@ -104,6 +104,7 @@ export default async function YangbeiPage() {
           videoUrl={data.process.admin_video_url as string | undefined}
           highlights={highlightsOf("admin_highlights")}
           color={byId("admin")?.color ?? "#FF5BC0"}
+          transitionText="整體資料與帳號，由誰統籌管理？"
         />
         <AIWorkflow process={data.process} />
         <Outcomes process={data.process} />
