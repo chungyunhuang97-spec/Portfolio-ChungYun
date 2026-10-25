@@ -70,6 +70,15 @@ export default async function YangbeiPage() {
   const byId = (id: string) => platforms.find((p) => p.id === id);
   const highlightsOf = (key: string) =>
     Array.isArray(data.process[key]) ? (data.process[key] as string[]) : [];
+  // Falls back to that platform's own `screenshot_url` (inside the
+  // `platforms` array) when the dedicated `{id}_video_url` field is empty.
+  // The admin's upload dropzone shows up in BOTH places — once per platform
+  // row (screenshot_url, left over from the old tabbed showcase) and once
+  // as this section's own top-level field — and whichever one someone
+  // reaches for first still ends up on the page instead of silently doing
+  // nothing.
+  const videoUrlOf = (id: string) =>
+    (data.process[`${id}_video_url`] as string | undefined) || byId(id)?.screenshot_url;
 
   return (
     <DoorReveal>
@@ -82,7 +91,7 @@ export default async function YangbeiPage() {
           index="01"
           label="前台：住戶視角"
           description="從瀏覽課程到完成報名，專為年長住戶簡化每一個步驟。"
-          videoUrl={data.process.frontend_video_url as string | undefined}
+          videoUrl={videoUrlOf("frontend")}
           highlights={highlightsOf("frontend_highlights")}
           color={byId("frontend")?.color ?? "#FF520D"}
           transitionText="住戶眼中的報名流程，長什麼樣子？"
@@ -91,7 +100,7 @@ export default async function YangbeiPage() {
           index="02"
           label="中台：講師視角"
           description="講師登入後，管理課程、記錄出席與查看學員回饋的日常操作。"
-          videoUrl={data.process.instructor_video_url as string | undefined}
+          videoUrl={videoUrlOf("instructor")}
           highlights={highlightsOf("instructor_highlights")}
           color={byId("instructor")?.color ?? "#0D21FF"}
           reverse
@@ -101,7 +110,7 @@ export default async function YangbeiPage() {
           index="03"
           label="後台：管理員視角"
           description="從課程建立到報名漏斗監控，後台工具讓管理員掌握平台全局。"
-          videoUrl={data.process.admin_video_url as string | undefined}
+          videoUrl={videoUrlOf("admin")}
           highlights={highlightsOf("admin_highlights")}
           color={byId("admin")?.color ?? "#FF5BC0"}
           transitionText="整體資料與帳號，由誰統籌管理？"
