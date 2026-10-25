@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useInView } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
-import { CaretDown, Check, FilmSlate } from "@phosphor-icons/react/dist/ssr";
+import { CaretDown, Check, FilmSlate, Pause, Play } from "@phosphor-icons/react/dist/ssr";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -104,6 +104,59 @@ function toEmbedUrl(url: string): string | null {
   return null;
 }
 
+/**
+ * Self-hosted video with a custom play/pause button instead of the native
+ * `controls` attribute — the browser's built-in control bar paints a heavy
+ * dark gradient scrim across the bottom third of the video on every
+ * platform, which read as far too visually loud for a short product demo
+ * clip. This swaps it for one small, lightly-tinted circular button (just
+ * enough contrast to read the icon, no bar) that toggles play/pause; no
+ * scrub bar, volume or fullscreen, since these are short looping demos the
+ * visitor only ever needs to start or stop.
+ */
+function SelfHostedVideo({ videoUrl }: { videoUrl: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+
+  function toggle() {
+    const el = videoRef.current;
+    if (!el) return;
+    if (el.paused) {
+      el.play();
+    } else {
+      el.pause();
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      className="group relative block h-full w-full cursor-pointer"
+      aria-label={playing ? "暫停影片" : "播放影片"}
+    >
+      <video
+        ref={videoRef}
+        src={videoUrl}
+        loop
+        muted
+        playsInline
+        className="h-full w-full object-contain"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+      />
+      <span
+        className={`absolute bottom-3 left-3 flex size-9 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition-opacity md:size-10 ${
+          playing ? "opacity-0 group-hover:opacity-100" : "opacity-90"
+        }`}
+        aria-hidden
+      >
+        {playing ? <Pause size={16} weight="fill" /> : <Play size={16} weight="fill" className="ml-0.5" />}
+      </span>
+    </button>
+  );
+}
+
 function VideoFrame({ videoUrl, label, color }: { videoUrl?: string; label: string; color: string }) {
   // A thin, fully-saturated border in the section's own color (not a
   // tinted/translucent version of it) instead of a drop shadow — matches
@@ -147,7 +200,7 @@ function VideoFrame({ videoUrl, label, color }: { videoUrl?: string; label: stri
 
   return (
     <div className="aspect-video w-full overflow-hidden rounded-2xl border bg-black" style={borderStyle}>
-      <video src={videoUrl} controls muted loop playsInline className="h-full w-full object-contain" />
+      <SelfHostedVideo videoUrl={videoUrl} />
     </div>
   );
 }
