@@ -1,20 +1,34 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useInView } from "framer-motion";
+import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { CaretDown, Check, FilmSlate } from "@phosphor-icons/react/dist/ssr";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-// How long the transition line sits alone on screen before the real
-// content swaps in.
-const INTRO_HOLD_MS = 1400;
+// Minimum scroll distance (px) past the moment the intro screen scrolls
+// into view before it hands off to the real content — the user nudging
+// the page is what advances it, not a timer. A floor on top of that so a
+// visitor who stops scrolling entirely (trackpad momentum settled, or
+// just reading) isn't stuck on the intro forever.
+const INTRO_SCROLL_THRESHOLD_PX = 28;
+const INTRO_FALLBACK_MS = 6000;
 
 const introVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } },
-  exit: { opacity: 0, y: -12, transition: { duration: 0.4, ease: EASE } },
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.6, ease: EASE } },
+  exit: { opacity: 0, scale: 0.97, transition: { duration: 0.45, ease: EASE } },
+};
+
+const introCardVariants = {
+  hidden: { opacity: 0, scale: 0.92, y: 14 },
+  show: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: { type: "spring" as const, stiffness: 180, damping: 20, delay: 0.1 },
+  },
 };
 
 const contentVariants = {
@@ -74,8 +88,27 @@ function toEmbedUrl(url: string): string | null {
   return null;
 }
 
+/**
+ * One soft, slowly breathing light blob behind the intro glass card —
+ * glassmorphism + ambient glow, the same visual language the Metro
+ * hackathon case study already uses elsewhere in this portfolio. Pure
+ * white at low opacity reads as "light" against any of the three section
+ * colors without needing a per-color variant.
+ */
+function GlowBlob({ className, delay = 0 }: { className: string; delay?: number }) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <motion.div
+      aria-hidden
+      className={`pointer-events-none absolute rounded-full bg-white/35 blur-[80px] md:blur-[110px] ${className}`}
+      animate={reduceMotion ? undefined : { scale: [1, 1.18, 1], opacity: [0.25, 0.45, 0.25] }}
+      transition={reduceMotion ? undefined : { duration: 7, repeat: Infinity, ease: "easeInOut", delay }}
+    />
+  );
+}
+
 function VideoFrame({ videoUrl, label, color }: { videoUrl?: string; label: string; color: string }) {
-  // A solid, fairly saturated border in the section's own color instead of
+  // A thin, fairly saturated border in the section's own color instead of
   // a drop shadow — reads as "this chapter's frame" rather than a floating
   // card, and keeps the same color language across the placeholder and the
   // loaded-video states.
@@ -84,7 +117,7 @@ function VideoFrame({ videoUrl, label, color }: { videoUrl?: string; label: stri
   if (!videoUrl) {
     return (
       <div
-        className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-2xl border-2"
+        className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-2xl border"
         style={{
           background: `linear-gradient(160deg, ${color}26 0%, ${color}0D 100%)`,
           ...borderStyle,
@@ -102,7 +135,7 @@ function VideoFrame({ videoUrl, label, color }: { videoUrl?: string; label: stri
 
   if (embed) {
     return (
-      <div className="aspect-video w-full overflow-hidden rounded-2xl border-2 bg-black" style={borderStyle}>
+      <div className="aspect-video w-full overflow-hidden rounded-2xl border bg-black" style={borderStyle}>
         <iframe
           src={embed}
           title={label}
@@ -115,7 +148,7 @@ function VideoFrame({ videoUrl, label, color }: { videoUrl?: string; label: stri
   }
 
   return (
-    <div className="aspect-video w-full overflow-hidden rounded-2xl border-2 bg-black" style={borderStyle}>
+    <div className="aspect-video w-full overflow-hidden rounded-2xl border bg-black" style={borderStyle}>
       <video src={videoUrl} controls muted loop playsInline className="h-full w-full object-contain" />
     </div>
   );
@@ -167,15 +200,35 @@ export function YangbeiVideoSection({
   const introInView = useInView(introRef, { once: true, margin: "0px 0px -10% 0px" });
   const [showContent, setShowContent] = useState(!transitionText);
 
+  // Advances past the intro once the visitor actually scrolls (mouse wheel,
+  // trackpad, or a touch drag — all fire the same window "scroll" event, so
+  // this needs no separate touch handling for mobile), measured from
+  // wherever the page happened to be when the intro first came into view.
+  // The timed fallback only covers someone who stops scrolling entirely
+  // (momentum settled mid-read) so the section can't get stuck open.
   useEffect(() => {
     if (!transitionText || showContent || !introInView) return;
-    const timer = setTimeout(() => setShowContent(true), INTRO_HOLD_MS);
-    return () => clearTimeout(timer);
+    const startY = window.scrollY;
+
+    function reveal() {
+      setShowContent(true);
+      window.removeEventListener("scroll", onScroll);
+    }
+    function onScroll() {
+      if (Math.abs(window.scrollY - startY) > INTRO_SCROLL_THRESHOLD_PX) reveal();
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    const fallback = setTimeout(reveal, INTRO_FALLBACK_MS);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      clearTimeout(fallback);
+    };
   }, [transitionText, showContent, introInView]);
 
   return (
     <section
-      className="flex min-h-[100dvh] flex-col justify-center overflow-hidden px-6 py-16 md:px-[120px] md:py-[80px]"
+      className="relative flex min-h-[100dvh] flex-col justify-center overflow-hidden px-6 py-16 md:px-[120px] md:py-[80px]"
       style={{ backgroundColor: `${color}0D` }}
     >
       <AnimatePresence mode="wait">
@@ -187,15 +240,39 @@ export function YangbeiVideoSection({
             initial="hidden"
             animate="show"
             exit="exit"
-            className="mx-auto flex w-full max-w-[680px] flex-col items-center gap-4 text-center"
+            className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden"
+            style={{ background: `linear-gradient(135deg, ${color} 0%, ${color}E6 100%)` }}
           >
-            <p
-              className="font-nunito text-[20px] leading-[30px] font-semibold italic md:text-[30px] md:leading-[42px]"
-              style={{ color: `${color}CC` }}
+            <GlowBlob className="-top-20 -left-16 size-[260px] md:size-[440px]" />
+            <GlowBlob className="-bottom-24 -right-10 size-[240px] md:size-[400px]" delay={1.6} />
+
+            <motion.div
+              variants={introCardVariants}
+              className="relative z-10 mx-6 flex max-w-[620px] flex-col items-center gap-2 rounded-[28px] border border-white/30 bg-white/15 px-7 py-9 text-center shadow-[0px_20px_60px_rgba(0,0,0,0.15)] backdrop-blur-xl md:px-14 md:py-14"
             >
-              {transitionText}
-            </p>
-            <CaretDown size={20} weight="bold" style={{ color: `${color}66` }} aria-hidden />
+              <span
+                className="font-nunito select-none text-[44px] leading-none text-white/60 md:text-[64px]"
+                aria-hidden
+              >
+                “
+              </span>
+              <p className="font-nunito -mt-2 text-[19px] leading-[28px] font-bold text-white md:text-[27px] md:leading-[38px]">
+                {transitionText}
+              </p>
+              <span
+                className="font-nunito self-end select-none text-[44px] leading-none text-white/60 md:text-[64px]"
+                aria-hidden
+              >
+                ”
+              </span>
+            </motion.div>
+
+            <motion.div
+              variants={introCardVariants}
+              className="relative z-10 mt-6"
+            >
+              <CaretDown size={20} weight="bold" className="text-white/70" aria-hidden />
+            </motion.div>
           </motion.div>
         ) : (
           <motion.div
@@ -263,7 +340,7 @@ export function YangbeiVideoSection({
                       <motion.li
                         key={feat}
                         variants={itemVariants}
-                        className="flex items-center gap-3 rounded-xl border border-grey-100 bg-grey-50 px-4 py-3"
+                        className="flex items-center gap-3 rounded-xl border border-grey-100 bg-proj-white px-4 py-3 shadow-[0px_4px_10px_rgba(64,50,42,0.05),0px_1px_2px_rgba(64,50,42,0.04)]"
                       >
                         <span
                           className="flex size-6 shrink-0 items-center justify-center rounded-full"
