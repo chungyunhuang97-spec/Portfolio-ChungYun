@@ -120,11 +120,12 @@ function GlowBlob({ className, delay = 0 }: { className: string; delay?: number 
 }
 
 function VideoFrame({ videoUrl, label, color }: { videoUrl?: string; label: string; color: string }) {
-  // A thin, fairly saturated border in the section's own color instead of
-  // a drop shadow — reads as "this chapter's frame" rather than a floating
-  // card, and keeps the same color language across the placeholder and the
-  // loaded-video states.
-  const borderStyle = { borderColor: `${color}66` };
+  // A thin, fully-saturated border in the section's own color (not a
+  // tinted/translucent version of it) instead of a drop shadow — matches
+  // the Figma spec exactly (border border-[#ff520d] etc.) rather than a
+  // softened approximation, and keeps the same color language across the
+  // placeholder and the loaded-video states.
+  const borderStyle = { borderColor: color };
 
   if (!videoUrl) {
     return (
@@ -333,7 +334,7 @@ export function YangbeiVideoSection({
                   </motion.span>
                   <motion.h2
                     variants={titleVariants}
-                    className="font-nunito text-[30px] leading-[40px] font-bold md:text-[40px] md:leading-[50px]"
+                    className="font-display text-[30px] leading-[40px] font-bold md:text-[40px] md:leading-[50px]"
                     style={{ color }}
                   >
                     {label}
@@ -358,7 +359,7 @@ export function YangbeiVideoSection({
                       <motion.li
                         key={feat}
                         variants={itemVariants}
-                        className="flex items-center gap-3 rounded-xl border border-grey-100 bg-proj-white px-4 py-3 shadow-[0px_4px_10px_rgba(64,50,42,0.05),0px_1px_2px_rgba(64,50,42,0.04)]"
+                        className="flex items-center gap-3 rounded-xl border border-grey-100 bg-proj-white px-4 py-3 shadow-[0px_4px_5px_rgba(64,50,42,0.05),0px_1px_1px_rgba(64,50,42,0.04)]"
                       >
                         <span
                           className="flex size-6 shrink-0 items-center justify-center rounded-full"
