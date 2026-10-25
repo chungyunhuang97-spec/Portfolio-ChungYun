@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useInView } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
 import { CaretDown, Check, FilmSlate } from "@phosphor-icons/react/dist/ssr";
 
@@ -29,17 +29,21 @@ const INTRO_GRACE_MS = 550;
 
 const introVariants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { duration: 0.6, ease: EASE } },
-  exit: { opacity: 0, scale: 0.97, transition: { duration: 0.45, ease: EASE } },
+  show: { opacity: 1, transition: { duration: 0.5, ease: EASE } },
+  exit: { opacity: 0, transition: { duration: 0.35, ease: EASE } },
 };
 
-const introCardVariants = {
-  hidden: { opacity: 0, scale: 0.92, y: 14 },
+const introNumberVariants = {
+  hidden: { opacity: 0, scale: 0.85 },
+  show: { opacity: 1, scale: 1, transition: { type: "spring" as const, stiffness: 120, damping: 18 } },
+};
+
+const introTextVariants = {
+  hidden: { opacity: 0, y: 14 },
   show: {
     opacity: 1,
-    scale: 1,
     y: 0,
-    transition: { type: "spring" as const, stiffness: 180, damping: 20, delay: 0.1 },
+    transition: { type: "spring" as const, stiffness: 180, damping: 20, delay: 0.15 },
   },
 };
 
@@ -98,25 +102,6 @@ function toEmbedUrl(url: string): string | null {
   const vimeo = url.match(/vimeo\.com\/(?:video\/)?(\d+)/i);
   if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
   return null;
-}
-
-/**
- * One soft, slowly breathing light blob behind the intro glass card —
- * glassmorphism + ambient glow, the same visual language the Metro
- * hackathon case study already uses elsewhere in this portfolio. Pure
- * white at low opacity reads as "light" against any of the three section
- * colors without needing a per-color variant.
- */
-function GlowBlob({ className, delay = 0 }: { className: string; delay?: number }) {
-  const reduceMotion = useReducedMotion();
-  return (
-    <motion.div
-      aria-hidden
-      className={`pointer-events-none absolute rounded-full bg-white/35 blur-[80px] md:blur-[110px] ${className}`}
-      animate={reduceMotion ? undefined : { scale: [1, 1.18, 1], opacity: [0.25, 0.45, 0.25] }}
-      transition={reduceMotion ? undefined : { duration: 7, repeat: Infinity, ease: "easeInOut", delay }}
-    />
-  );
 }
 
 function VideoFrame({ videoUrl, label, color }: { videoUrl?: string; label: string; color: string }) {
@@ -259,38 +244,32 @@ export function YangbeiVideoSection({
             initial="hidden"
             animate="show"
             exit="exit"
-            className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden"
-            style={{ background: `linear-gradient(135deg, ${color} 0%, ${color}E6 100%)` }}
+            className="relative flex w-full flex-1 flex-col items-center justify-center"
           >
-            <GlowBlob className="-top-20 -left-16 size-[260px] md:size-[440px]" />
-            <GlowBlob className="-bottom-24 -right-10 size-[240px] md:size-[400px]" delay={1.6} />
+            {/* Giant, barely-there chapter numeral as a background watermark —
+                stays on the same tinted ground as the content below instead
+                of a separate saturated curtain, so nothing jumps when it
+                hands off. */}
+            <motion.span
+              variants={introNumberVariants}
+              aria-hidden
+              className="font-display pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[54%] text-[200px] leading-none font-bold select-none md:text-[340px]"
+              style={{ color: `${color}14` }}
+            >
+              {index}
+            </motion.span>
 
             <motion.div
-              variants={introCardVariants}
-              className="relative z-10 mx-6 flex max-w-[620px] flex-col items-center gap-2 rounded-[28px] border border-white/30 bg-white/15 px-7 py-9 text-center shadow-[0px_20px_60px_rgba(0,0,0,0.15)] backdrop-blur-xl md:px-14 md:py-14"
+              variants={introTextVariants}
+              className="relative z-10 flex flex-col items-center gap-4 px-6 text-center"
             >
-              <span
-                className="font-nunito select-none text-[44px] leading-none text-white/60 md:text-[64px]"
-                aria-hidden
+              <p
+                className="font-nunito max-w-[560px] text-[20px] leading-[30px] font-extrabold md:text-[28px] md:leading-[40px]"
+                style={{ color }}
               >
-                “
-              </span>
-              <p className="font-nunito -mt-2 text-[19px] leading-[28px] font-bold text-white md:text-[27px] md:leading-[38px]">
                 {transitionText}
               </p>
-              <span
-                className="font-nunito self-end select-none text-[44px] leading-none text-white/60 md:text-[64px]"
-                aria-hidden
-              >
-                ”
-              </span>
-            </motion.div>
-
-            <motion.div
-              variants={introCardVariants}
-              className="relative z-10 mt-6"
-            >
-              <CaretDown size={20} weight="bold" className="text-white/70" aria-hidden />
+              <CaretDown size={20} weight="bold" style={{ color: `${color}80` }} aria-hidden />
             </motion.div>
           </motion.div>
         ) : (
