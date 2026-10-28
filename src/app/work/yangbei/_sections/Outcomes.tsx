@@ -75,13 +75,13 @@ export function Outcomes({ process }: { process: Record<string, unknown> }) {
             key={outcome.unit}
             variants={cardInner}
             custom={i}
-            className="flex flex-col gap-3 rounded-2xl border border-grey-100 bg-grey-50 p-6 md:p-7"
+            className="flex flex-col items-center gap-3 rounded-2xl border border-grey-100 bg-grey-50 p-6 text-center md:items-start md:p-7 md:text-left"
           >
-            {/* Number + unit */}
-            <div className="flex items-baseline gap-2">
+            {/* Number + unit — stacked & centered on mobile, inline baseline on desktop */}
+            <div className="flex flex-col items-center gap-1 md:flex-row md:items-baseline md:gap-2">
               <motion.span
                 variants={numberPop}
-                className="font-fredoka text-[48px] leading-none text-primary-orange md:text-[64px]"
+                className="font-fredoka text-[40px] leading-none text-primary-orange md:text-[64px]"
               >
                 {outcome.number}
               </motion.span>
@@ -112,8 +112,8 @@ export function Outcomes({ process }: { process: Record<string, unknown> }) {
 
       {/* Iteration note */}
       <SlideIn delay={0.25}>
-        <div className="mt-8 flex items-start gap-3 rounded-xl border border-grey-100 bg-grey-50 p-4 md:mt-10">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mt-0.5 shrink-0" aria-hidden>
+        <div className="mt-8 flex flex-col items-center gap-2 rounded-xl border border-grey-100 bg-grey-50 p-4 text-center md:mt-10 md:flex-row md:items-start md:gap-3 md:text-left">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 md:mt-0.5" aria-hidden>
             <circle cx="8" cy="8" r="7" stroke="#FF520D" strokeOpacity="0.5" strokeWidth="1.2" />
             <path d="M5.5 8l1.8 1.8L10.5 6" stroke="#FF520D" strokeOpacity="0.7" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>

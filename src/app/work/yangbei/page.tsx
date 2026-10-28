@@ -6,6 +6,8 @@ import { Footer } from "@/components/design-system/Footer";
 import { BackToTop } from "@/components/design-system/BackToTop";
 import { Hero } from "./_sections/Hero";
 import { WhyThisProject } from "./_sections/WhyThisProject";
+import { Timeline } from "./_sections/Timeline";
+import { UserInterviews } from "./_sections/UserInterviews";
 import { YangbeiSystemRoles } from "./_sections/YangbeiSystemRoles";
 import { YangbeiVideoSection } from "./_sections/YangbeiVideoSection";
 import { AIWorkflow } from "./_sections/AIWorkflow";
@@ -19,13 +21,19 @@ import type { YangbeiPlatform } from "./types";
 //
 // Content model (Supabase project_sections):
 //   hero     → kicker / title / subtitle / timeframeLabel / badges / mockup_media_url
-//   process  → whyIntro / whySteps / systemRoles (3×) / platforms (3×) /
+//   process  → whyParagraph / whyParagraphMobile / whyEmphasis /
+//              timelineTitle / timelineSubtitle / timelinePhases (4×) /
+//              interviewTitle / interviewSubtitle / interviewAudience (4×) /
+//              interviewInsights (3×) / interviewNoteTitle / interviewNoteBody /
+//              interviewNotePlainMobile /
+//              systemRoles (3×) / platforms (3×) /
 //              {frontend,instructor,admin}_video_url / {frontend,instructor,admin}_highlights /
 //              aiWorkflowTitle / aiWorkflowDesc / aiWorkflowItems (3×) / outcomesTitle / outcomes (3×)
-//   reflection → closingQuote / closingBody
+//   reflection → closingQuote / closingSubtitle / closingSubtitleMobile /
+//                closingBody / closingBodyMobile
 //
 // Section ordering mirrors the narrative arc:
-//   Hero → WhyThisProject → YangbeiSystemRoles
+//   Hero → WhyThisProject → Timeline → UserInterviews → YangbeiSystemRoles
 //   → YangbeiVideoSection(01 前台) → YangbeiVideoSection(02 中台)
 //   → YangbeiVideoSection(03 後台) → AIWorkflow → Outcomes → Closing
 //
@@ -86,6 +94,8 @@ export default async function YangbeiPage() {
       <main className="font-nunito bg-proj-white">
         <Hero project={data.project} hero={data.hero} platforms={platforms} />
         <WhyThisProject process={data.process} />
+        <Timeline process={data.process} />
+        <UserInterviews process={data.process} />
         <YangbeiSystemRoles process={data.process} />
         <YangbeiVideoSection
           index="01"

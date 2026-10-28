@@ -54,7 +54,9 @@ function GeometricBackdrop() {
 export function Closing({ reflection }: { reflection: Record<string, unknown> }) {
   const quote = reflection.closingQuote as string | undefined;
   const subtitle = reflection.closingSubtitle as string | undefined;
+  const subtitleMobile = (reflection.closingSubtitleMobile as string | undefined) ?? subtitle;
   const body = reflection.closingBody as string | undefined;
+  const bodyMobile = (reflection.closingBodyMobile as string | undefined) ?? body;
 
   if (!quote || !body) return null;
 
@@ -86,26 +88,30 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
           >
             {quote}
           </motion.p>
-          {subtitle && (
-            <motion.p
+          {subtitleMobile && (
+            <motion.div
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
               className="w-full font-nunito text-[13px] font-semibold leading-[20px] opacity-90"
             >
-              {subtitle}
-            </motion.p>
+              {subtitleMobile.split("\n").map((line, i) => (
+                <p key={i}>{line}</p>
+              ))}
+            </motion.div>
           )}
-          <motion.p
+          <motion.div
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.25, ease: "easeOut" }}
             className="w-full font-nunito text-[13px] font-normal leading-[20px] opacity-80"
           >
-            {body}
-          </motion.p>
+            {(bodyMobile ?? "").split("\n").map((line, i) =>
+              line === "" ? <div key={i} aria-hidden className="h-2.5" /> : <p key={i}>{line}</p>
+            )}
+          </motion.div>
         </div>
       </div>
 
@@ -144,15 +150,17 @@ export function Closing({ reflection }: { reflection: Record<string, unknown> })
               {subtitle}
             </motion.p>
           )}
-          <motion.p
+          <motion.div
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.25, ease: "easeOut" }}
             className="w-[680px] font-nunito text-[18px] font-normal leading-[28px] opacity-80"
           >
-            {body}
-          </motion.p>
+            {body.split("\n").map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </motion.div>
         </div>
       </div>
     </section>
