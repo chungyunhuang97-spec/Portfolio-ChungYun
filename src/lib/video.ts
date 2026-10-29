@@ -48,3 +48,28 @@ export function resolveFallbackThumbnailUrl(
   const videoId = extractYouTubeId(videoUrl);
   return videoId ? getYouTubeThumbnailUrl(videoId, "hq") : null;
 }
+
+/**
+ * Instagram serves an iframe-embeddable version of any public post/reel at
+ * the same URL with `/embed` appended -- no API key needed for the basic
+ * (uncaptioned) widget. Extracts the post type + shortcode from any common
+ * Instagram URL shape (with or without a leading username segment).
+ */
+export function getInstagramEmbedUrl(url: string): string | null {
+  const match = url.match(/instagram\.com\/(?:[^/]+\/)?(p|reel|reels)\/([\w-]+)/i);
+  if (!match) return null;
+  const type = match[1].toLowerCase() === "reels" ? "reel" : match[1].toLowerCase();
+  return `https://www.instagram.com/${type}/${match[2]}/embed`;
+}
+
+/**
+ * Resolves any work/reel-link URL to an embeddable iframe src, trying
+ * YouTube first and then Instagram -- null when the URL matches neither,
+ * in which case the caller should fall back to an outbound link.
+ */
+export function resolveEmbedUrl(url: string | null): string | null {
+  if (!url) return null;
+  const videoId = extractYouTubeId(url);
+  if (videoId) return getYouTubeEmbedUrl(videoId);
+  return getInstagramEmbedUrl(url);
+}

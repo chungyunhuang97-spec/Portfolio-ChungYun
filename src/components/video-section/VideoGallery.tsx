@@ -3,25 +3,25 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Play, X } from "@phosphor-icons/react/dist/ssr";
-import type { VideoWork } from "@/lib/types";
-import {
-  extractYouTubeId,
-  getYouTubeEmbedUrl,
-  resolveFallbackThumbnailUrl,
-  resolveThumbnailUrl,
-} from "@/lib/video";
+import { ArrowUpRight, Play, X } from "@phosphor-icons/react/dist/ssr";
+import type { ReelLink, VideoWork } from "@/lib/types";
+import { resolveEmbedUrl, resolveFallbackThumbnailUrl, resolveThumbnailUrl } from "@/lib/video";
 import { ThumbnailImage } from "@/components/video-section/ThumbnailImage";
 import { BriefLightbox } from "@/components/video-section/BriefLightbox";
 import { FadeIn } from "@/components/FadeIn";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
-const SPRING = { type: "spring" as const, stiffness: 170, damping: 22 };
+const SPRING_3D = { type: "spring" as const, stiffness: 150, damping: 20 };
+
+interface ActiveEmbed {
+  src: string;
+  label: string;
+}
 
 function PlayOverlay() {
   return (
     <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/0 transition-colors group-hover:bg-ink/25">
-      <span className="flex size-14 items-center justify-center rounded-full bg-bg/0 text-bg opacity-0 transition-all duration-200 group-hover:scale-110 group-hover:bg-bg/90 group-hover:text-ink group-hover:opacity-100">
+      <span className="flex size-14 items-center justify-center rounded-full bg-bg/90 text-ink opacity-90 transition-transform duration-200 group-hover:scale-110">
         <Play size={22} weight="fill" className="ml-0.5" />
       </span>
     </span>
@@ -30,31 +30,29 @@ function PlayOverlay() {
 
 /**
  * The active work's stage. Two independent layers of motion:
- * - the OUTER wrapper tumbles the whole frame out/in (rotate + diagonal
- *   translate) whenever `work` itself changes -- the visible "rotation"
- *   switching between works.
+ * - the OUTER wrapper rotates the whole frame around the Y axis (a real
+ *   3D turn, not a flat Z-axis spin) whenever `work` changes -- the
+ *   "cards winding past each other" feel, closer to a rotating drum/
+ *   double-helix than the card-stacking look it replaced.
  * - the INNER frame carries `layoutId`, shared with the expanded overlay
- *   below. Clicking it toggles `expanded`, which unmounts it from here
- *   and mounts the overlay's frame with the same layoutId -- Motion
- *   animates the shared element between the two positions/sizes
- *   automatically, which is the "zoom in on click" behavior.
+ *   below. Clicking it opens that work's primary link; Motion animates
+ *   the shared element between the two positions/sizes automatically.
  */
 function HelixStage({
   work,
-  expanded,
-  onOpen,
+  embed,
+  onOpenPrimary,
   onClose,
 }: {
   work: VideoWork;
-  expanded: boolean;
-  onOpen: () => void;
+  embed: ActiveEmbed | null;
+  onOpenPrimary: () => void;
   onClose: () => void;
 }) {
   const thumbnailUrl = resolveThumbnailUrl(work.thumbnail_url, work.video_url);
   const thumbnailFallbackUrl = resolveFallbackThumbnailUrl(work.thumbnail_url, work.video_url);
-  const videoId = work.video_url ? extractYouTubeId(work.video_url) : null;
-  const canEmbed = work.embed_type === "youtube" && videoId;
   const layoutId = `video-stage-${work.id}`;
+  const expanded = embed !== null;
 
   useEffect(() => {
     if (!expanded) return;
@@ -67,21 +65,25 @@ function HelixStage({
 
   return (
     <>
-      <div className="relative aspect-[4/3] w-full md:aspect-[16/10]">
+      <div
+        className="relative aspect-[4/3] w-full md:aspect-[16/10]"
+        style={{ perspective: "1800px" }}
+      >
         <AnimatePresence mode="popLayout">
           <motion.div
             key={work.id}
             className="absolute inset-0"
-            initial={{ opacity: 0, rotate: -12, x: 70, y: -50, scale: 0.92 }}
-            animate={{ opacity: 1, rotate: 0, x: 0, y: 0, scale: 1 }}
-            exit={{ opacity: 0, rotate: 10, x: -70, y: 60, scale: 0.92 }}
-            transition={SPRING}
+            style={{ transformStyle: "preserve-3d" }}
+            initial={{ opacity: 0, rotateY: 75, x: 90, scale: 0.86 }}
+            animate={{ opacity: 1, rotateY: 0, x: 0, scale: 1 }}
+            exit={{ opacity: 0, rotateY: -75, x: -90, scale: 0.86 }}
+            transition={SPRING_3D}
           >
             {!expanded && (
               <motion.button
                 type="button"
                 layoutId={layoutId}
-                onClick={onOpen}
+                onClick={onOpenPrimary}
                 className="group block h-full w-full cursor-pointer overflow-hidden bg-ink"
                 aria-label={`放大播放${work.title}`}
               >
@@ -105,11 +107,11 @@ function HelixStage({
       {typeof document !== "undefined" &&
         createPortal(
           <AnimatePresence>
-            {expanded && (
+            {embed && (
               <motion.div
                 role="dialog"
                 aria-modal="true"
-                aria-label={work.title}
+                aria-label={embed.label}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -131,38 +133,13 @@ function HelixStage({
                   onClick={(e) => e.stopPropagation()}
                   className="relative aspect-video w-full max-w-5xl overflow-hidden bg-ink"
                 >
-                  {canEmbed ? (
-                    <iframe
-                      src={getYouTubeEmbedUrl(videoId!)}
-                      title={work.title}
-                      className="h-full w-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <>
-                      {thumbnailUrl ? (
-                        <ThumbnailImage
-                          src={thumbnailUrl}
-                          fallbackSrc={thumbnailFallbackUrl}
-                          alt={`${work.title} 縮圖`}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-ink-faint/20" aria-hidden />
-                      )}
-                      {work.video_url && (
-                        <a
-                          href={work.video_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="absolute inset-0 flex items-center justify-center bg-ink/20 text-sm tracking-wide text-bg transition-colors hover:bg-ink/40"
-                        >
-                          前往觀看 ↗
-                        </a>
-                      )}
-                    </>
-                  )}
+                  <iframe
+                    src={embed.src}
+                    title={embed.label}
+                    className="h-full w-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
                 </motion.div>
               </motion.div>
             )}
@@ -174,32 +151,46 @@ function HelixStage({
 }
 
 /**
- * Homepage "影片製作" gallery for the featured works — a numbered list
- * that switches which work is on stage (a visible rotating tumble, see
- * HelixStage), and a detail readout alongside. Clicking the stage image
- * zooms it into a full-size overlay via a shared layoutId transition.
- * Lower-tier "more works" stay in the separate MoreWorksSection grid
- * below this.
+ * Homepage "影片製作" gallery — every video_work (single pieces and
+ * multi-link columns like 教學性質短影片 / 生活記事 Vlog alike) in one
+ * numbered list that switches the active work on the stage, with a
+ * detail readout alongside. A multi-link work's reel_links render as a
+ * list of its own, each opening the same inline embed overlay as the
+ * stage image.
  */
-export function VideoGallery({ works }: { works: VideoWork[] }) {
+export function VideoGallery({
+  works,
+  reelLinksByWorkId,
+}: {
+  works: VideoWork[];
+  reelLinksByWorkId: Record<string, ReelLink[]>;
+}) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [expanded, setExpanded] = useState(false);
+  const [embed, setEmbed] = useState<ActiveEmbed | null>(null);
   const [briefOpen, setBriefOpen] = useState(false);
   const active = works[activeIndex];
+  const activeReelLinks = active ? (reelLinksByWorkId[active.id] ?? []) : [];
 
   function selectIndex(i: number) {
     if (i === activeIndex) return;
     setActiveIndex(i);
-    setExpanded(false);
+    setEmbed(null);
   }
 
-  function handleOpen() {
-    if (!active) return;
-    if (active.embed_type === "youtube" && active.video_url && extractYouTubeId(active.video_url)) {
-      setExpanded(true);
-    } else if (active.video_url) {
-      window.open(active.video_url, "_blank", "noopener,noreferrer");
+  function openEmbed(url: string | null, label: string) {
+    if (!url) return;
+    const src = resolveEmbedUrl(url);
+    if (src) {
+      setEmbed({ src, label });
+    } else {
+      window.open(url, "_blank", "noopener,noreferrer");
     }
+  }
+
+  function handleOpenPrimary() {
+    if (!active) return;
+    const primaryUrl = active.video_url ?? activeReelLinks[0]?.url ?? null;
+    openEmbed(primaryUrl, active.title);
   }
 
   if (!active) return null;
@@ -213,7 +204,7 @@ export function VideoGallery({ works }: { works: VideoWork[] }) {
         </FadeIn>
 
         <FadeIn delay={0.1}>
-          <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[220px_1fr_300px] lg:gap-12">
+          <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[220px_1fr_300px] lg:gap-12">
             <div
               role="tablist"
               aria-label="選擇作品"
@@ -240,12 +231,12 @@ export function VideoGallery({ works }: { works: VideoWork[] }) {
 
             <HelixStage
               work={active}
-              expanded={expanded}
-              onOpen={handleOpen}
-              onClose={() => setExpanded(false)}
+              embed={embed}
+              onOpenPrimary={handleOpenPrimary}
+              onClose={() => setEmbed(null)}
             />
 
-            <div>
+            <div className="min-w-0">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={active.id}
@@ -257,7 +248,14 @@ export function VideoGallery({ works }: { works: VideoWork[] }) {
                   <p className="text-xs tracking-[0.2em] text-ink-faint">
                     {String(activeIndex + 1).padStart(2, "0")} / {String(works.length).padStart(2, "0")}
                   </p>
-                  <h3 className="mt-3 text-2xl">{active.title}</h3>
+                  <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                    <h3 className="text-2xl">{active.title}</h3>
+                    {active.level_label && (
+                      <span className="rounded-full bg-accent-soft px-2.5 py-1 text-[11px] tracking-[0.1em] text-accent">
+                        {active.level_label}
+                      </span>
+                    )}
+                  </div>
                   {active.subtitle && (
                     <p className="mt-1 text-sm text-ink-faint">{active.subtitle}</p>
                   )}
@@ -289,6 +287,23 @@ export function VideoGallery({ works }: { works: VideoWork[] }) {
                     </ul>
                   )}
 
+                  {activeReelLinks.length > 0 && (
+                    <ul className="mt-5 space-y-2 border-t border-line pt-4">
+                      {activeReelLinks.map((link) => (
+                        <li key={link.id}>
+                          <button
+                            type="button"
+                            onClick={() => openEmbed(link.url, link.label)}
+                            className="group inline-flex items-center gap-1.5 text-sm text-ink-muted transition-colors hover:text-accent"
+                          >
+                            <Play size={11} weight="fill" className="shrink-0" />
+                            {link.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
                   {active.brief_image_url && (
                     <button
                       type="button"
@@ -305,14 +320,17 @@ export function VideoGallery({ works }: { works: VideoWork[] }) {
                     </button>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={handleOpen}
-                    className="group mt-6 inline-flex items-center gap-2 border-b border-ink pb-1 text-sm tracking-wide transition-colors hover:border-accent hover:text-accent"
-                  >
-                    <Play size={14} weight="fill" />
-                    觀看影片
-                  </button>
+                  {active.video_url && !resolveEmbedUrl(active.video_url) && (
+                    <a
+                      href={active.video_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group mt-5 inline-flex items-center gap-1.5 text-sm text-ink transition-colors hover:text-accent"
+                    >
+                      查看完整帳號
+                      <ArrowUpRight size={14} weight="light" className="transition-transform group-hover:translate-x-0.5" />
+                    </a>
+                  )}
                 </motion.div>
               </AnimatePresence>
             </div>

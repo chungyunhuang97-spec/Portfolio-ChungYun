@@ -137,6 +137,7 @@ export interface VideoWorkFields {
   video_url: string | null;
   embed_type: VideoEmbedType | null;
   brief_image_url: string | null;
+  level_label: string | null;
   sort_order: number;
   is_active: boolean;
 }

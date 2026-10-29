@@ -64,6 +64,8 @@ export interface VideoWork {
   video_url: string | null;
   embed_type: VideoEmbedType | null;
   brief_image_url: string | null;
+  /** Free-text badge the admin sets per work, e.g. "基礎剪輯" / "進階剪輯". */
+  level_label: string | null;
   sort_order: number;
   is_active: boolean;
   created_at: string;

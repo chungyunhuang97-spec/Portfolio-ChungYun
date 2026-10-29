@@ -33,6 +33,7 @@ export function VideoWorkForm({
     video_url: work.video_url,
     embed_type: work.embed_type,
     brief_image_url: work.brief_image_url,
+    level_label: work.level_label,
     sort_order: work.sort_order,
     is_active: work.is_active,
   };
@@ -117,6 +118,16 @@ export function VideoWorkForm({
       <div className="flex flex-col gap-1.5 md:col-span-2">
         <label className={labelClass()}>TAGS (comma separated)</label>
         <input value={tagsText} onChange={(e) => setTagsText(e.target.value)} className={inputClass()} />
+      </div>
+
+      <div className="flex flex-col gap-1.5 md:col-span-2">
+        <label className={labelClass()}>LEVEL 標籤（自訂文案，例：基礎剪輯 / 進階剪輯，留空則不顯示）</label>
+        <input
+          value={fields.level_label ?? ""}
+          onChange={(e) => set("level_label", e.target.value || null)}
+          placeholder="基礎剪輯"
+          className={inputClass()}
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">

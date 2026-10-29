@@ -5,7 +5,6 @@ import { FadeIn } from "@/components/FadeIn";
 import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/design-system/Navbar";
 import { VideoGallery } from "@/components/video-section/VideoGallery";
-import { MoreWorksSection } from "@/components/video-section/MoreWorksSection";
 
 export const revalidate = 60;
 
@@ -110,16 +109,16 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Video & content production */}
-        {videoSectionData && videoSectionData.featured.length > 0 && (
-          <VideoGallery works={videoSectionData.featured} />
-        )}
-        {videoSectionData && (
-          <MoreWorksSection
-            more={videoSectionData.more}
-            reelLinksByWorkId={videoSectionData.reelLinksByWorkId}
-          />
-        )}
+        {/* Video & content production — one unified gallery, basic and
+            advanced editing work alike, differentiated by each work's
+            own level_label rather than a separate "more works" tier. */}
+        {videoSectionData &&
+          (videoSectionData.featured.length > 0 || videoSectionData.more.length > 0) && (
+            <VideoGallery
+              works={[...videoSectionData.featured, ...videoSectionData.more]}
+              reelLinksByWorkId={videoSectionData.reelLinksByWorkId}
+            />
+          )}
 
         {/* Footer */}
         <footer className="border-t border-line">
