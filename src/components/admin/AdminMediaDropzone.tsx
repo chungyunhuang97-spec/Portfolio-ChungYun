@@ -10,6 +10,10 @@ function isVideoUrl(url: string) {
   return /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(url);
 }
 
+function isImageUrl(url: string) {
+  return /\.(png|jpe?g|gif|webp|avif|svg)(\?.*)?$/i.test(url) || url.includes("img.youtube.com");
+}
+
 /**
  * Uploads directly to the Supabase Storage REST endpoint via XHR instead of
  * the SDK's `storage.upload()` (which wraps `fetch` and exposes no progress
@@ -55,17 +59,42 @@ function uploadWithProgress({
   });
 }
 
+/** Uploads one file to the `project-media` bucket and returns its public
+ * URL. Shared by the dropzone and by callers that generate files
+ * themselves (e.g. a poster frame captured from an mp4). */
+export async function uploadMediaFile(
+  file: File,
+  mediaPathPrefix: string | undefined,
+  onProgress: (pct: number) => void = () => {}
+): Promise<string> {
+  const supabase = createSupabaseBrowserClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error("尚未登入或登入已過期，請重新整理頁面");
+
+  const ext = file.name.split(".").pop() ?? "bin";
+  const safePrefix = (mediaPathPrefix ?? "misc").replace(/[^a-zA-Z0-9/_-]/g, "-");
+  const path = `${safePrefix}/${Date.now()}.${ext}`;
+
+  await uploadWithProgress({ path, file, accessToken: session.access_token, onProgress });
+  return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
 export function AdminMediaDropzone({
   value,
   onChange,
   mediaPathPrefix,
   compact = false,
   warnIfOverBytes,
+  accept = "image/*,video/*",
 }: {
   value: string;
   onChange: (value: string) => void;
   mediaPathPrefix?: string;
   compact?: boolean;
+  /** `<input accept>`; defaults to images + videos. */
+  accept?: string;
   /** Shows a non-blocking warning under the dropzone when the selected
    * file exceeds this size -- doesn't stop the upload (e.g.
    * hover_preview_video's "keep it under 3MB" guidance). */
@@ -91,25 +120,7 @@ export function AdminMediaDropzone({
       }
       setProgress(0);
       try {
-        const supabase = createSupabaseBrowserClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.access_token) throw new Error("尚未登入或登入已過期，請重新整理頁面");
-
-        const ext = file.name.split(".").pop() ?? "bin";
-        const safePrefix = (mediaPathPrefix ?? "misc").replace(/[^a-zA-Z0-9/_-]/g, "-");
-        const path = `${safePrefix}/${Date.now()}.${ext}`;
-
-        await uploadWithProgress({
-          path,
-          file,
-          accessToken: session.access_token,
-          onProgress: setProgress,
-        });
-
-        const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-        onChange(data.publicUrl);
+        onChange(await uploadMediaFile(file, mediaPathPrefix, setProgress));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Upload failed");
       } finally {
@@ -129,9 +140,13 @@ export function AdminMediaDropzone({
           >
             {isVideoUrl(url) ? (
               <video src={url} className="h-full w-full object-cover" muted />
-            ) : (
+            ) : isImageUrl(url) ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center font-mono text-[10px] uppercase text-admin-text-faint">
+                {url.split("?")[0].split(".").pop()}
+              </span>
             )}
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -171,7 +186,7 @@ export function AdminMediaDropzone({
           <input
             ref={inputRef}
             type="file"
-            accept="image/*,video/*"
+            accept={accept}
             disabled={uploading}
             onChange={(e) => handleFile(e.target.files?.[0])}
             className="sr-only"
