@@ -112,8 +112,15 @@ export function HeroDoodleField({
         idleY={8}
         className="absolute left-[46%] top-[38%] w-[30%] max-w-[300px] text-secondary-blue md:left-[42%]"
       >
-        <DoodleSplat className="h-auto w-full drop-shadow-[0_8px_20px_rgba(13,33,255,0.25)]" />
+        <div data-star-origin-art>
+          <DoodleSplat className="h-auto w-full drop-shadow-[0_8px_20px_rgba(13,33,255,0.25)]" />
+        </div>
       </Piece>
+      {/* Untransformed twin of the splat's box: the homepage Star Drop
+          (projects/useProjectsChoreography.ts) measures this as the
+          traveling star's start position, since the real splat carries
+          parallax + wobble transforms. */}
+      <div data-star-origin className="absolute left-[46%] top-[38%] aspect-square w-[30%] max-w-[300px] md:left-[42%]" />
 
       <Piece
         depth={50}

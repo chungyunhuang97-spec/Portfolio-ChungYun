@@ -5,6 +5,22 @@
 > `claude/blissful-cerf-jofuz3`（commit `deb19d0`）。以下是 **還沒做** 的 Phase 2–4，
 > 以及一些延續到後續階段都要記得的既定決策。
 
+> **2026-10-29 更新：Phase 2–4 已實作**（branch `claude/new-session-irjrsp`）。
+> 程式碼：`src/components/projects/`（`ProjectsSection` / `BentoCard` / `BentoDecoration` /
+> `useProjectsChoreography`）、`src/lib/motion.config.ts`、`globals.css` 的 Bento 區塊。
+> 開放問題 1 已決定：**新增 `title_en` 欄位** —— migration 在
+> `supabase/migrations/20261029120000_add_projects_title_en.sql`，**部署前必須先在 Supabase 跑**，
+> 否則後台儲存專案資料會失敗。
+>
+> 仍未完成（需要真人／真資料）：封面圖補上後的視覺驗收、iPhone Safari / Android Chrome 實機、
+> Lighthouse、螢幕錄影。已用 mock 資料在 Playwright 驗證：390/834/1280/1440/1920/320/844×390
+> 無橫向捲軸、1440×900 六個標題可見、CLS=0、錨點直達跳過進場、reduced motion 只淡入、
+> 無 JS 內容完整、觸控不載入 hover 影片。
+>
+> 已知取捨：`grid-auto-flow: dense` 在後台尺寸組合留下空洞時，DECOR cell 可能被補進空洞而非最後一格
+> （現有 seed 組合剛好填滿，不受影響）。Projects 區塊已移到 Hero 正下方（About 之前），
+> 這是 Star Drop 轉場的前提；Navbar 連結順序未調整。
+
 ---
 
 ## 已經定案、後續階段要沿用的決策

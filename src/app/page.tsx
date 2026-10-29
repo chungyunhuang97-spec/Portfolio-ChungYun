@@ -1,9 +1,8 @@
-import Link from "next/link";
-import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { getAllSiteContent, getPublishedProjects } from "@/lib/data";
+import { getAllSiteContent, getProjectGridSettings, getPublishedProjects } from "@/lib/data";
 import { FadeIn } from "@/components/FadeIn";
 import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/design-system/Navbar";
+import { ProjectsSection } from "@/components/projects/ProjectsSection";
 
 export const revalidate = 60;
 
@@ -17,6 +16,9 @@ export default async function Home() {
   const aboutMe = (siteContent.about_me?.text as string | undefined) ?? "";
   const positioningTags =
     (siteContent.positioning_tags?.items as { title: string; desc: string }[] | undefined) ?? [];
+  const gridSettings = getProjectGridSettings(siteContent);
+  // Already sorted by display_order; is_visible is the homepage-only switch.
+  const gridProjects = caseStudies.filter((project) => project.is_visible !== false);
 
   return (
     <>
@@ -24,6 +26,10 @@ export default async function Home() {
       <main className="flex-1">
         {/* Hero — scribble-collage poster with scroll parallax + idle doodle motion. */}
         <Hero tagline={heroTagline} />
+
+        {/* Selected work -- Bento grid, directly under the Hero so the Star
+            Drop transition can hand the Hero's splat down into it. */}
+        <ProjectsSection projects={gridProjects} settings={gridSettings} />
 
         {/* About + positioning */}
         <section id="about" className="border-t border-line">
@@ -47,63 +53,6 @@ export default async function Home() {
                 ))}
               </div>
             </FadeIn>
-          </div>
-        </section>
-
-        {/* Case studies */}
-        <section id="work" className="border-t border-line">
-          <div className="mx-auto max-w-[1400px] px-6 py-16 md:px-10 md:py-24">
-            <FadeIn>
-              <h2 className="text-2xl md:text-3xl">Case Studies</h2>
-            </FadeIn>
-
-            {caseStudies.length === 0 ? (
-              <p className="mt-8 text-sm text-ink-faint">
-                尚未有已發布的案例 — 在 Supabase Table Editor 把 projects.status 改成 published 即可顯示。
-              </p>
-            ) : (
-              <div className="mt-10 divide-y divide-line">
-                {caseStudies.map((project, index) => (
-                  <FadeIn key={project.id} delay={index * 0.05}>
-                    <Link
-                      href={`/work/${project.slug}`}
-                      className="group grid grid-cols-1 gap-3 py-8 first:pt-0 md:grid-cols-[auto_1fr_auto] md:items-center md:gap-8"
-                    >
-                      <span className="font-mono text-sm text-ink-faint">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <div>
-                        <h3 className="text-xl transition-colors group-hover:text-accent md:text-2xl">
-                          {project.title}
-                        </h3>
-                        {project.subtitle && (
-                          <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-ink-muted">
-                            {project.subtitle}
-                          </p>
-                        )}
-                        {project.tags.length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-                            {project.tags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="text-[11px] tracking-[0.15em] text-ink-faint"
-                              >
-                                {tag.toUpperCase()}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <ArrowRight
-                        size={20}
-                        weight="light"
-                        className="hidden text-ink-faint transition-transform group-hover:translate-x-1 group-hover:text-accent md:block"
-                      />
-                    </Link>
-                  </FadeIn>
-                ))}
-              </div>
-            )}
           </div>
         </section>
 

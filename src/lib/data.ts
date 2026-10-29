@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
-import type { Project, ProjectSection, SiteContent } from "@/lib/types";
+import type { Project, ProjectGridSettings, ProjectSection, SiteContent } from "@/lib/types";
 
 export async function getPublishedProjects(
   projectType?: "case_study" | "side_project"
@@ -52,6 +52,35 @@ export async function getAllSiteContent(): Promise<Record<string, Record<string,
     map[row.key] = row.content;
   }
   return map;
+}
+
+const DEFAULT_GRID_SETTINGS: ProjectGridSettings = {
+  enable_scroll_choreography: true,
+  decor_cell_label: "More about me",
+  decor_cell_link: "/#about",
+};
+
+/** Homepage Bento grid settings from the `project_grid_settings`
+ * site_content row, field-by-field defaulted so a missing/partial row
+ * never breaks the page. */
+export function getProjectGridSettings(
+  siteContent: Record<string, Record<string, unknown>>
+): ProjectGridSettings {
+  const raw = siteContent.project_grid_settings ?? {};
+  return {
+    enable_scroll_choreography:
+      typeof raw.enable_scroll_choreography === "boolean"
+        ? raw.enable_scroll_choreography
+        : DEFAULT_GRID_SETTINGS.enable_scroll_choreography,
+    decor_cell_label:
+      typeof raw.decor_cell_label === "string" && raw.decor_cell_label.trim()
+        ? raw.decor_cell_label
+        : DEFAULT_GRID_SETTINGS.decor_cell_label,
+    decor_cell_link:
+      typeof raw.decor_cell_link === "string" && raw.decor_cell_link.trim()
+        ? raw.decor_cell_link
+        : DEFAULT_GRID_SETTINGS.decor_cell_link,
+  };
 }
 
 export interface ProjectWithSections {

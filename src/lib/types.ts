@@ -15,6 +15,9 @@ export interface Project {
   id: string;
   slug: string;
   title: string;
+  /** Optional English subtitle shown under the (Chinese) title on the
+   * homepage Bento card only. */
+  title_en: string | null;
   subtitle: string | null;
   tagline: string | null;
   category: string | null;

@@ -11,7 +11,8 @@ import type { SVGProps } from "react";
  * Two families, matching the reference's split between bold flat shapes
  * and thin scribbled line-art:
  * - Filled: DoodleSplat, DoodleStar, DoodleFlower
- * - Stroked: DoodleSpiral, DoodleScribble, DoodleGrid, DoodleArrow
+ * - Stroked: DoodleSpiral, DoodleScribble, DoodleGrid, DoodleArrow, DoodleEye,
+ *   DoodlePlus
  */
 
 export function DoodleSplat(props: SVGProps<SVGSVGElement>) {
@@ -86,6 +87,15 @@ export function DoodleEye(props: SVGProps<SVGSVGElement>) {
     <svg viewBox="0 0 100 60" fill="none" stroke="currentColor" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M2 30c14-22 82-22 96 0-14 22-82 22-96 0Z" />
       <circle cx="50" cy="30" r="11" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function DoodlePlus(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth={14} strokeLinecap="round" {...props}>
+      <path d="M50 12 L52 88" />
+      <path d="M12 51 L88 48" />
     </svg>
   );
 }

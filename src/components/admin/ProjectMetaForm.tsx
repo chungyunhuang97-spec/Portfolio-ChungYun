@@ -32,6 +32,7 @@ function sectionHeadingClass() {
 
 type MetaFields = {
   title: string;
+  title_en: string | null;
   subtitle: string | null;
   category: string | null;
   role: string | null;
@@ -63,6 +64,7 @@ type MetaFields = {
 function fieldsFromProject(project: Project): MetaFields {
   return {
     title: project.title,
+    title_en: project.title_en ?? null,
     subtitle: project.subtitle,
     category: project.category,
     role: project.role,
@@ -215,6 +217,17 @@ export function ProjectMetaForm({
         <div className="flex flex-col gap-1.5 md:col-span-2">
           <label className={labelClass()}>TITLE</label>
           <input value={fields.title} onChange={(e) => set("title", e.target.value)} className={inputClass()} />
+        </div>
+
+        <div className="flex flex-col gap-1.5 md:col-span-2">
+          <label className={labelClass()}>TITLE (EN)</label>
+          <input
+            value={fields.title_en ?? ""}
+            onChange={(e) => set("title_en", e.target.value || null)}
+            className={inputClass()}
+            placeholder="例如：Taipei Metro Ticketing Kiosk"
+          />
+          <p className="text-xs text-admin-text-faint">選填，只顯示在首頁 Bento 卡片的中文標題下方</p>
         </div>
 
         <div className="flex flex-col gap-1.5 md:col-span-2">

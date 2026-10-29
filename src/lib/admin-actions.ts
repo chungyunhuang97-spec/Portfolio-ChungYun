@@ -9,6 +9,7 @@ export async function updateProjectMeta(
   slug: string,
   fields: {
     title: string;
+    title_en: string | null;
     subtitle: string | null;
     category: string | null;
     role: string | null;
