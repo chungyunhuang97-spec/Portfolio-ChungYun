@@ -156,8 +156,11 @@ export async function getVideoSectionData(): Promise<VideoSectionData | null> {
   const featured = allWorks.filter((w) => w.type === "featured");
   const more = allWorks.filter((w) => w.type === "more");
 
+  // Every "more" work can carry its own reel_links now -- a teaching-reels
+  // column and a personal vlog column are both open-ended series, not a
+  // single deliverable, so neither is limited to one outbound link.
   const reelLinksByWorkId: Record<string, ReelLink[]> = {};
-  const reelWorkIds = more.filter((w) => w.embed_type === "youtube").map((w) => w.id);
+  const reelWorkIds = more.map((w) => w.id);
 
   if (reelWorkIds.length > 0) {
     const { data: reelLinks, error: reelLinksError } = await supabase
