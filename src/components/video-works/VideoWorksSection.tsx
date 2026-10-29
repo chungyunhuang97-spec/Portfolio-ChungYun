@@ -481,7 +481,10 @@ export function VideoWorksSection({
 
           {/* Info */}
           <div ref={infoRef} className="min-w-0 md:col-span-5 lg:col-span-3">
-            <div className="flex flex-wrap items-center gap-2.5">
+            {/* Phone: the active chip already names the category and the
+                card caption names the video, so those headings are
+                tablet/desktop only. */}
+            <div className="hidden flex-wrap items-center gap-2.5 md:flex">
               <h3 className="text-[30px] leading-tight lg:text-[34px]">
                 <span className="sr-only">{category.title}</span>
                 <span aria-hidden className="inline-block overflow-hidden pb-[0.06em] align-bottom font-fredoka">
@@ -502,15 +505,15 @@ export function VideoWorksSection({
                 </span>
               )}
             </div>
-            {category.subtitle && <p className="mt-1 font-nunito text-sm text-cream/70">{category.subtitle}</p>}
+            {category.subtitle && <p className="mt-1 hidden font-nunito text-sm text-cream/70 md:block">{category.subtitle}</p>}
             {category.description && (
-              <p className="mt-4 font-nunito text-[15px] leading-relaxed text-cream/85">{category.description}</p>
+              <p className="font-nunito text-[15px] leading-relaxed text-cream/85 md:mt-4">{category.description}</p>
             )}
 
-            <div className="mt-5 border-t border-cream/15 pt-4">
-              <p className="font-nunito text-[15px] font-bold">{video.title}</p>
+            <div className="mt-3 md:mt-5 md:border-t md:border-cream/15 md:pt-4">
+              <p className="hidden font-nunito text-[15px] font-bold md:block">{video.title}</p>
               {meta.length > 0 && (
-                <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 font-nunito text-sm">
+                <dl className="grid md:mt-3 grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 font-nunito text-sm">
                   {meta.map(([k, v]) => (
                     <div key={k} className="contents">
                       <dt className="text-cream/60">{k}</dt>
