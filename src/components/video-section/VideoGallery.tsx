@@ -29,22 +29,33 @@ function PlayOverlay() {
 }
 
 /**
- * The active work's stage. Two independent layers of motion:
- * - the OUTER wrapper rotates the whole frame around the Y axis (a real
- *   3D turn, not a flat Z-axis spin) whenever `work` changes -- the
- *   "cards winding past each other" feel, closer to a rotating drum/
- *   double-helix than the card-stacking look it replaced.
- * - the INNER frame carries `layoutId`, shared with the expanded overlay
- *   below. Clicking it opens that work's primary link; Motion animates
- *   the shared element between the two positions/sizes automatically.
+ * The active work's stage. Two different content shapes, chosen by
+ * whether the work has reel_links:
+ * - A single-video work (one YouTube/IG url on the work itself) keeps the
+ *   thumbnail + click-to-expand flow: clicking the frame zooms it into a
+ *   fullscreen overlay via a shared `layoutId`, which works well because
+ *   YouTube's 16:9 genuinely fits a wide fullscreen box.
+ * - A multi-link work (教學性質短影片 / 生活記事 Vlog, reel_links children)
+ *   never goes fullscreen. Instagram's own embed widget has a fixed,
+ *   usually-vertical natural size that a wide fullscreen box can't match
+ *   (it just leaves empty space on the sides), so instead the stage shows
+ *   the active reel inline, in a vertical-shaped frame close to its real
+ *   proportions; the right-side reel list swaps which one plays here.
+ * Either way, switching the *work* itself still rotates the whole frame
+ * around the Y axis (a real 3D turn) -- the "cards winding past each
+ * other" feel.
  */
 function HelixStage({
   work,
+  reelLinks,
+  activeReelIndex,
   embed,
   onOpenPrimary,
   onClose,
 }: {
   work: VideoWork;
+  reelLinks: ReelLink[];
+  activeReelIndex: number;
   embed: ActiveEmbed | null;
   onOpenPrimary: () => void;
   onClose: () => void;
@@ -53,6 +64,7 @@ function HelixStage({
   const thumbnailFallbackUrl = resolveFallbackThumbnailUrl(work.thumbnail_url, work.video_url);
   const layoutId = `video-stage-${work.id}`;
   const expanded = embed !== null;
+  const hasReelLinks = reelLinks.length > 0;
 
   useEffect(() => {
     if (!expanded) return;
@@ -62,6 +74,55 @@ function HelixStage({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [expanded, onClose]);
+
+  if (hasReelLinks) {
+    const activeReel = reelLinks[activeReelIndex] ?? reelLinks[0];
+    const embedSrc = resolveEmbedUrl(activeReel.url);
+
+    return (
+      <div className="flex justify-center md:justify-start">
+        <div
+          className="relative aspect-[9/16] w-full max-w-[340px] overflow-hidden bg-ink"
+          style={{ perspective: "1800px" }}
+        >
+          <AnimatePresence mode="popLayout">
+            <motion.div
+              key={`${work.id}-${activeReel.id}`}
+              className="absolute inset-0"
+              style={{ transformStyle: "preserve-3d" }}
+              initial={{ opacity: 0, rotateY: 75, x: 60, scale: 0.9 }}
+              animate={{ opacity: 1, rotateY: 0, x: 0, scale: 1 }}
+              exit={{ opacity: 0, rotateY: -75, x: -60, scale: 0.9 }}
+              transition={SPRING_3D}
+            >
+              {embedSrc ? (
+                <iframe
+                  src={embedSrc}
+                  title={activeReel.label}
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <a
+                  href={activeReel.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-full w-full flex-col items-center justify-center gap-2 bg-ink-faint/20 px-4 text-center text-sm text-ink-muted"
+                >
+                  {activeReel.label}
+                  <span className="inline-flex items-center gap-1 text-xs text-ink">
+                    開新分頁觀看
+                    <ArrowUpRight size={12} weight="light" />
+                  </span>
+                </a>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -155,8 +216,8 @@ function HelixStage({
  * multi-link columns like 教學性質短影片 / 生活記事 Vlog alike) in one
  * numbered list that switches the active work on the stage, with a
  * detail readout alongside. A multi-link work's reel_links render as a
- * list of its own, each opening the same inline embed overlay as the
- * stage image.
+ * switcher list of their own: clicking one swaps which reel plays inline
+ * on the stage (see HelixStage above).
  */
 export function VideoGallery({
   works,
@@ -166,6 +227,7 @@ export function VideoGallery({
   reelLinksByWorkId: Record<string, ReelLink[]>;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [embed, setEmbed] = useState<ActiveEmbed | null>(null);
   const [briefOpen, setBriefOpen] = useState(false);
   const active = works[activeIndex];
@@ -174,6 +236,7 @@ export function VideoGallery({
   function selectIndex(i: number) {
     if (i === activeIndex) return;
     setActiveIndex(i);
+    setActiveReelIndex(0);
     setEmbed(null);
   }
 
@@ -188,9 +251,8 @@ export function VideoGallery({
   }
 
   function handleOpenPrimary() {
-    if (!active) return;
-    const primaryUrl = active.video_url ?? activeReelLinks[0]?.url ?? null;
-    openEmbed(primaryUrl, active.title);
+    if (!active || activeReelLinks.length > 0) return;
+    openEmbed(active.video_url, active.title);
   }
 
   if (!active) return null;
@@ -231,6 +293,8 @@ export function VideoGallery({
 
             <HelixStage
               work={active}
+              reelLinks={activeReelLinks}
+              activeReelIndex={activeReelIndex}
               embed={embed}
               onOpenPrimary={handleOpenPrimary}
               onClose={() => setEmbed(null)}
@@ -289,14 +353,21 @@ export function VideoGallery({
 
                   {activeReelLinks.length > 0 && (
                     <ul className="mt-5 space-y-2 border-t border-line pt-4">
-                      {activeReelLinks.map((link) => (
+                      {activeReelLinks.map((link, i) => (
                         <li key={link.id}>
                           <button
                             type="button"
-                            onClick={() => openEmbed(link.url, link.label)}
-                            className="group inline-flex items-center gap-1.5 text-sm text-ink-muted transition-colors hover:text-accent"
+                            onClick={() => setActiveReelIndex(i)}
+                            aria-current={i === activeReelIndex}
+                            className={`group inline-flex items-center gap-1.5 text-sm transition-colors hover:text-accent ${
+                              i === activeReelIndex ? "text-accent" : "text-ink-muted"
+                            }`}
                           >
-                            <Play size={11} weight="fill" className="shrink-0" />
+                            <Play
+                              size={11}
+                              weight="fill"
+                              className={`shrink-0 ${i === activeReelIndex ? "" : "opacity-50"}`}
+                            />
                             {link.label}
                           </button>
                         </li>
