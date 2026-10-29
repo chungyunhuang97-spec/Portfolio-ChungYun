@@ -43,7 +43,12 @@ export default async function Home() {
         )}
 
         {/* 03 / VIDEO WORKS -- video_categories + videos (v2 tables). */}
-        {videoCategories && <VideoWorksSection categories={videoCategories} />}
+        {videoCategories && (
+          <VideoWorksSection
+            categories={videoCategories}
+            choreography={gridSettings.enable_scroll_choreography}
+          />
+        )}
 
         {/* Footer -- orange bookend to the Hero; dark type (cream on orange
             is only 2.8:1). Doubles as the Contact block. */}

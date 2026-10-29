@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { ArrowUpRight, Play } from "@phosphor-icons/react/dist/ssr";
 import { displayNumber, playerEmbedUrl, resolvePoster } from "@/lib/about-video";
 import type { Video } from "@/lib/types";
@@ -14,6 +14,33 @@ export const POSTER_THEMES = [
 ] as const;
 
 export type CardState = "idle" | "selected" | "playing";
+
+/** Decorative "● REC" + running timecode over a playing preview_clip. */
+function RecBadge() {
+  const [frames, setFrames] = useState(0);
+  useEffect(() => {
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      setFrames(Math.floor(((now - start) / 1000) * 25));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const ff = String(frames % 25).padStart(2, "0");
+  const ss = String(Math.floor(frames / 25) % 60).padStart(2, "0");
+  const mm = String(Math.floor(frames / 1500) % 60).padStart(2, "0");
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-black/60 px-2 py-0.5 font-mono text-[10px] font-bold text-white"
+    >
+      <span className="size-2 animate-pulse rounded-full bg-primary-orange" />
+      REC <span className="tabular-nums">00:{mm}:{ss}:{ff}</span>
+    </span>
+  );
+}
 
 function PosterLayer({ video, index, theme }: { video: Video; index: number; theme: string }) {
   const poster = resolvePoster(video);
@@ -87,12 +114,18 @@ export function VideoCard({
   const embed = playing && video.source_type !== "mp4" ? playerEmbedUrl(video) : null;
 
   return (
+    // Shell: React-owned position (fan transform / snap item). Inner: the
+    // visible card, free for GSAP to deal, stack and flip.
     <div
       style={style}
       data-video-card={index}
-      className={`[container-type:inline-size] overflow-hidden rounded-[var(--radius-card)] bg-grey-800 shadow-[0_24px_48px_-24px_rgba(0,0,0,0.7)] outline-offset-4 transition-[transform,filter,outline-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:rounded-[var(--radius-card-lg)] ${
+      className={`transition-[transform,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${className}`}
+    >
+    <div
+      data-card-inner
+      className={`relative h-full w-full [container-type:inline-size] overflow-hidden rounded-[var(--radius-card)] bg-grey-800 shadow-[0_24px_48px_-24px_rgba(0,0,0,0.7)] outline-offset-4 transition-[outline-color] duration-300 lg:rounded-[var(--radius-card-lg)] ${
         state === "idle" ? "outline-2 outline-transparent" : "outline-2 outline-cream"
-      } ${className}`}
+      }`}
     >
       {playing ? (
         video.source_type === "mp4" && video.video_file ? (
@@ -128,6 +161,7 @@ export function VideoCard({
       ) : (
         <>
           <PosterLayer video={video} index={index} theme={theme} />
+          {state !== "idle" && showPreview && video.preview_clip && <RecBadge />}
           {state !== "idle" && showPreview && video.preview_clip && (
             <video
               src={video.preview_clip}
@@ -162,7 +196,10 @@ export function VideoCard({
                 aria-label={`播放：${video.title}`}
                 className="absolute inset-0 flex items-center justify-center focus-visible:outline-none [&:focus-visible>span]:ring-3 [&:focus-visible>span]:ring-cream"
               >
-                <span className="flex size-14 items-center justify-center rounded-full bg-cream text-grey-900 shadow-lg transition-transform duration-200 hover:scale-110">
+                <span
+                  data-play-icon
+                  className="flex size-14 items-center justify-center rounded-full bg-cream text-grey-900 shadow-lg transition-transform duration-200 hover:scale-110"
+                >
                   <Play size={22} weight="fill" className="ml-0.5" />
                 </span>
               </button>
@@ -170,6 +207,7 @@ export function VideoCard({
           )}
         </>
       )}
+    </div>
     </div>
   );
 }

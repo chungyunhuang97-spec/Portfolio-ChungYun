@@ -16,6 +16,8 @@ import type { VideoWorksCategory } from "@/lib/data";
 import { BriefLightbox } from "@/components/video-section/BriefLightbox";
 import { InstagramLightbox } from "./InstagramLightbox";
 import { POSTER_THEMES, VideoCard } from "./VideoCard";
+import { useVideoChoreography } from "./useVideoChoreography";
+import { videoMotion } from "@/lib/motion.config";
 
 /** Neighbour cards per side that stay visible in the fan, and their scales. */
 const VISIBLE_PER_SIDE = 2;
@@ -77,7 +79,14 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
  * tabs, a scroll-snap card row, and a collapsed info column.
  * Card behaviour (states, single player, poster fallback) lives in VideoCard.
  */
-export function VideoWorksSection({ categories }: { categories: VideoWorksCategory[] }) {
+export function VideoWorksSection({
+  categories,
+  choreography,
+}: {
+  categories: VideoWorksCategory[];
+  /** Site-wide enable_scroll_choreography switch. */
+  choreography: boolean;
+}) {
   const [catIndex, setCatIndex] = useState(0);
   const [videoIndex, setVideoIndex] = useState(() => featuredIndex(categories[0]));
   const [playing, setPlaying] = useState(false);
@@ -88,6 +97,9 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
   const isPhone = useMediaQuery(PHONE_QUERY);
   const canPreview = useMediaQuery(PREVIEW_QUERY);
   const stageRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const infoRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const snapRef = useRef<HTMLDivElement>(null);
   const pointerStart = useRef<number | null>(null);
   const scrollingTo = useRef<number | null>(null);
@@ -113,9 +125,11 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
   function selectCategory(i: number) {
     if (i === catIndex) return;
     setPlaying(false);
-    setInfoOpen(false);
-    setCatIndex(i);
-    setVideoIndex(featuredIndex(categories[i]));
+    runCategorySwitch(() => {
+      setInfoOpen(false);
+      setCatIndex(i);
+      setVideoIndex(featuredIndex(categories[i]));
+    });
   }
 
   function selectVideo(i: number) {
@@ -139,6 +153,18 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
   }
   const widths = ratios.map((r) => cardHeight * r);
   const measured = cardHeight > 0;
+
+  const { runCategorySwitch } = useVideoChoreography({
+    sectionRef,
+    stageRef,
+    infoRef,
+    overlayRef,
+    enabled: choreography,
+    isPhone,
+    measured,
+    catIndex,
+    videoIndex,
+  });
   const offsets = layoutOffsets(widths, videoIndex);
 
   useEffect(() => {
@@ -243,14 +269,38 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
 
   return (
     <section
+      ref={sectionRef}
       id="video"
       aria-labelledby="video-works-heading"
       className="relative bg-ink py-20 text-cream md:py-28"
       style={{
         paddingLeft: "max(16px, env(safe-area-inset-left))",
         paddingRight: "max(16px, env(safe-area-inset-right))",
+        // Clips the entrance wipe sideways without creating a scroll
+        // container (which would break the sticky phone tabs).
+        overflowX: "clip",
       }}
     >
+      {/* Entrance wipe: About's blue slides off to the right, led by a
+          film-strip edge. Hidden in the markup; only the choreography
+          un-hides it, so no-JS / reduced motion never sees it. */}
+      <div
+        ref={overlayRef}
+        hidden
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-30 bg-secondary-blue"
+      >
+        <div
+          className="absolute inset-y-0 left-0 w-7 -translate-x-full bg-ink"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(to bottom, transparent 0 10px, var(--color-cream) 10px 22px, transparent 22px 32px)",
+            backgroundSize: "8px 100%",
+            backgroundPosition: "center",
+            backgroundRepeat: "repeat-y",
+          }}
+        />
+      </div>
       <DoodleScribble
         aria-hidden
         strokeWidth={4}
@@ -276,7 +326,10 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
             className="shrink-0 font-fredoka text-2xl text-cream md:text-3xl"
             aria-label={`第 ${catIndex + 1} 個分類，共 ${categories.length} 個`}
           >
-            {displayNumber(catIndex)} / {pad2(categories.length)}
+            <span data-counter-num className="inline-block">
+              {displayNumber(catIndex)}
+            </span>{" "}
+            / {pad2(categories.length)}
           </p>
         </div>
 
@@ -382,7 +435,10 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
                           width: widths[i],
                           height: cardHeight,
                           zIndex: 10 - d,
-                          transform: `translateX(calc(-50% + ${offsets[i]}px)) scale(${scale})`,
+                          // Fan arc: neighbours sink and tilt like a hand of cards.
+                          transform: `translateX(calc(-50% + ${offsets[i]}px)) translateY(${
+                            Math.min(d, 2) * videoMotion.arc.sinkPx
+                          }px) rotate(${Math.sign(i - videoIndex) * (d === 0 ? 0 : d === 1 ? 1 : 1.5) * videoMotion.arc.rotationDeg}deg) scale(${scale})`,
                           // Dim, never fade: a translucent poster reads as "not loaded".
                           filter: d === 0 ? "none" : "brightness(0.7)",
                         }}
@@ -436,10 +492,21 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
           </div>
 
           {/* Info */}
-          <div className="min-w-0 md:col-span-5 lg:col-span-3">
+          <div ref={infoRef} className="min-w-0 md:col-span-5 lg:col-span-3">
             <div className="flex flex-wrap items-center gap-2.5">
               <h3 className="text-[30px] leading-tight lg:text-[34px]">
-                <span className="font-fredoka">{category.title}</span>
+                <span className="sr-only">{category.title}</span>
+                <span aria-hidden className="inline-block overflow-hidden pb-[0.06em] align-bottom font-fredoka">
+                  {Array.from(category.title).map((ch, i) =>
+                    ch === " " ? (
+                      " "
+                    ) : (
+                      <span key={i} data-title-char className="inline-block">
+                        {ch}
+                      </span>
+                    )
+                  )}
+                </span>
               </h3>
               {category.level_label && (
                 <span className="rounded-full border border-cream/40 px-2.5 py-0.5 font-nunito text-[11px] font-bold tracking-[0.1em] text-cream/90">

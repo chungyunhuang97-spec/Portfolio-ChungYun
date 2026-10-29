@@ -10,6 +10,26 @@ import {
 import { displayNumber } from "@/lib/about-video";
 import type { AboutData } from "@/lib/data";
 import type { AboutIcon } from "@/lib/types";
+import { AboutMotion } from "./AboutMotion";
+
+/** One span per character (spaces stay plain text so wrapping is
+ * unchanged) -- the targets of the Phase 4 scroll fill. Fully opaque in
+ * the markup; only AboutMotion ever dims them. */
+function Chars({ text }: { text: string }) {
+  return (
+    <>
+      {Array.from(text).map((ch, i) =>
+        /\s/.test(ch) ? (
+          ch
+        ) : (
+          <span key={i} data-char>
+            {ch}
+          </span>
+        )
+      )}
+    </>
+  );
+}
 
 function TraitIcon({ icon }: { icon: AboutIcon }) {
   const cls = "h-6 w-6";
@@ -54,14 +74,15 @@ function Highlight({ children }: { children: string }) {
           d="M2 12 C 22 7, 45 15, 62 10 S 88 8, 98 11"
           fill="none"
           stroke="currentColor"
-          strokeWidth={16}
+          // Units of the stretched 100x20 viewBox: ~0.36em tall on screen.
+          strokeWidth={17}
           strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
           pathLength={1}
-          style={{ strokeWidth: "0.36em" }}
+          // Gap > dash so the next dash's round cap never peeks in at the end.
+          strokeDasharray="1 2"
         />
       </svg>
-      {children}
+      <Chars text={children} />
     </span>
   );
 }
@@ -73,6 +94,7 @@ function Highlight({ children }: { children: string }) {
  * Mobile reorders to statement -> portrait -> intro via grid areas.
  */
 export function AboutSection({ data, marqueeEnabled }: { data: AboutData; marqueeEnabled: boolean }) {
+  // `marqueeEnabled` is the site-wide enable_scroll_choreography switch.
   const { content, traits, stats, tools } = data;
   const runs = highlightRuns(content.statement, content.highlight_words);
   const showMarquee = content.show_tools_marquee && tools.length > 0;
@@ -107,9 +129,10 @@ export function AboutSection({ data, marqueeEnabled }: { data: AboutData; marque
         <div className="about-top mt-6 grid gap-x-12 gap-y-10">
           <h2
             id="about-heading"
+            aria-label={content.statement}
             className="[grid-area:statement] min-w-0 text-[clamp(36px,5.4vw,80px)] uppercase leading-[1.02] [overflow-wrap:anywhere]"
           >
-            <span className="font-fredoka">
+            <span aria-hidden className="font-fredoka">
               {runs.map((r, i) =>
                 r.hit ? (
                   // One stroke per word, so a phrase that wraps keeps its marker on every line.
@@ -117,7 +140,7 @@ export function AboutSection({ data, marqueeEnabled }: { data: AboutData; marque
                     part.trim() ? <Highlight key={`${i}-${j}`}>{part}</Highlight> : part
                   )
                 ) : (
-                  <span key={i}>{r.text}</span>
+                  <Chars key={i} text={r.text} />
                 )
               )}
             </span>
@@ -125,7 +148,7 @@ export function AboutSection({ data, marqueeEnabled }: { data: AboutData; marque
 
           <div className="[grid-area:photo] flex justify-center lg:items-start lg:justify-end">
             {content.portrait_image ? (
-              <figure className="about-portrait group relative w-4/5 max-w-[380px] md:w-3/5 lg:w-full lg:max-w-[400px]">
+              <figure data-about-photo className="about-portrait group relative w-4/5 max-w-[380px] md:w-3/5 lg:w-full lg:max-w-[400px]">
                 {/* eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL */}
                 <img
                   src={content.portrait_image}
@@ -133,10 +156,10 @@ export function AboutSection({ data, marqueeEnabled }: { data: AboutData; marque
                   loading="lazy"
                   className="aspect-[4/5] w-full rounded-[var(--radius-card-lg)] object-cover shadow-[0_24px_48px_-20px_rgba(0,0,0,0.45)]"
                 />
-                <DoodleStar aria-hidden className="about-sticker absolute -right-5 -top-5 h-16 w-16 text-primary-orange md:h-20 md:w-20" />
+                <DoodleStar aria-hidden data-about-sticker className="about-sticker absolute -right-5 -top-5 h-16 w-16 text-primary-orange md:h-20 md:w-20" />
               </figure>
             ) : (
-              <DoodleSplat aria-hidden className="w-[min(70%,320px)] text-cream/90 lg:w-[80%]" />
+              <DoodleSplat aria-hidden data-about-photo className="w-[min(70%,320px)] text-cream/90 lg:w-[80%]" />
             )}
           </div>
 
@@ -150,6 +173,7 @@ export function AboutSection({ data, marqueeEnabled }: { data: AboutData; marque
             {traits.map((t, i) => (
               <li
                 key={t.id}
+                data-about-trait
                 className="about-trait group flex flex-col rounded-[var(--radius-card)] bg-cream p-6 text-grey-900 lg:rounded-[var(--radius-card-lg)] lg:p-7"
               >
                 <div className="flex items-start justify-between text-secondary-blue">
@@ -159,7 +183,7 @@ export function AboutSection({ data, marqueeEnabled }: { data: AboutData; marque
                   <TraitIcon icon={t.icon} />
                 </div>
                 <h3 className="mt-5 text-[22px] leading-tight">
-                  <span className="font-fredoka">{t.title}</span>
+                  <span aria-hidden className="font-fredoka">{t.title}</span>
                 </h3>
                 <p className="mt-2 font-nunito text-[15px] leading-relaxed text-grey-700">{t.description}</p>
               </li>
@@ -168,12 +192,14 @@ export function AboutSection({ data, marqueeEnabled }: { data: AboutData; marque
         )}
 
         {stats.length > 0 && (
-          <dl className="mt-14 grid grid-cols-2 gap-x-6 gap-y-8 border-y border-cream/25 py-8 md:grid-cols-4">
+          <dl data-about-stats className="mt-14 grid grid-cols-2 gap-x-6 gap-y-8 border-y border-cream/25 py-8 md:grid-cols-4">
             {stats.map((s) => (
               <div key={s.id} className="flex flex-col-reverse gap-1">
                 <dt className="font-nunito text-sm text-cream/85">{s.label}</dt>
                 <dd className="font-fredoka text-[44px] leading-none md:text-[56px]">
-                  <span data-stat-value={s.value}>{s.value}</span>
+                  <span data-stat-value={s.value} className="tabular-nums">
+                    {s.value}
+                  </span>
                   {s.suffix}
                 </dd>
               </div>
@@ -228,6 +254,7 @@ export function AboutSection({ data, marqueeEnabled }: { data: AboutData; marque
           </div>
         )}
       </div>
+      <AboutMotion enabled={marqueeEnabled} />
     </section>
   );
 }
