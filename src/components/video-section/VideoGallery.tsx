@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import { ArrowUpRight, CaretLeft, CaretRight, Play, X } from "@phosphor-icons/react/dist/ssr";
 import type { ReelLink, VideoWork } from "@/lib/types";
 import { resolveEmbedUrl, resolveFallbackThumbnailUrl, resolveThumbnailUrl } from "@/lib/video";
@@ -16,12 +16,25 @@ const SPRING_3D = { type: "spring" as const, stiffness: 150, damping: 20 };
 // Reel carousel geometry -- a shallow 3D fan (not a flat row), each card
 // positioned purely by its numeric offset from the active index so Motion
 // can tween smoothly between positions.
-const REEL_CARD_SPACING = 108;
-const REEL_CARD_ROTATION = 24;
+const REEL_CARD_SPACING = 150;
+const REEL_CARD_ROTATION = 22;
 const REEL_MAX_VISIBLE_OFFSET = 3;
 
 function reelFloatTransition(delay: number) {
   return { duration: 4.5, repeat: Infinity, ease: "easeInOut" as const, delay };
+}
+
+/**
+ * Offset from the active index along the *shortest* path around the ring,
+ * so the carousel reads as a true cycle: at index 0 the last card sits
+ * just to the left (offset -1) instead of the fan having a dead end.
+ */
+function circularOffset(index: number, activeIndex: number, length: number) {
+  let diff = index - activeIndex;
+  const half = length / 2;
+  if (diff > half) diff -= length;
+  if (diff < -half) diff += length;
+  return diff;
 }
 
 /**
@@ -36,12 +49,16 @@ function ReelCard({
   reel,
   offset,
   isActive,
+  isDragging,
+  dragOffsetPx,
   onSelect,
   floatDelay,
 }: {
   reel: ReelLink;
   offset: number;
   isActive: boolean;
+  isDragging: boolean;
+  dragOffsetPx: number;
   onSelect: () => void;
   floatDelay: number;
 }) {
@@ -56,12 +73,12 @@ function ReelCard({
       <motion.div
         style={{ transformStyle: "preserve-3d" }}
         animate={{
-          x: offset * REEL_CARD_SPACING,
+          x: offset * REEL_CARD_SPACING + dragOffsetPx,
           rotateY: Math.max(-65, Math.min(65, offset * -REEL_CARD_ROTATION)),
           scale: Math.max(0.42, 1 - Math.min(Math.abs(offset), 4) * 0.14),
           opacity: hidden ? 0 : 1 - Math.min(Math.abs(offset), 2) * 0.28,
         }}
-        transition={SPRING_3D}
+        transition={isDragging ? { duration: 0 } : SPRING_3D}
       >
         <motion.button
           type="button"
@@ -69,9 +86,9 @@ function ReelCard({
           disabled={isActive}
           aria-current={isActive}
           aria-label={reel.label}
-          animate={{ y: [0, -6, 0] }}
+          animate={{ y: [0, -7, 0] }}
           transition={reelFloatTransition(floatDelay)}
-          className={`relative block aspect-[9/16] w-[168px] overflow-hidden rounded-2xl border border-ink/10 bg-bg/40 shadow-[0_25px_55px_-22px_rgba(23,23,22,0.45)] backdrop-blur-md md:w-[188px] ${
+          className={`relative block aspect-[9/16] w-[200px] overflow-hidden rounded-2xl border border-ink/10 bg-bg/40 shadow-[0_25px_55px_-22px_rgba(23,23,22,0.45)] backdrop-blur-md md:w-[240px] ${
             isActive ? "cursor-default" : "cursor-pointer"
           }`}
         >
@@ -79,14 +96,16 @@ function ReelCard({
             <iframe
               src={embedSrc}
               title={reel.label}
+              scrolling="no"
               className="h-full w-full"
+              style={{ overflow: "hidden" }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             />
           ) : (
-            <span className="flex h-full w-full flex-col items-center justify-center gap-2 px-3 text-center">
-              <Play size={18} weight="fill" className="text-ink/60" />
-              <span className="text-xs leading-snug text-ink-muted">{reel.label}</span>
+            <span className="flex h-full w-full flex-col items-center justify-center gap-3 px-4 text-center">
+              <Play size={24} weight="fill" className="text-ink/60" />
+              <span className="text-sm leading-snug text-ink-muted">{reel.label}</span>
             </span>
           )}
         </motion.button>
@@ -97,9 +116,14 @@ function ReelCard({
 
 /**
  * The reel switcher itself: a shallow 3D fan of cards (replaces the old
- * text link list) -- clicking a side card, the arrow buttons, or the
- * left/right arrow keys all move the active index; every card repositions
- * with a spring, which reads as the whole fan turning.
+ * text link list), arranged as a true cycle (see circularOffset). Clicking
+ * a side card, the arrow buttons, the left/right arrow keys, or dragging
+ * horizontally all move the active index; every card repositions with a
+ * spring, which reads as the whole fan turning. Dragging starts from a
+ * card's own pointer events, so it's captured reliably everywhere except
+ * directly over the active card's embed -- that's a cross-origin iframe,
+ * a separate browsing context the page can't see pointer events inside of;
+ * side cards, the empty frame area, and the arrow controls are unaffected.
  */
 function ReelCarousel({
   reelLinks,
@@ -110,52 +134,74 @@ function ReelCarousel({
   activeReelIndex: number;
   onSelectReel: (i: number) => void;
 }) {
-  const activeReel = reelLinks[activeReelIndex] ?? reelLinks[0];
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const count = reelLinks.length;
+
+  function goTo(i: number) {
+    onSelectReel(((i % count) + count) % count);
+  }
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "ArrowLeft") onSelectReel(Math.max(0, activeReelIndex - 1));
-      if (e.key === "ArrowRight") onSelectReel(Math.min(reelLinks.length - 1, activeReelIndex + 1));
+      if (e.key === "ArrowLeft") goTo(activeReelIndex - 1);
+      if (e.key === "ArrowRight") goTo(activeReelIndex + 1);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeReelIndex, reelLinks.length, onSelectReel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeReelIndex, count]);
+
+  function handleDragEnd(_: unknown, info: PanInfo) {
+    const steps = Math.round(-info.offset.x / REEL_CARD_SPACING);
+    if (steps !== 0) goTo(activeReelIndex + steps);
+    setDragOffset(0);
+    setIsDragging(false);
+  }
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative h-[320px] w-full md:h-[360px]" style={{ perspective: "1800px" }}>
+      <motion.div
+        className="relative h-[400px] w-full cursor-grab touch-pan-y active:cursor-grabbing md:h-[460px]"
+        style={{ perspective: "1800px" }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0}
+        onDragStart={() => setIsDragging(true)}
+        onDrag={(_, info) => setDragOffset(info.offset.x)}
+        onDragEnd={handleDragEnd}
+      >
         {reelLinks.map((reel, i) => (
           <ReelCard
             key={reel.id}
             reel={reel}
-            offset={i - activeReelIndex}
+            offset={circularOffset(i, activeReelIndex, count)}
             isActive={i === activeReelIndex}
-            onSelect={() => onSelectReel(i)}
+            isDragging={isDragging}
+            dragOffsetPx={dragOffset}
+            onSelect={() => goTo(i)}
             floatDelay={(i % 4) * 0.2}
           />
         ))}
-      </div>
+      </motion.div>
 
-      <div className="mt-5 flex items-center gap-4">
+      <div className="mt-5 flex items-center gap-5">
         <button
           type="button"
-          onClick={() => onSelectReel(Math.max(0, activeReelIndex - 1))}
-          disabled={activeReelIndex === 0}
+          onClick={() => goTo(activeReelIndex - 1)}
           aria-label="上一支"
-          className="text-ink-faint transition-colors hover:text-ink disabled:opacity-20"
+          className="text-ink-faint transition-colors hover:text-ink"
         >
           <CaretLeft size={18} weight="bold" />
         </button>
         <span className="text-xs tracking-[0.1em] text-ink-faint">
-          {activeReel?.label} · {String(activeReelIndex + 1).padStart(2, "0")} /{" "}
-          {String(reelLinks.length).padStart(2, "0")}
+          {String(activeReelIndex + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
         </span>
         <button
           type="button"
-          onClick={() => onSelectReel(Math.min(reelLinks.length - 1, activeReelIndex + 1))}
-          disabled={activeReelIndex === reelLinks.length - 1}
+          onClick={() => goTo(activeReelIndex + 1)}
           aria-label="下一支"
-          className="text-ink-faint transition-colors hover:text-ink disabled:opacity-20"
+          className="text-ink-faint transition-colors hover:text-ink"
         >
           <CaretRight size={18} weight="bold" />
         </button>
@@ -249,25 +295,31 @@ function HelixStage({
             ) : (
               <div className="relative aspect-[4/3] w-full md:aspect-[16/10]">
                 {!expanded && (
-                  <motion.button
-                    type="button"
-                    layoutId={layoutId}
-                    onClick={onOpenPrimary}
-                    className="group block h-full w-full cursor-pointer overflow-hidden bg-ink"
-                    aria-label={`放大播放${work.title}`}
+                  <motion.div
+                    className="h-full w-full"
+                    animate={{ y: [0, -7, 0] }}
+                    transition={reelFloatTransition(0)}
                   >
-                    {thumbnailUrl ? (
-                      <ThumbnailImage
-                        src={thumbnailUrl}
-                        fallbackSrc={thumbnailFallbackUrl}
-                        alt={`${work.title} 縮圖`}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-ink-faint/20" aria-hidden />
-                    )}
-                    <PlayOverlay />
-                  </motion.button>
+                    <motion.button
+                      type="button"
+                      layoutId={layoutId}
+                      onClick={onOpenPrimary}
+                      className="group block h-full w-full cursor-pointer overflow-hidden rounded-2xl border border-ink/10 bg-ink shadow-[0_25px_55px_-22px_rgba(23,23,22,0.45)] backdrop-blur-md"
+                      aria-label={`放大播放${work.title}`}
+                    >
+                      {thumbnailUrl ? (
+                        <ThumbnailImage
+                          src={thumbnailUrl}
+                          fallbackSrc={thumbnailFallbackUrl}
+                          alt={`${work.title} 縮圖`}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-ink-faint/20" aria-hidden />
+                      )}
+                      <PlayOverlay />
+                    </motion.button>
+                  </motion.div>
                 )}
               </div>
             )}
@@ -303,7 +355,7 @@ function HelixStage({
                 <motion.div
                   layoutId={layoutId}
                   onClick={(e) => e.stopPropagation()}
-                  className="relative aspect-video w-full max-w-5xl overflow-hidden bg-ink"
+                  className="relative aspect-video w-full max-w-5xl overflow-hidden rounded-2xl bg-ink"
                 >
                   <iframe
                     src={embed.src}
@@ -433,6 +485,13 @@ export function VideoGallery({
                   </div>
                   {active.subtitle && (
                     <p className="mt-1 text-sm text-ink-faint">{active.subtitle}</p>
+                  )}
+
+                  {activeReelLinks.length > 0 && (
+                    <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-accent">
+                      <Play size={10} weight="fill" />
+                      {activeReelLinks[activeReelIndex]?.label}
+                    </p>
                   )}
 
                   {active.tags.length > 0 && (
