@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { getAllSiteContent, getPublishedProjects } from "@/lib/data";
+import { getAllSiteContent, getPublishedProjects, getVideoSectionData } from "@/lib/data";
 import { FadeIn } from "@/components/FadeIn";
 import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/design-system/Navbar";
+import { VideoSection } from "@/components/video-section/VideoSection";
 
 export const revalidate = 60;
 
 export default async function Home() {
-  const [siteContent, caseStudies] = await Promise.all([
+  const [siteContent, caseStudies, videoSectionData] = await Promise.all([
     getAllSiteContent(),
     getPublishedProjects("case_study"),
+    getVideoSectionData(),
   ]);
 
   const heroTagline = (siteContent.hero_tagline?.text as string | undefined) ?? "";
@@ -106,6 +108,9 @@ export default async function Home() {
             )}
           </div>
         </section>
+
+        {/* Video & content production */}
+        {videoSectionData && <VideoSection data={videoSectionData} />}
 
         {/* Footer */}
         <footer className="border-t border-line">

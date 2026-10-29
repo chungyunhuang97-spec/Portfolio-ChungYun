@@ -48,3 +48,39 @@ export interface SiteContent {
   key: string;
   content: Record<string, unknown>;
 }
+
+export type VideoWorkType = "featured" | "more";
+export type VideoEmbedType = "youtube" | "link";
+
+export interface VideoWork {
+  id: string;
+  type: VideoWorkType;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  role_items: string[] | null;
+  tags: string[];
+  thumbnail_url: string | null;
+  video_url: string | null;
+  embed_type: VideoEmbedType | null;
+  brief_image_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ReelLink {
+  id: string;
+  video_work_id: string;
+  label: string;
+  url: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface VideoSectionSettings {
+  id: string;
+  is_visible: boolean;
+  updated_at: string;
+}
