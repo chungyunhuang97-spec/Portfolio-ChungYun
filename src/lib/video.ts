@@ -6,8 +6,17 @@ export function extractYouTubeId(url: string): string | null {
   return match ? match[1] : null;
 }
 
-export function getYouTubeThumbnailUrl(videoId: string): string {
-  return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+/**
+ * `maxresdefault` (1280x720) only exists for videos the uploader provided
+ * an HD thumbnail for -- YouTube 404s it otherwise. `hqdefault` (480x360)
+ * is generated for every public video, so it's the safe fallback quality.
+ */
+export function getYouTubeThumbnailUrl(
+  videoId: string,
+  quality: "max" | "hq" = "max"
+): string {
+  const file = quality === "max" ? "maxresdefault" : "hqdefault";
+  return `https://img.youtube.com/vi/${videoId}/${file}.jpg`;
 }
 
 export function getYouTubeEmbedUrl(videoId: string): string {
@@ -23,4 +32,19 @@ export function resolveThumbnailUrl(
   if (!videoUrl) return null;
   const videoId = extractYouTubeId(videoUrl);
   return videoId ? getYouTubeThumbnailUrl(videoId) : null;
+}
+
+/**
+ * The lower-quality thumbnail to fall back to when `resolveThumbnailUrl`'s
+ * guess was an auto `maxresdefault` one that might 404 -- null when the
+ * thumbnail is a manually-set upload (nothing to fall back from) or there's
+ * no YouTube video to derive one from.
+ */
+export function resolveFallbackThumbnailUrl(
+  thumbnailUrl: string | null,
+  videoUrl: string | null
+): string | null {
+  if (thumbnailUrl || !videoUrl) return null;
+  const videoId = extractYouTubeId(videoUrl);
+  return videoId ? getYouTubeThumbnailUrl(videoId, "hq") : null;
 }

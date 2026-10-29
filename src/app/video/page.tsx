@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getVideoSectionData } from "@/lib/data";
-import { resolveThumbnailUrl } from "@/lib/video";
+import { resolveFallbackThumbnailUrl, resolveThumbnailUrl } from "@/lib/video";
 import { Navbar } from "@/components/design-system/Navbar";
 import { VideoHero } from "@/components/video-section/VideoHero";
 import { FeaturedWorkRow } from "@/components/video-section/FeaturedWorkRow";
@@ -33,6 +33,9 @@ export default async function VideoPage() {
   const heroImage = heroWork
     ? resolveThumbnailUrl(heroWork.thumbnail_url, heroWork.video_url)
     : null;
+  const heroImageFallback = heroWork
+    ? resolveFallbackThumbnailUrl(heroWork.thumbnail_url, heroWork.video_url)
+    : null;
 
   return (
     <>
@@ -40,6 +43,7 @@ export default async function VideoPage() {
       <main className="flex-1">
         <VideoHero
           imageUrl={heroImage}
+          imageFallbackUrl={heroImageFallback}
           imageAlt={heroWork?.title ?? "影片製作"}
           headline={HEADLINE}
           subhead={SUBHEAD}

@@ -4,8 +4,14 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Play } from "@phosphor-icons/react/dist/ssr";
 import type { VideoWork } from "@/lib/types";
-import { extractYouTubeId, getYouTubeEmbedUrl, resolveThumbnailUrl } from "@/lib/video";
+import {
+  extractYouTubeId,
+  getYouTubeEmbedUrl,
+  resolveFallbackThumbnailUrl,
+  resolveThumbnailUrl,
+} from "@/lib/video";
 import { BriefLightbox } from "@/components/video-section/BriefLightbox";
+import { ThumbnailImage } from "@/components/video-section/ThumbnailImage";
 import { FadeIn } from "@/components/FadeIn";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -53,6 +59,7 @@ export function FeaturedWorkRow({
   const [briefOpen, setBriefOpen] = useState(false);
 
   const thumbnailUrl = resolveThumbnailUrl(work.thumbnail_url, work.video_url);
+  const thumbnailFallbackUrl = resolveFallbackThumbnailUrl(work.thumbnail_url, work.video_url);
   const videoId = work.video_url ? extractYouTubeId(work.video_url) : null;
   const canEmbed = work.embed_type === "youtube" && videoId;
   const { media: mediaWidthClass, align: alignClass } = SIZE_CLASSES[size];
@@ -95,8 +102,9 @@ export function FeaturedWorkRow({
             aria-label={`播放${work.title}`}
           >
             {thumbnailUrl ? (
-              <img
+              <ThumbnailImage
                 src={thumbnailUrl}
+                fallbackSrc={thumbnailFallbackUrl}
                 alt={`${work.title} 縮圖`}
                 className="h-full w-full object-cover"
               />

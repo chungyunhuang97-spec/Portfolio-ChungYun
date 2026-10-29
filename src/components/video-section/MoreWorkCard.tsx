@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import type { ReelLink, VideoWork } from "@/lib/types";
-import { resolveThumbnailUrl } from "@/lib/video";
+import { resolveFallbackThumbnailUrl, resolveThumbnailUrl } from "@/lib/video";
+import { ThumbnailImage } from "@/components/video-section/ThumbnailImage";
 
 /**
  * Card C/D — a lower-hierarchy "more works" entry. Renders as a list of
@@ -10,9 +11,15 @@ import { resolveThumbnailUrl } from "@/lib/video";
  */
 export function MoreWorkCard({ work, reelLinks }: { work: VideoWork; reelLinks: ReelLink[] }) {
   const thumbnailUrl = resolveThumbnailUrl(work.thumbnail_url, work.video_url);
+  const thumbnailFallbackUrl = resolveFallbackThumbnailUrl(work.thumbnail_url, work.video_url);
 
   const thumbnail = thumbnailUrl ? (
-    <img src={thumbnailUrl} alt={`${work.title} 縮圖`} className="h-full w-full object-cover" />
+    <ThumbnailImage
+      src={thumbnailUrl}
+      fallbackSrc={thumbnailFallbackUrl}
+      alt={`${work.title} 縮圖`}
+      className="h-full w-full object-cover"
+    />
   ) : (
     <div className="h-full w-full bg-ink-faint/20" aria-hidden />
   );
