@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowSquareOut, CaretRight } from "@phosphor-icons/react/dist/ssr";
-import { getProjectWithSectionsAdmin } from "@/lib/admin-data";
+import { getAllProjectsAdmin, getProjectWithSectionsAdmin } from "@/lib/admin-data";
 import { deleteSection, updateProjectMeta, upsertSection } from "@/lib/admin-actions";
 import { ProjectMetaForm } from "@/components/admin/ProjectMetaForm";
 import { SectionAccordion } from "@/components/admin/SectionAccordion";
@@ -24,6 +24,18 @@ export default async function ProjectEditPage({ params }: PageProps) {
   }
 
   const { project, sections } = result;
+
+  const allProjects = await getAllProjectsAdmin();
+  const siblingProjects = allProjects
+    .filter((p) => p.project_type === "case_study" && p.id !== project.id)
+    .map((p) => ({
+      id: p.id,
+      slug: p.slug,
+      title: p.title,
+      card_size: p.card_size,
+      is_visible: p.is_visible,
+      card_theme: p.card_theme,
+    }));
 
   async function saveMeta(
     projectId: string,
@@ -87,7 +99,7 @@ export default async function ProjectEditPage({ params }: PageProps) {
         <div className="mt-10 max-w-3xl">
           <h2 className="text-xs font-semibold tracking-[0.15em] text-admin-text-faint">DETAILS</h2>
           <div className="mt-4 rounded-lg border border-admin-border bg-admin-surface p-5">
-            <ProjectMetaForm project={project} onSave={saveMeta} />
+            <ProjectMetaForm project={project} onSave={saveMeta} siblingProjects={siblingProjects} />
           </div>
         </div>
 

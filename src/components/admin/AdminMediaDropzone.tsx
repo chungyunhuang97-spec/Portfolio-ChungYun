@@ -60,15 +60,21 @@ export function AdminMediaDropzone({
   onChange,
   mediaPathPrefix,
   compact = false,
+  warnIfOverBytes,
 }: {
   value: string;
   onChange: (value: string) => void;
   mediaPathPrefix?: string;
   compact?: boolean;
+  /** Shows a non-blocking warning under the dropzone when the selected
+   * file exceeds this size -- doesn't stop the upload (e.g.
+   * hover_preview_video's "keep it under 3MB" guidance). */
+  warnIfOverBytes?: number;
 }) {
   const [dragOver, setDragOver] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sizeWarning, setSizeWarning] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const url = value ?? "";
   const uploading = progress !== null;
@@ -77,6 +83,12 @@ export function AdminMediaDropzone({
     async (file: File | undefined) => {
       if (!file) return;
       setError(null);
+      setSizeWarning(null);
+      if (warnIfOverBytes && file.size > warnIfOverBytes) {
+        setSizeWarning(
+          `檔案大小 ${(file.size / (1024 * 1024)).toFixed(1)}MB，建議壓縮到 ${(warnIfOverBytes / (1024 * 1024)).toFixed(0)}MB 以內`
+        );
+      }
       setProgress(0);
       try {
         const supabase = createSupabaseBrowserClient();
@@ -105,7 +117,7 @@ export function AdminMediaDropzone({
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [mediaPathPrefix, onChange]
+    [mediaPathPrefix, onChange, warnIfOverBytes]
   );
 
   return (
@@ -191,6 +203,8 @@ export function AdminMediaDropzone({
           {error}
         </p>
       )}
+
+      {sizeWarning && <p className="text-xs text-admin-warning">{sizeWarning}</p>}
 
       <input
         value={url}

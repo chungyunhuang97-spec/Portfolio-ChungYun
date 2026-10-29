@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { ProjectStatus } from "@/lib/types";
+import type { BadgeStatus, CardSize, CardTheme, Decoration, DecorationPosition, ProjectStatus } from "@/lib/types";
 
 export async function updateProjectMeta(
   projectId: string,
@@ -20,6 +20,21 @@ export async function updateProjectMeta(
     display_order: number;
     tags: string[];
     footer_copyright: string | null;
+    is_visible: boolean;
+    card_size: CardSize;
+    card_theme: CardTheme;
+    cover_image_url: string | null;
+    cover_image_mobile: string | null;
+    cover_alt: string | null;
+    outcome: string | null;
+    year: number | null;
+    badge_status: BadgeStatus | null;
+    decoration: Decoration;
+    decoration_position: DecorationPosition;
+    animate_decoration: boolean;
+    enter_rotation: number | null;
+    hover_preview_video: string | null;
+    max_tags_on_card: number;
   }
 ) {
   const supabase = await createSupabaseServerClient();
@@ -74,6 +89,25 @@ export async function deleteSection(sectionId: string, slug: string) {
   revalidatePath("/");
   revalidatePath(`/work/${slug}`);
   revalidatePath(`/admin/projects/${slug}`);
+  return { success: true as const };
+}
+
+/** Persists a drag-reordered project list in one round trip. Sequential
+ * (not Promise.all) for the same reason ChangesStore.saveAll is sequential
+ * -- these are writes to different rows, but a burst of concurrent
+ * updates to the same table from one reorder gesture isn't worth it here. */
+export async function reorderProjects(updates: { id: string; display_order: number }[]) {
+  const supabase = await createSupabaseServerClient();
+
+  for (const { id, display_order } of updates) {
+    const { error } = await supabase.from("projects").update({ display_order }).eq("id", id);
+    if (error) {
+      return { success: false as const, error: error.message };
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin");
   return { success: true as const };
 }
 

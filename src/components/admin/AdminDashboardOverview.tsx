@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { ProjectReorderList } from "@/components/admin/ProjectReorderList";
 import type { Project, ProjectStatus, SiteContent } from "@/lib/types";
 
 const STATUS_FILTERS: (ProjectStatus | "all")[] = ["all", "published", "draft", "archived"];
@@ -52,6 +53,13 @@ export function AdminDashboardOverview({
   const caseStudies = filteredProjects.filter((p) => p.project_type === "case_study");
   const sideProjects = filteredProjects.filter((p) => p.project_type === "side_project");
   const showingAllStatuses = statusFilter === "all" && q === "";
+
+  // Drag-reordering only makes sense against the complete, unfiltered
+  // group -- a search/status filter would hide some rows, scrambling the
+  // display_order math on drop. Unfiltered view gets the sortable list;
+  // any filter falls back to the plain read-only list below.
+  const allCaseStudies = projects.filter((p) => p.project_type === "case_study");
+  const allSideProjects = projects.filter((p) => p.project_type === "side_project");
 
   return (
     <div>
@@ -107,25 +115,15 @@ export function AdminDashboardOverview({
 
       <section className="mt-10">
         <h2 className="text-xs font-semibold tracking-[0.15em] text-admin-text-faint">CASE STUDIES</h2>
-        <div className="mt-3 divide-y divide-admin-border overflow-hidden rounded-lg border border-admin-border bg-admin-surface">
-          {caseStudies.length === 0 && <p className="px-4 py-6 text-sm text-admin-text-faint">沒有符合的專案</p>}
-          {caseStudies.map((project) => (
-            <ListRow
-              key={project.id}
-              href={`/admin/projects/${project.slug}`}
-              title={project.title}
-              status={project.status}
-            />
-          ))}
-        </div>
-      </section>
-
-      {(sideProjects.length > 0 || (q === "" && statusFilter === "all")) && (
-        <section className="mt-10">
-          <h2 className="text-xs font-semibold tracking-[0.15em] text-admin-text-faint">SIDE PROJECTS</h2>
+        {showingAllStatuses ? (
+          <div className="mt-3">
+            <p className="mb-2 text-[11px] text-admin-text-faint">拖曳 ⠿ 可調整排序（同時是 Bento Grid 的 sort_order）</p>
+            <ProjectReorderList projects={allCaseStudies} />
+          </div>
+        ) : (
           <div className="mt-3 divide-y divide-admin-border overflow-hidden rounded-lg border border-admin-border bg-admin-surface">
-            {sideProjects.length === 0 && <p className="px-4 py-6 text-sm text-admin-text-faint">沒有符合的專案</p>}
-            {sideProjects.map((project) => (
+            {caseStudies.length === 0 && <p className="px-4 py-6 text-sm text-admin-text-faint">沒有符合的專案</p>}
+            {caseStudies.map((project) => (
               <ListRow
                 key={project.id}
                 href={`/admin/projects/${project.slug}`}
@@ -134,6 +132,29 @@ export function AdminDashboardOverview({
               />
             ))}
           </div>
+        )}
+      </section>
+
+      {(sideProjects.length > 0 || (q === "" && statusFilter === "all")) && (
+        <section className="mt-10">
+          <h2 className="text-xs font-semibold tracking-[0.15em] text-admin-text-faint">SIDE PROJECTS</h2>
+          {showingAllStatuses ? (
+            <div className="mt-3">
+              <ProjectReorderList projects={allSideProjects} />
+            </div>
+          ) : (
+            <div className="mt-3 divide-y divide-admin-border overflow-hidden rounded-lg border border-admin-border bg-admin-surface">
+              {sideProjects.length === 0 && <p className="px-4 py-6 text-sm text-admin-text-faint">沒有符合的專案</p>}
+              {sideProjects.map((project) => (
+                <ListRow
+                  key={project.id}
+                  href={`/admin/projects/${project.slug}`}
+                  title={project.title}
+                  status={project.status}
+                />
+              ))}
+            </div>
+          )}
         </section>
       )}
     </div>
