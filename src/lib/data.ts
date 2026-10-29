@@ -1,5 +1,9 @@
 import { supabase } from "@/lib/supabase/client";
 import type {
+  AboutContent,
+  AboutStat,
+  AboutTool,
+  AboutTrait,
   Project,
   ProjectGridSettings,
   ProjectSection,
@@ -245,4 +249,31 @@ export async function getVideoWorksData(): Promise<VideoWorksCategory[] | null> 
     .map((c) => ({ ...c, videos: all.filter((v) => v.category_id === c.id) }))
     .filter((c) => c.videos.length > 0);
   return result.length > 0 ? result : null;
+}
+
+export interface AboutData {
+  content: AboutContent;
+  traits: AboutTrait[];
+  stats: AboutStat[];
+  tools: AboutTool[];
+}
+
+/** Homepage "02 / ABOUT" from the about_* tables (null = not migrated yet). */
+export async function getAboutData(): Promise<AboutData | null> {
+  const [content, traits, stats, tools] = await Promise.all([
+    supabase.from("about_content").select("*").maybeSingle<AboutContent>(),
+    supabase.from("about_traits").select("*").order("sort_order", { ascending: true }),
+    supabase.from("about_stats").select("*").order("sort_order", { ascending: true }),
+    supabase.from("about_tools").select("*").order("sort_order", { ascending: true }),
+  ]);
+  if (content.error || !content.data) {
+    if (content.error) console.error("Failed to load about content:", content.error.message);
+    return null;
+  }
+  return {
+    content: content.data,
+    traits: (traits.data ?? []) as AboutTrait[],
+    stats: ((stats.data ?? []) as AboutStat[]).slice(0, 4),
+    tools: (tools.data ?? []) as AboutTool[],
+  };
 }

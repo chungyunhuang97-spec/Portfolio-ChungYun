@@ -1,5 +1,11 @@
-import { getAllSiteContent, getProjectGridSettings, getPublishedProjects, getVideoWorksData } from "@/lib/data";
-import { FadeIn } from "@/components/FadeIn";
+import {
+  getAboutData,
+  getAllSiteContent,
+  getProjectGridSettings,
+  getPublishedProjects,
+  getVideoWorksData,
+} from "@/lib/data";
+import { AboutSection } from "@/components/about/AboutSection";
 import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/design-system/Navbar";
 import { ProjectsSection } from "@/components/projects/ProjectsSection";
@@ -8,16 +14,14 @@ import { VideoWorksSection } from "@/components/video-works/VideoWorksSection";
 export const revalidate = 60;
 
 export default async function Home() {
-  const [siteContent, caseStudies, videoCategories] = await Promise.all([
+  const [siteContent, caseStudies, videoCategories, aboutData] = await Promise.all([
     getAllSiteContent(),
     getPublishedProjects("case_study"),
     getVideoWorksData(),
+    getAboutData(),
   ]);
 
   const heroTagline = (siteContent.hero_tagline?.text as string | undefined) ?? "";
-  const aboutMe = (siteContent.about_me?.text as string | undefined) ?? "";
-  const positioningTags =
-    (siteContent.positioning_tags?.items as { title: string; desc: string }[] | undefined) ?? [];
   const gridSettings = getProjectGridSettings(siteContent);
   // Already sorted by display_order; is_visible is the homepage-only switch.
   const gridProjects = caseStudies.filter((project) => project.is_visible !== false);
@@ -33,41 +37,29 @@ export default async function Home() {
             Drop transition can hand the Hero's splat down into it. */}
         <ProjectsSection projects={gridProjects} settings={gridSettings} />
 
-        {/* About + positioning */}
-        <section id="about" className="border-t border-line">
-          <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-12 px-6 py-16 md:grid-cols-[0.9fr_1.1fr] md:gap-16 md:px-10 md:py-24">
-            <FadeIn>
-              <h2 className="text-2xl md:text-3xl">About</h2>
-              <p className="mt-6 max-w-[60ch] text-base leading-relaxed text-ink-muted">
-                {aboutMe}
-              </p>
-            </FadeIn>
-
-            <FadeIn delay={0.1}>
-              <div className="divide-y divide-line">
-                {positioningTags.map((tag) => (
-                  <div key={tag.title} className="py-6 first:pt-0">
-                    <h3 className="text-lg">{tag.title}</h3>
-                    <p className="mt-2 max-w-[55ch] text-sm leading-relaxed text-ink-muted">
-                      {tag.desc}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </FadeIn>
-          </div>
-        </section>
+        {/* 02 / ABOUT -- about_* tables (blue). */}
+        {aboutData && (
+          <AboutSection data={aboutData} marqueeEnabled={gridSettings.enable_scroll_choreography} />
+        )}
 
         {/* 03 / VIDEO WORKS -- video_categories + videos (v2 tables). */}
         {videoCategories && <VideoWorksSection categories={videoCategories} />}
 
-        {/* Footer */}
-        <footer className="border-t border-line">
-          <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-6 py-10 text-sm text-ink-faint md:flex-row md:items-center md:justify-between md:px-10">
+        {/* Footer -- orange bookend to the Hero; dark type (cream on orange
+            is only 2.8:1). Doubles as the Contact block. */}
+        <footer className="bg-primary-orange text-primary-black">
+          <div
+            className="mx-auto flex max-w-[1400px] flex-col gap-4 py-10 font-nunito text-sm font-bold md:flex-row md:items-center md:justify-between md:px-10"
+            style={{
+              paddingLeft: "max(24px, env(safe-area-inset-left))",
+              paddingRight: "max(24px, env(safe-area-inset-right))",
+              paddingBottom: "max(40px, env(safe-area-inset-bottom))",
+            }}
+          >
             <p>© {new Date().getFullYear()} Chung Yun Huang</p>
             <a
               href="mailto:chungyunhuang97@gmail.com"
-              className="transition-colors hover:text-ink"
+              className="inline-flex min-h-11 items-center underline-offset-4 hover:underline"
             >
               chungyunhuang97@gmail.com
             </a>

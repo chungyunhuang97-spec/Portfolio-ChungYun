@@ -68,6 +68,7 @@ export function VideoCard({
   theme,
   showPreview,
   style,
+  className = "",
   onSelect,
   onPlay,
 }: {
@@ -77,6 +78,8 @@ export function VideoCard({
   theme: string;
   showPreview: boolean;
   style: CSSProperties;
+  /** Positioning: absolute in the desktop fan, a snap item on phones. */
+  className?: string;
   onSelect: () => void;
   onPlay: () => void;
 }) {
@@ -86,7 +89,10 @@ export function VideoCard({
   return (
     <div
       style={style}
-      className="absolute left-1/2 top-0 [container-type:inline-size] overflow-hidden rounded-[var(--radius-card)] bg-grey-900 shadow-[0_24px_48px_-24px_rgba(23,23,22,0.5)] transition-[transform,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:rounded-[var(--radius-card-lg)]"
+      data-video-card={index}
+      className={`[container-type:inline-size] overflow-hidden rounded-[var(--radius-card)] bg-grey-800 shadow-[0_24px_48px_-24px_rgba(0,0,0,0.7)] outline-offset-4 transition-[transform,filter,outline-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:rounded-[var(--radius-card-lg)] ${
+        state === "idle" ? "outline-2 outline-transparent" : "outline-2 outline-cream"
+      } ${className}`}
     >
       {playing ? (
         video.source_type === "mp4" && video.video_file ? (

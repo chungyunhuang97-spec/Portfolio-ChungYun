@@ -375,3 +375,67 @@ h4 {
   0%, 100% { transform: rotate(-4deg) translateY(0); }
   50% { transform: rotate(4deg) translateY(-8px); }
 }
+
+/* ---------------------------------------------------------------
+   Homepage About (components/about/AboutSection.tsx)
+   --------------------------------------------------------------- */
+.about-top {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "statement" "photo" "intro";
+}
+
+@media (min-width: 1024px) {
+  .about-top {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-areas:
+      "statement statement statement statement statement statement statement photo photo photo photo photo"
+      "intro intro intro intro intro intro intro photo photo photo photo photo";
+    grid-template-rows: auto 1fr;
+  }
+}
+
+.about-portrait img,
+.about-sticker {
+  transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.about-portrait img { transform: rotate(-3deg); }
+
+.about-trait {
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.about-trait-number {
+  padding: 0.08em 0.22em;
+  margin: -0.08em -0.22em;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .about-portrait:hover img { transform: rotate(0deg); }
+  .about-portrait:hover .about-sticker { transform: rotate(180deg); }
+  .about-trait:hover { transform: translateY(-4px); }
+  .about-trait:hover .about-trait-number {
+    background-color: var(--color-secondary-blue);
+    color: var(--color-cream);
+  }
+}
+
+/* Tools marquee: two identical copies scrolled by -50% for a seamless loop. */
+@keyframes about-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.about-marquee-track {
+  animation: about-marquee 32s linear infinite;
+}
+.about-marquee:hover .about-marquee-track { animation-play-state: paused; }
+@media (max-width: 767px) {
+  /* 30% slower on phones */
+  .about-marquee-track { animation-duration: 45.7s; }
+}
+.about-marquee[data-paused] .about-marquee-track { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .about-marquee-track { animation: none; }
+  .about-portrait img,
+  .about-sticker,
+  .about-trait { transition: none; }
+}

@@ -1,20 +1,38 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type PointerEvent } from "react";
-import { ArrowUpRight, CaretLeft, CaretRight, Star } from "@phosphor-icons/react/dist/ssr";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
+import { ArrowUpRight, CaretDown, CaretLeft, CaretRight, Star } from "@phosphor-icons/react/dist/ssr";
+import { DoodleEye, DoodleScribble } from "@/components/design-system/doodles";
 import { aspectValue, displayNumber } from "@/lib/about-video";
 import type { VideoWorksCategory } from "@/lib/data";
 import { BriefLightbox } from "@/components/video-section/BriefLightbox";
 import { InstagramLightbox } from "./InstagramLightbox";
 import { POSTER_THEMES, VideoCard } from "./VideoCard";
 
-/** Neighbour cards per side that stay visible, and their scale steps. */
+/** Neighbour cards per side that stay visible in the fan, and their scales. */
 const VISIBLE_PER_SIDE = 2;
 const SCALES = [1, 0.82, 0.68];
 /** How much of a neighbour hides behind the card in front of it. */
 const OVERLAP = 0.45;
 const MAX_CARD_HEIGHT = 460;
 const SWIPE_PX = 40;
+/** Phone layout: selected card ~72vw wide (landscape ones a bit wider so
+ * 16:9 stays watchable), never taller than 62svh. */
+const PHONE_CARD_WIDTH = 0.72;
+const PHONE_LANDSCAPE_WIDTH = 0.88;
+/** Room for the selected card's outline (outline-offset 4px + 2px). */
+const OUTLINE_GUTTER = 8;
+const PHONE_MAX_HEIGHT_SVH = 0.62;
+
+const PHONE_QUERY = "(max-width: 767px)";
 /** preview_clip only autoplays for a mouse/trackpad user who allows motion. */
 const PREVIEW_QUERY = "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
 
@@ -35,7 +53,7 @@ function featuredIndex(category: VideoWorksCategory): number {
   return i === -1 ? 0 : i;
 }
 
-/** Horizontal center offset (px) for every card, selected card at 0. */
+/** Horizontal center offset (px) for every fan card, selected card at 0. */
 function layoutOffsets(widths: number[], selected: number): number[] {
   const x = new Array<number>(widths.length).fill(0);
   for (const dir of [-1, 1]) {
@@ -50,21 +68,30 @@ function layoutOffsets(widths: number[], selected: number): number[] {
   return x;
 }
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 /**
- * Homepage "03 / VIDEO WORKS" (Phase 2 = behaviour; the dark-background
- * redesign and motion are Phases 3-4). Categories and videos come from
- * video_categories / videos; every number (01 / 04, 01 / 06) is derived
- * from sort order.
+ * Homepage "03 / VIDEO WORKS": dark (--color-ink) section, cream type.
+ * Desktop: categories 3 / cards 6 / info 3. Tablet: category tabs on top,
+ * cards + info side by side. Phone: sticky horizontally-scrolling chip
+ * tabs, a scroll-snap card row, and a collapsed info column.
+ * Card behaviour (states, single player, poster fallback) lives in VideoCard.
  */
 export function VideoWorksSection({ categories }: { categories: VideoWorksCategory[] }) {
   const [catIndex, setCatIndex] = useState(0);
   const [videoIndex, setVideoIndex] = useState(() => featuredIndex(categories[0]));
   const [playing, setPlaying] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [stageWidth, setStageWidth] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(800);
+  const isPhone = useMediaQuery(PHONE_QUERY);
   const canPreview = useMediaQuery(PREVIEW_QUERY);
   const stageRef = useRef<HTMLDivElement>(null);
+  const snapRef = useRef<HTMLDivElement>(null);
   const pointerStart = useRef<number | null>(null);
+  const scrollingTo = useRef<number | null>(null);
+  const videoIndexRef = useRef(videoIndex);
 
   const category = categories[catIndex];
   const videos = category.videos;
@@ -75,7 +102,10 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
   useLayoutEffect(() => {
     const el = stageRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setStageWidth(entry.contentRect.width));
+    const ro = new ResizeObserver(([entry]) => {
+      setStageWidth(entry.contentRect.width);
+      setViewportHeight(window.innerHeight);
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -83,6 +113,7 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
   function selectCategory(i: number) {
     if (i === catIndex) return;
     setPlaying(false);
+    setInfoOpen(false);
     setCatIndex(i);
     setVideoIndex(featuredIndex(categories[i]));
   }
@@ -94,13 +125,75 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
     setVideoIndex(next);
   }
 
-  // Same card height across the category; widths follow each aspect ratio.
+  // Card sizing: one height per category, widths follow aspect_ratio.
   const ratios = videos.map((v) => aspectValue(v.aspect_ratio));
   const maxRatio = Math.max(...ratios);
-  const widthShare = maxRatio > 1 ? 0.86 : 0.62;
-  const cardHeight = stageWidth ? Math.min(MAX_CARD_HEIGHT, (stageWidth * widthShare) / maxRatio) : 0;
+  let cardHeight = 0;
+  if (stageWidth) {
+    cardHeight = isPhone
+      ? Math.min(
+          (stageWidth * (maxRatio > 1 ? PHONE_LANDSCAPE_WIDTH : PHONE_CARD_WIDTH)) / maxRatio,
+          viewportHeight * PHONE_MAX_HEIGHT_SVH
+        )
+      : Math.min(MAX_CARD_HEIGHT, (stageWidth * (maxRatio > 1 ? 0.86 : 0.62)) / maxRatio);
+  }
   const widths = ratios.map((r) => cardHeight * r);
+  const measured = cardHeight > 0;
   const offsets = layoutOffsets(widths, videoIndex);
+
+  useEffect(() => {
+    videoIndexRef.current = videoIndex;
+  }, [videoIndex]);
+
+  // Phone: keep the snap row's scroll position in sync with the selection.
+  useEffect(() => {
+    const row = snapRef.current;
+    if (!isPhone || !row) return;
+    const card = row.querySelector<HTMLElement>(`[data-video-card="${videoIndex}"]`);
+    if (!card) return;
+    const maxScroll = row.scrollWidth - row.clientWidth;
+    const target = Math.min(maxScroll, Math.max(0, card.offsetLeft + card.offsetWidth / 2 - row.clientWidth / 2));
+    if (Math.abs(row.scrollLeft - target) < 4) return;
+    scrollingTo.current = videoIndex;
+    row.scrollTo({ left: target, behavior: "smooth" });
+  }, [isPhone, videoIndex, catIndex, cardHeight]);
+
+  // Phone: a finished swipe selects whichever card snapped to the center.
+  useEffect(() => {
+    const row = snapRef.current;
+    if (!isPhone || !row) return;
+    let timer: number | undefined;
+    function settle() {
+      const center = row!.scrollLeft + row!.clientWidth / 2;
+      let best = 0;
+      let bestDist = Infinity;
+      row!.querySelectorAll<HTMLElement>("[data-video-card]").forEach((el) => {
+        const d = Math.abs(el.offsetLeft + el.offsetWidth / 2 - center);
+        if (d < bestDist) {
+          bestDist = d;
+          best = Number(el.dataset.videoCard);
+        }
+      });
+      if (scrollingTo.current !== null) {
+        if (best === scrollingTo.current) scrollingTo.current = null;
+        return;
+      }
+      if (best !== videoIndexRef.current) {
+        setPlaying(false);
+        setVideoIndex(best);
+      }
+    }
+    function onScroll() {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(settle, 120);
+    }
+    row.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      row.removeEventListener("scroll", onScroll);
+      window.clearTimeout(timer);
+    };
+    // The row only mounts once the stage has been measured.
+  }, [isPhone, catIndex, measured]);
 
   function handleStageKey(e: KeyboardEvent<HTMLDivElement>) {
     if (!multi) return;
@@ -133,64 +226,109 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
     if (Math.abs(dx) > SWIPE_PX) selectVideo(videoIndex + (dx < 0 ? 1 : -1));
   }
 
-  const meta = [video.roles.join(" / "), video.client, video.year].filter(Boolean);
+  const meta: [string, string][] = [];
+  if (video.roles.length > 0) meta.push(["角色", video.roles.join(" / ")]);
+  if (video.client) meta.push(["客戶", video.client]);
+  if (video.year) meta.push(["年份", String(video.year)]);
+
+  const cardProps = (i: number) => ({
+    video: videos[i],
+    index: i,
+    state: (i === videoIndex ? (playing ? "playing" : "selected") : "idle") as "idle" | "selected" | "playing",
+    theme,
+    showPreview: canPreview,
+    onSelect: () => selectVideo(i),
+    onPlay: () => setPlaying(true),
+  });
 
   return (
-    <section id="video" aria-labelledby="video-works-heading" className="border-t border-line">
-      <div className="mx-auto max-w-[1400px] px-6 py-16 md:px-10 md:py-24">
+    <section
+      id="video"
+      aria-labelledby="video-works-heading"
+      className="relative bg-ink py-20 text-cream md:py-28"
+      style={{
+        paddingLeft: "max(16px, env(safe-area-inset-left))",
+        paddingRight: "max(16px, env(safe-area-inset-right))",
+      }}
+    >
+      <DoodleScribble
+        aria-hidden
+        strokeWidth={4}
+        className="pointer-events-none absolute right-6 top-16 hidden w-32 text-primary-orange md:block"
+      />
+      <DoodleEye
+        aria-hidden
+        className="pointer-events-none absolute bottom-10 left-8 hidden w-24 text-cream/20 lg:block"
+      />
+
+      <div className="relative mx-auto w-full max-w-[1400px] md:px-6 wide:max-w-[1600px]">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="font-nunito text-[11px] font-extrabold tracking-[0.25em] text-secondary-blue md:text-[13px]">
+            <p className="font-nunito text-[11px] font-extrabold tracking-[0.25em] text-primary-orange md:text-[13px]">
               03 / VIDEO WORKS
             </p>
-            <h2 id="video-works-heading" className="mt-2 text-2xl md:text-3xl">
-              影片製作
+            <h2 id="video-works-heading" className="mt-3 text-[56px] leading-[0.95] md:text-[80px] desk:text-[88px]">
+              <span className="font-fredoka">Video Works</span>
             </h2>
-            <p className="mt-1 text-sm tracking-[0.1em] text-ink-faint">企劃 · 導演 · 剪輯</p>
+            <p className="mt-3 font-nunito text-sm font-bold tracking-[0.2em] text-cream/70">企劃 · 導演 · 剪輯</p>
           </div>
-          <p className="font-nunito text-sm font-bold tracking-[0.15em] text-ink-muted" aria-label={`第 ${catIndex + 1} 個分類，共 ${categories.length} 個`}>
-            {displayNumber(catIndex)} / {String(categories.length).padStart(2, "0")}
+          <p
+            className="shrink-0 font-fredoka text-2xl text-cream md:text-3xl"
+            aria-label={`第 ${catIndex + 1} 個分類，共 ${categories.length} 個`}
+          >
+            {displayNumber(catIndex)} / {pad2(categories.length)}
           </p>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10">
-          {/* Categories */}
-          <div
-            role="tablist"
-            aria-label="影片分類"
-            aria-orientation="vertical"
-            onKeyDown={handleTabKey}
-            className="flex gap-2 overflow-x-auto pb-2 lg:col-span-3 lg:flex-col lg:gap-0 lg:overflow-visible lg:pb-0"
-          >
-            {categories.map((c, i) => {
-              const active = i === catIndex;
-              return (
-                <button
-                  key={c.id}
-                  id={`video-tab-${c.id}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  aria-controls="video-works-panel"
-                  tabIndex={active ? 0 : -1}
-                  onClick={() => selectCategory(i)}
-                  className={`group flex min-h-11 shrink-0 items-center gap-2.5 whitespace-nowrap border-b border-line px-1 py-3 text-left transition-colors lg:whitespace-normal ${
-                    active ? "text-ink" : "text-ink-faint hover:text-ink-muted"
-                  }`}
-                >
-                  <span className="flex w-3 shrink-0 justify-center text-secondary-blue">
-                    {active && <Star size={12} weight="fill" aria-hidden />}
-                  </span>
-                  <span className="font-mono text-xs transition-transform group-hover:translate-x-2">{displayNumber(i)}</span>
-                  <span className="text-sm">{c.title}</span>
-                  <span className="text-xs text-ink-faint">({c.videos.length})</span>
-                </button>
-              );
-            })}
+        <div className="mt-10 grid grid-cols-1 gap-8 md:grid-cols-12 md:gap-x-8 md:gap-y-10 lg:mt-14 lg:gap-10">
+          {/* Categories: chips (phone, sticky) / tabs (tablet) / list (desktop) */}
+          <div className="sticky top-0 z-20 -mx-4 bg-ink px-4 py-3 md:static md:col-span-12 md:mx-0 md:p-0 lg:col-span-3">
+            <div
+              role="tablist"
+              aria-label="影片分類"
+              aria-orientation={isPhone ? "horizontal" : undefined}
+              onKeyDown={handleTabKey}
+              className="flex gap-2 overflow-x-auto [scrollbar-width:none] lg:flex-col lg:gap-0 lg:overflow-visible"
+            >
+              {categories.map((c, i) => {
+                const active = i === catIndex;
+                return (
+                  <button
+                    key={c.id}
+                    id={`video-tab-${c.id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    aria-controls="video-works-panel"
+                    tabIndex={active ? 0 : -1}
+                    onClick={() => selectCategory(i)}
+                    className={`group flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-4 text-left transition-colors lg:gap-3 lg:rounded-none lg:border-0 lg:border-b lg:border-cream/15 lg:px-0 lg:py-4 lg:whitespace-normal ${
+                      active
+                        ? "border-cream bg-cream text-ink lg:bg-transparent lg:text-cream"
+                        : "border-cream/30 text-cream/70 hover:text-cream"
+                    }`}
+                  >
+                    <span className="hidden w-4 shrink-0 justify-center text-primary-orange lg:flex">
+                      {active && <Star size={14} weight="fill" aria-hidden />}
+                    </span>
+                    <span className="font-fredoka text-base transition-transform duration-200 group-hover:translate-x-2 lg:text-[28px] lg:leading-none">
+                      {displayNumber(i)}
+                    </span>
+                    <span className="font-nunito text-sm font-bold lg:text-base">{c.title}</span>
+                    <span className={`font-nunito text-xs ${active ? "opacity-70" : "text-cream/60"}`}>({c.videos.length})</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Cards */}
-          <div id="video-works-panel" role="tabpanel" aria-labelledby={`video-tab-${category.id}`} className="min-w-0 lg:col-span-6">
+          <div
+            id="video-works-panel"
+            role="tabpanel"
+            aria-labelledby={`video-tab-${category.id}`}
+            className="min-w-0 md:col-span-7 lg:col-span-6"
+          >
             <div
               ref={stageRef}
               role="group"
@@ -198,37 +336,61 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
               aria-label={`${category.title} 影片`}
               tabIndex={0}
               onKeyDown={handleStageKey}
-              onPointerDown={onPointerDown}
-              onPointerUp={onPointerUp}
-              className="relative touch-pan-y overflow-hidden outline-offset-4 focus-visible:outline-2 focus-visible:outline-secondary-blue"
-              style={{ height: cardHeight || MAX_CARD_HEIGHT }}
+              onPointerDown={isPhone ? undefined : onPointerDown}
+              onPointerUp={isPhone ? undefined : onPointerUp}
+              className="relative outline-offset-8 focus-visible:outline-2 focus-visible:outline-cream"
+              style={{ height: (cardHeight || MAX_CARD_HEIGHT) + OUTLINE_GUTTER * 2 }}
             >
-              {cardHeight > 0 &&
-                videos.map((v, i) => {
-                  const d = Math.abs(i - videoIndex);
-                  if (d > VISIBLE_PER_SIDE) return null;
-                  const scale = SCALES[Math.min(d, SCALES.length - 1)];
-                  return (
+              {cardHeight > 0 && isPhone && (
+                <div
+                  ref={snapRef}
+                  className="relative -mx-4 flex h-full snap-x snap-mandatory items-center gap-3 overflow-x-auto [scrollbar-width:none]"
+                  // Lets the first and last card snap to the center too.
+                  style={{
+                    paddingLeft: `calc((100% - ${widths[0]}px) / 2 + 16px)`,
+                    paddingRight: `calc((100% - ${widths[widths.length - 1]}px) / 2 + 16px)`,
+                  }}
+                >
+                  {videos.map((v, i) => (
                     <VideoCard
                       key={v.id}
-                      video={v}
-                      index={i}
-                      state={i === videoIndex ? (playing ? "playing" : "selected") : "idle"}
-                      theme={theme}
-                      showPreview={canPreview}
-                      onSelect={() => selectVideo(i)}
-                      onPlay={() => setPlaying(true)}
+                      {...cardProps(i)}
+                      className="relative shrink-0 snap-center"
                       style={{
                         width: widths[i],
                         height: cardHeight,
-                        zIndex: 10 - d,
-                        transform: `translateX(calc(-50% + ${offsets[i]}px)) scale(${scale})`,
-                        // Dim, never fade: a translucent poster reads as "not loaded".
-                        filter: d === 0 ? "none" : "brightness(0.7)",
+                        filter: i === videoIndex ? "none" : "brightness(0.7)",
                       }}
                     />
-                  );
-                })}
+                  ))}
+                </div>
+              )}
+
+              {cardHeight > 0 && !isPhone && (
+                <div className="absolute inset-0 touch-pan-y overflow-hidden">
+                  {videos.map((v, i) => {
+                    const d = Math.abs(i - videoIndex);
+                    if (d > VISIBLE_PER_SIDE) return null;
+                    const scale = SCALES[Math.min(d, SCALES.length - 1)];
+                    return (
+                      <VideoCard
+                        key={v.id}
+                        {...cardProps(i)}
+                        className="absolute left-1/2"
+                        style={{
+                          top: OUTLINE_GUTTER,
+                          width: widths[i],
+                          height: cardHeight,
+                          zIndex: 10 - d,
+                          transform: `translateX(calc(-50% + ${offsets[i]}px)) scale(${scale})`,
+                          // Dim, never fade: a translucent poster reads as "not loaded".
+                          filter: d === 0 ? "none" : "brightness(0.7)",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <p className="sr-only" aria-live="polite">
@@ -236,23 +398,23 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
             </p>
 
             {multi && (
-              <div className="mt-5 flex items-center justify-center gap-5">
+              <div className="mt-6 flex items-center justify-center gap-4">
                 <button
                   type="button"
                   onClick={() => selectVideo(videoIndex - 1)}
                   aria-label="上一支"
-                  className="flex size-11 items-center justify-center rounded-full text-ink-faint transition-colors hover:text-ink"
+                  className="flex size-11 items-center justify-center rounded-full border border-cream/30 text-cream transition-colors hover:border-cream"
                 >
                   <CaretLeft size={18} weight="bold" />
                 </button>
-                <span className="font-nunito text-xs font-bold tracking-[0.15em] text-ink-muted">
-                  {displayNumber(videoIndex)} / {String(videos.length).padStart(2, "0")}
+                <span className="min-w-[4.5rem] text-center font-fredoka text-lg">
+                  {displayNumber(videoIndex)} / {pad2(videos.length)}
                 </span>
                 <button
                   type="button"
                   onClick={() => selectVideo(videoIndex + 1)}
                   aria-label="下一支"
-                  className="flex size-11 items-center justify-center rounded-full text-ink-faint transition-colors hover:text-ink"
+                  className="flex size-11 items-center justify-center rounded-full border border-cream/30 text-cream transition-colors hover:border-cream"
                 >
                   <CaretRight size={18} weight="bold" />
                 </button>
@@ -265,7 +427,7 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
                   href={video.source_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex min-h-11 items-center gap-1.5 text-sm text-ink-muted transition-colors hover:text-ink"
+                  className="inline-flex min-h-11 items-center gap-1.5 font-nunito text-sm font-bold text-cream/80 underline-offset-4 transition-colors hover:text-cream hover:underline"
                 >
                   在 Instagram 上觀看 <ArrowUpRight size={14} weight="bold" />
                 </a>
@@ -274,81 +436,110 @@ export function VideoWorksSection({ categories }: { categories: VideoWorksCatego
           </div>
 
           {/* Info */}
-          <div className="min-w-0 lg:col-span-3">
+          <div className="min-w-0 md:col-span-5 lg:col-span-3">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h3 className="text-2xl">{category.title}</h3>
+              <h3 className="text-[30px] leading-tight lg:text-[34px]">
+                <span className="font-fredoka">{category.title}</span>
+              </h3>
               {category.level_label && (
-                <span className="rounded-full bg-accent-soft px-2.5 py-1 text-[11px] tracking-[0.1em] text-accent">
+                <span className="rounded-full border border-cream/40 px-2.5 py-0.5 font-nunito text-[11px] font-bold tracking-[0.1em] text-cream/90">
                   {category.level_label}
                 </span>
               )}
             </div>
-            {category.subtitle && <p className="mt-1 text-sm text-ink-faint">{category.subtitle}</p>}
+            {category.subtitle && <p className="mt-1 font-nunito text-sm text-cream/70">{category.subtitle}</p>}
             {category.description && (
-              <p className="mt-4 text-sm leading-relaxed text-ink-muted">{category.description}</p>
+              <p className="mt-4 font-nunito text-[15px] leading-relaxed text-cream/85">{category.description}</p>
             )}
 
-            <div className="mt-5 border-t border-line pt-4">
-              <p className="text-sm text-ink">{video.title}</p>
-              {meta.length > 0 && <p className="mt-1 text-xs text-ink-faint">{meta.join(" · ")}</p>}
+            <div className="mt-5 border-t border-cream/15 pt-4">
+              <p className="font-nunito text-[15px] font-bold">{video.title}</p>
+              {meta.length > 0 && (
+                <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 font-nunito text-sm">
+                  {meta.map(([k, v]) => (
+                    <div key={k} className="contents">
+                      <dt className="text-cream/60">{k}</dt>
+                      <dd className="text-cream/90">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
             </div>
 
-            {multi && (
-              <ol className="mt-4 space-y-1">
-                {videos.map((v, i) => (
-                  <li key={v.id}>
-                    <button
-                      type="button"
-                      onClick={() => selectVideo(i)}
-                      aria-current={i === videoIndex}
-                      className={`flex min-h-9 w-full items-center gap-2 text-left text-sm transition-colors ${
-                        i === videoIndex ? "text-ink" : "text-ink-faint hover:text-ink-muted"
-                      }`}
-                    >
-                      <span className="flex w-3 shrink-0 justify-center text-secondary-blue">
-                        {i === videoIndex && <Star size={10} weight="fill" aria-hidden />}
-                      </span>
-                      <span className="font-mono text-[11px]">{displayNumber(i)}</span>
-                      <span className="truncate">{v.title}</span>
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            )}
+            {/* Phone: everything below collapses behind one toggle. */}
+            <button
+              type="button"
+              onClick={() => setInfoOpen((o) => !o)}
+              aria-expanded={infoOpen}
+              aria-controls="video-info-more"
+              className="mt-4 inline-flex min-h-11 items-center gap-1.5 font-nunito text-sm font-bold text-cream md:hidden"
+            >
+              {multi ? `查看全部 (${videos.length})` : "更多資訊"}
+              <CaretDown size={14} weight="bold" className={`transition-transform ${infoOpen ? "rotate-180" : ""}`} />
+            </button>
 
-            {category.brief_image_url && (
-              <button
-                type="button"
-                onClick={() => setBriefOpen(true)}
-                className="mt-5 block cursor-zoom-in text-left"
-                aria-label={`放大查看${category.title}的企劃截圖`}
-              >
-                <span className="text-[11px] tracking-[0.15em] text-ink-faint">企劃截圖</span>
-                {/* eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL */}
-                <img src={category.brief_image_url} alt="" className="mt-1.5 w-24 object-cover transition-opacity hover:opacity-80" />
-              </button>
-            )}
+            <div id="video-info-more" className={infoOpen ? "block" : "hidden md:block"}>
+              {multi && (
+                <ol className="mt-4 space-y-0.5">
+                  {videos.map((v, i) => (
+                    <li key={v.id}>
+                      <button
+                        type="button"
+                        onClick={() => selectVideo(i)}
+                        aria-current={i === videoIndex}
+                        className={`flex min-h-10 w-full items-center gap-2 text-left font-nunito text-sm transition-colors ${
+                          i === videoIndex ? "text-cream" : "text-cream/60 hover:text-cream"
+                        }`}
+                      >
+                        <span className="flex w-3 shrink-0 justify-center text-primary-orange">
+                          {i === videoIndex && <Star size={11} weight="fill" aria-hidden />}
+                        </span>
+                        <span className="font-fredoka text-xs">{displayNumber(i)}</span>
+                        <span className="truncate">{v.title}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              )}
 
-            {category.profile_url && (
-              <a
-                href={category.profile_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-5 inline-flex min-h-11 items-center gap-1.5 text-sm text-ink transition-colors hover:text-accent"
-              >
-                查看完整帳號 <ArrowUpRight size={14} weight="bold" />
-              </a>
-            )}
+              {category.brief_image_url && (
+                <button
+                  type="button"
+                  onClick={() => setBriefOpen(true)}
+                  className="mt-5 block cursor-zoom-in text-left"
+                  aria-label={`放大查看${category.title}的企劃截圖`}
+                >
+                  <span className="font-nunito text-[11px] font-bold tracking-[0.15em] text-cream/60">企劃截圖</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL */}
+                  <img
+                    src={category.brief_image_url}
+                    alt=""
+                    className="mt-1.5 w-24 rounded-md object-cover transition-opacity hover:opacity-80"
+                  />
+                </button>
+              )}
 
-            {category.tags.length > 0 && (
-              <div className="mt-5 flex flex-wrap gap-x-3 gap-y-1">
-                {category.tags.map((tag) => (
-                  <span key={tag} className="text-[11px] tracking-[0.15em] text-ink-faint">
-                    {tag.toUpperCase()}
-                  </span>
-                ))}
-              </div>
-            )}
+              {category.profile_url && (
+                <a
+                  href={category.profile_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-5 inline-flex min-h-11 items-center gap-1.5 font-nunito text-sm font-bold text-cream underline-offset-4 hover:underline"
+                >
+                  查看完整帳號 <ArrowUpRight size={14} weight="bold" />
+                </a>
+              )}
+
+              {category.tags.length > 0 && (
+                <div className="mt-5 flex flex-wrap gap-x-3 gap-y-1">
+                  {category.tags.map((tag) => (
+                    <span key={tag} className="font-nunito text-[11px] tracking-[0.15em] text-cream/60">
+                      {tag.toUpperCase()}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
