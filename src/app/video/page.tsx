@@ -58,6 +58,8 @@ export default async function VideoPage() {
                 work={work}
                 reverse={i % 2 === 1}
                 toneStep={i % 2 === 1}
+                size={i % 2 === 0 ? "large" : "default"}
+                emphasize={i === 0}
               />
             ))}
           </section>
