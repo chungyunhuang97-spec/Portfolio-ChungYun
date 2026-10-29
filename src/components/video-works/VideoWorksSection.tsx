@@ -10,7 +10,7 @@ import {
   type PointerEvent,
 } from "react";
 import { ArrowUpRight, CaretDown, CaretLeft, CaretRight, Star } from "@phosphor-icons/react/dist/ssr";
-import { DoodleEye, DoodleScribble } from "@/components/design-system/doodles";
+import { DoodleEye } from "@/components/design-system/doodles";
 import { aspectValue, displayNumber } from "@/lib/about-video";
 import type { VideoWorksCategory } from "@/lib/data";
 import { BriefLightbox } from "@/components/video-section/BriefLightbox";
@@ -301,11 +301,6 @@ export function VideoWorksSection({
           }}
         />
       </div>
-      <DoodleScribble
-        aria-hidden
-        strokeWidth={4}
-        className="pointer-events-none absolute right-6 top-16 hidden w-32 text-primary-orange md:block"
-      />
       <DoodleEye
         aria-hidden
         className="pointer-events-none absolute bottom-10 left-8 hidden w-24 text-cream/20 lg:block"
@@ -477,18 +472,6 @@ export function VideoWorksSection({
               </div>
             )}
 
-            {video.source_type === "instagram" && video.source_url && (
-              <p className="mt-3 text-center">
-                <a
-                  href={video.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-11 items-center gap-1.5 font-nunito text-sm font-bold text-cream/80 underline-offset-4 transition-colors hover:text-cream hover:underline"
-                >
-                  在 Instagram 上觀看 <ArrowUpRight size={14} weight="bold" />
-                </a>
-              </p>
-            )}
           </div>
 
           {/* Info */}

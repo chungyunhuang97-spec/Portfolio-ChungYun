@@ -7,7 +7,6 @@ import {
   DoodleEye,
   DoodleFlower,
   DoodleGrid,
-  DoodleScribble,
   DoodleSpiral,
   DoodleSplat,
   DoodleStar,
@@ -19,7 +18,7 @@ import {
  * Two things layer on top of each other, matching the brief ("整體 SVG
  * 滾動視差" + "背後的動態結合塗鴉感"):
  * - Scroll parallax: "far" pieces (grid, splat, spiral) drift less than
- *   "near" pieces (stars, flower, arrow, scribble) as the hero scrolls
+ *   "near" pieces (stars, flower, arrow) as the hero scrolls
  *   past, driven by this section's own scroll progress.
  * - Idle wobble: every piece also gets a slow, staggered rotate/float
  *   loop so the whole cluster feels hand-drawn and alive even at rest,
@@ -159,17 +158,6 @@ export function HeroDoodleField({
         <DoodleFlower className="h-auto w-full" />
       </Piece>
 
-      <Piece
-        depth={140}
-        scrollYProgress={scrollYProgress}
-        reducedMotion={reducedMotion}
-        idleDuration={6}
-        idleRotate={8}
-        idleY={9}
-        className="absolute left-[58%] bottom-[26%] w-[16%] max-w-[130px] text-secondary-blue"
-      >
-        <DoodleScribble className="h-auto w-full" strokeWidth={3} />
-      </Piece>
 
       <Piece
         depth={175}
