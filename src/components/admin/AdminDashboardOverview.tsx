@@ -6,6 +6,7 @@ import { MagnifyingGlass } from "@phosphor-icons/react";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ProjectReorderList } from "@/components/admin/ProjectReorderList";
 import type { Project, ProjectStatus, SiteContent, VideoSectionSettings } from "@/lib/types";
+import { LEGACY_SITE_CONTENT } from "@/lib/about-video";
 
 const STATUS_FILTERS: (ProjectStatus | "all")[] = ["all", "published", "draft", "archived"];
 
@@ -40,7 +41,10 @@ export function AdminDashboardOverview({
   const q = query.trim().toLowerCase();
 
   const filteredSiteContent = useMemo(
-    () => siteContent.filter((item) => item.key.toLowerCase().includes(q)),
+    () =>
+      siteContent.filter(
+        (item) => !LEGACY_SITE_CONTENT[item.key] && item.key.toLowerCase().includes(q)
+      ),
     [siteContent, q]
   );
 
@@ -167,12 +171,12 @@ export function AdminDashboardOverview({
           <h2 className="text-xs font-semibold tracking-[0.15em] text-admin-text-faint">VIDEO SECTION</h2>
           <div className="mt-3 overflow-hidden rounded-lg border border-admin-border bg-admin-surface">
             <Link
-              href="/admin/video-section"
+              href="/admin/videos"
               className="flex items-center justify-between gap-3 px-4 py-3.5 transition-colors hover:bg-admin-surface-hover"
             >
               <span className="text-sm text-admin-text">
-                影片製作
-                <span className="ml-2 text-xs text-admin-text-faint">{videoWorkCount ?? 0} 個作品</span>
+                影片作品
+                <span className="ml-2 text-xs text-admin-text-faint">{videoWorkCount ?? 0} 支影片</span>
               </span>
               <div className="flex shrink-0 items-center gap-3">
                 <span

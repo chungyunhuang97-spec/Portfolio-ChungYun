@@ -75,12 +75,14 @@ export function AdminSidebar({ projects, siteContent }: { projects: Project[]; s
         <p className="px-2.5 text-[10px] font-semibold tracking-[0.15em] text-admin-text-faint">SITE CONTENT</p>
         <div className="mt-2 flex flex-col gap-0.5">
           {siteContent.length === 0 && <p className="px-2.5 text-xs text-admin-text-faint">尚無內容</p>}
-          {siteContent.map((item) => (
-            <NavLink key={item.key} href={`/admin/site-content/${item.key}`} isActive={isActive(`/admin/site-content/${item.key}`)} onNavigate={close}>
-              {item.key}
-              {LEGACY_SITE_CONTENT[item.key] && <span className="text-admin-text-faint">（舊版）</span>}
-            </NavLink>
-          ))}
+          {/* about_me / positioning_tags were replaced by /admin/about. */}
+          {siteContent
+            .filter((item) => !LEGACY_SITE_CONTENT[item.key])
+            .map((item) => (
+              <NavLink key={item.key} href={`/admin/site-content/${item.key}`} isActive={isActive(`/admin/site-content/${item.key}`)} onNavigate={close}>
+                {item.key}
+              </NavLink>
+            ))}
         </div>
       </div>
 
@@ -116,11 +118,6 @@ export function AdminSidebar({ projects, siteContent }: { projects: Project[]; s
           </NavLink>
           <NavLink href="/admin/videos" isActive={isActive("/admin/videos")} onNavigate={close}>
             影片作品
-          </NavLink>
-          {/* Legacy video_works editor -- still drives the homepage until
-              the Phase 2 switch to video_categories/videos. */}
-          <NavLink href="/admin/video-section" isActive={isActive("/admin/video-section")} onNavigate={close}>
-            影片製作（舊版）
           </NavLink>
         </div>
       </div>

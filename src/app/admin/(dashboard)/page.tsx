@@ -1,17 +1,17 @@
 import {
   getAllProjectsAdmin,
   getAllSiteContentAdmin,
-  getAllVideoWorksAdmin,
+  getVideoCategoriesWithVideosAdmin,
   getVideoSectionSettingsAdmin,
 } from "@/lib/admin-data";
 import { AdminDashboardOverview } from "@/components/admin/AdminDashboardOverview";
 
 export default async function AdminDashboard() {
-  const [projects, siteContent, videoSectionSettings, videoWorks] = await Promise.all([
+  const [projects, siteContent, videoSectionSettings, videoCategories] = await Promise.all([
     getAllProjectsAdmin(),
     getAllSiteContentAdmin(),
     getVideoSectionSettingsAdmin(),
-    getAllVideoWorksAdmin(),
+    getVideoCategoriesWithVideosAdmin(),
   ]);
 
   return (
@@ -22,7 +22,7 @@ export default async function AdminDashboard() {
           projects={projects}
           siteContent={siteContent}
           videoSectionSettings={videoSectionSettings}
-          videoWorkCount={videoWorks.length}
+          videoWorkCount={videoCategories.reduce((n, c) => n + c.videos.length, 0)}
         />
       </div>
     </div>
