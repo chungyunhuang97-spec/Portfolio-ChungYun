@@ -42,13 +42,13 @@ export function MoreWorkCard({ work, reelLinks }: { work: VideoWork; reelLinks: 
 
   if (reelLinks.length > 0) {
     return (
-      <article className="border border-line p-5 md:p-6">
-        <div className="aspect-square w-full max-w-[180px] overflow-hidden">{thumbnail}</div>
-        <div className="mt-4">
+      <article className="bg-ink/[0.03] p-6 md:p-8">
+        <div className="aspect-square w-full max-w-[200px] overflow-hidden">{thumbnail}</div>
+        <div className="mt-5">
           {body}
-          <ul className="mt-4 space-y-2 divide-y divide-line">
+          <ul className="mt-5 space-y-2.5">
             {reelLinks.map((link) => (
-              <li key={link.id} className="pt-2 first:pt-0">
+              <li key={link.id}>
                 <a
                   href={link.url}
                   target="_blank"
@@ -73,11 +73,9 @@ export function MoreWorkCard({ work, reelLinks }: { work: VideoWork; reelLinks: 
 
   if (!work.video_url) {
     return (
-      <article className="border border-line p-5 md:p-6">
-        <div className="aspect-square w-full max-w-[140px] overflow-hidden rounded-full">
-          {thumbnail}
-        </div>
-        <div className="mt-4">{body}</div>
+      <article className="bg-ink/[0.03] p-6 md:p-8">
+        <div className="aspect-square w-full max-w-[160px] overflow-hidden">{thumbnail}</div>
+        <div className="mt-5">{body}</div>
       </article>
     );
   }
@@ -88,12 +86,10 @@ export function MoreWorkCard({ work, reelLinks }: { work: VideoWork; reelLinks: 
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`在新分頁開啟 ${work.title} 的 Instagram`}
-      className="group block border border-line p-5 transition-colors hover:border-ink md:p-6"
+      className="group block bg-ink/[0.03] p-6 transition-colors hover:bg-ink/[0.06] md:p-8"
     >
-      <div className="aspect-square w-full max-w-[140px] overflow-hidden rounded-full">
-        {thumbnail}
-      </div>
-      <div className="mt-4">
+      <div className="aspect-square w-full max-w-[160px] overflow-hidden">{thumbnail}</div>
+      <div className="mt-5">
         {body}
         <span className="mt-4 inline-flex items-center gap-1.5 text-sm text-ink transition-colors group-hover:text-accent">
           前往 Instagram

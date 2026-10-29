@@ -4,7 +4,6 @@ import { getAllSiteContent, getPublishedProjects, getVideoSectionData } from "@/
 import { FadeIn } from "@/components/FadeIn";
 import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/design-system/Navbar";
-import { VideoSection } from "@/components/video-section/VideoSection";
 
 export const revalidate = 60;
 
@@ -109,8 +108,32 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Video & content production */}
-        {videoSectionData && <VideoSection data={videoSectionData} />}
+        {/* Video & content production — teaser only, full content lives on its own page */}
+        {videoSectionData && (videoSectionData.featured.length > 0 || videoSectionData.more.length > 0) && (
+          <section className="border-t border-line">
+            <div className="mx-auto flex max-w-[1400px] flex-col items-start gap-6 px-6 py-16 md:flex-row md:items-center md:justify-between md:px-10 md:py-20">
+              <FadeIn>
+                <h2 className="text-2xl md:text-3xl">影片製作</h2>
+                <p className="mt-2 max-w-[48ch] text-sm leading-relaxed text-ink-muted">
+                  企劃、執導、剪輯——婚禮開場、紀錄片與社群短影音的幕後工作。
+                </p>
+              </FadeIn>
+              <FadeIn delay={0.1}>
+                <Link
+                  href="/video"
+                  className="group inline-flex shrink-0 items-center gap-2 border-b border-ink pb-1 text-sm tracking-wide transition-colors hover:border-accent hover:text-accent"
+                >
+                  查看影片作品
+                  <ArrowRight
+                    size={16}
+                    weight="light"
+                    className="transition-transform group-hover:translate-x-1"
+                  />
+                </Link>
+              </FadeIn>
+            </div>
+          </section>
+        )}
 
         {/* Footer */}
         <footer className="border-t border-line">
