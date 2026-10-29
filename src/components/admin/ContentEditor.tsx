@@ -815,7 +815,9 @@ export function ContentEditor({
             <button
               type="button"
               onClick={addField}
-              className="inline-flex items-center gap-1.5 rounded-md border border-admin-border px-3 py-2 text-xs font-medium text-admin-text-muted transition-colors hover:border-admin-accent hover:text-admin-accent"
+              disabled={!newFieldKey.trim()}
+              title={newFieldKey.trim() ? undefined : "先輸入 NEW FIELD KEY"}
+              className="inline-flex items-center gap-1.5 rounded-md border border-admin-border px-3 py-2 text-xs font-medium text-admin-text-muted transition-colors hover:border-admin-accent hover:text-admin-accent disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-admin-border disabled:hover:text-admin-text-muted"
             >
               <Plus size={14} weight="bold" />
               ADD FIELD

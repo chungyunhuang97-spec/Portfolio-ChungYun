@@ -152,3 +152,10 @@ export function playerEmbedUrl(v: Pick<Video, "source_type" | "source_url">): st
   }
   return null;
 }
+
+/** site_content keys the homepage no longer reads since the About v2
+ * migration, mapped to the admin page that replaced them. */
+export const LEGACY_SITE_CONTENT: Record<string, { href: string; label: string }> = {
+  about_me: { href: "/admin/about", label: "關於我" },
+  positioning_tags: { href: "/admin/about", label: "關於我" },
+};

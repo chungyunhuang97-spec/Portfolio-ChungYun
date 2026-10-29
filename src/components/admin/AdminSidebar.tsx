@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { List, X } from "@phosphor-icons/react";
 import type { Project, SiteContent } from "@/lib/types";
+import { LEGACY_SITE_CONTENT } from "@/lib/about-video";
 
 interface SidebarContextValue {
   open: boolean;
@@ -77,6 +78,7 @@ export function AdminSidebar({ projects, siteContent }: { projects: Project[]; s
           {siteContent.map((item) => (
             <NavLink key={item.key} href={`/admin/site-content/${item.key}`} isActive={isActive(`/admin/site-content/${item.key}`)} onNavigate={close}>
               {item.key}
+              {LEGACY_SITE_CONTENT[item.key] && <span className="text-admin-text-faint">（舊版）</span>}
             </NavLink>
           ))}
         </div>
