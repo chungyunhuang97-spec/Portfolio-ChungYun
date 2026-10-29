@@ -110,3 +110,45 @@ export function validateVideo(v: VideoFields): ValidationResult {
     errors.push("年份格式不正確");
   return { errors, warnings };
 }
+
+/* ------------------------------------------------------------------ */
+/* Front-end helpers for the Video Works section                       */
+/* ------------------------------------------------------------------ */
+
+/** Width / height as a number ("16:9" -> 1.777...). */
+export function aspectValue(ratio: VideoAspectRatio): number {
+  const [w, h] = ratio.split(":").map(Number);
+  return w / h;
+}
+
+/**
+ * Poster fallback chain (steps 1-2; step 3 is the mp4 frame, step 4 the
+ * poster card -- both rendered by the caller when this returns null):
+ * uploaded poster_image, then YouTube's auto thumbnail.
+ */
+export function resolvePoster(v: Pick<Video, "poster_image" | "source_type" | "source_url">): string | null {
+  if (v.poster_image) return v.poster_image;
+  if (v.source_type === "youtube" && v.source_url) return youTubePosterFor(v.source_url);
+  return null;
+}
+
+/** Muted autoplay embed URL for the inline player (null = not embeddable). */
+export function playerEmbedUrl(v: Pick<Video, "source_type" | "source_url">): string | null {
+  const url = v.source_url;
+  if (!url) return null;
+  if (v.source_type === "youtube") {
+    const id = extractYouTubeId(url) ?? url.match(/youtube\.com\/shorts\/([\w-]{6,})/i)?.[1];
+    return id ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&playsinline=1&rel=0` : null;
+  }
+  if (v.source_type === "vimeo") {
+    const id = url.match(/vimeo\.com\/(?:video\/)?(\d+)/i)?.[1];
+    return id ? `https://player.vimeo.com/video/${id}?autoplay=1&muted=1` : null;
+  }
+  if (v.source_type === "instagram") {
+    const m = url.match(/instagram\.com\/(?:[^/]+\/)?(p|reel|reels)\/([\w-]+)/i);
+    if (!m) return null;
+    const type = m[1].toLowerCase() === "reels" ? "reel" : m[1].toLowerCase();
+    return `https://www.instagram.com/${type}/${m[2]}/embed`;
+  }
+  return null;
+}

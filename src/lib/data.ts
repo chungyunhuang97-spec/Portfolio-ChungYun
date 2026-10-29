@@ -5,6 +5,8 @@ import type {
   ProjectSection,
   ReelLink,
   SiteContent,
+  Video,
+  VideoCategory,
   VideoSectionSettings,
   VideoWork,
 } from "@/lib/types";
@@ -210,4 +212,37 @@ export async function getVideoSectionData(): Promise<VideoSectionData | null> {
   }
 
   return { featured, more, reelLinksByWorkId };
+}
+
+export interface VideoWorksCategory extends VideoCategory {
+  videos: Video[];
+}
+
+/**
+ * Homepage "03 / VIDEO WORKS" data from the v2 tables: visible categories
+ * in sort order, each with its visible videos; categories left with no
+ * visible video are dropped. Still honours the section-wide
+ * video_section_settings.is_visible switch. Null = don't render.
+ */
+export async function getVideoWorksData(): Promise<VideoWorksCategory[] | null> {
+  const { data: settings } = await supabase
+    .from("video_section_settings")
+    .select("is_visible")
+    .maybeSingle<{ is_visible: boolean }>();
+  if (settings && !settings.is_visible) return null;
+
+  const [categories, videos] = await Promise.all([
+    supabase.from("video_categories").select("*").eq("is_visible", true).order("sort_order", { ascending: true }),
+    supabase.from("videos").select("*").eq("is_visible", true).order("sort_order", { ascending: true }),
+  ]);
+  if (categories.error || videos.error) {
+    console.error("Failed to load video works:", categories.error?.message ?? videos.error?.message);
+    return null;
+  }
+
+  const all = (videos.data ?? []) as Video[];
+  const result = ((categories.data ?? []) as VideoCategory[])
+    .map((c) => ({ ...c, videos: all.filter((v) => v.category_id === c.id) }))
+    .filter((c) => c.videos.length > 0);
+  return result.length > 0 ? result : null;
 }

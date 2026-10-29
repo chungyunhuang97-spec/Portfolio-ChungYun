@@ -1,17 +1,17 @@
-import { getAllSiteContent, getProjectGridSettings, getPublishedProjects, getVideoSectionData } from "@/lib/data";
+import { getAllSiteContent, getProjectGridSettings, getPublishedProjects, getVideoWorksData } from "@/lib/data";
 import { FadeIn } from "@/components/FadeIn";
 import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/design-system/Navbar";
 import { ProjectsSection } from "@/components/projects/ProjectsSection";
-import { VideoGallery } from "@/components/video-section/VideoGallery";
+import { VideoWorksSection } from "@/components/video-works/VideoWorksSection";
 
 export const revalidate = 60;
 
 export default async function Home() {
-  const [siteContent, caseStudies, videoSectionData] = await Promise.all([
+  const [siteContent, caseStudies, videoCategories] = await Promise.all([
     getAllSiteContent(),
     getPublishedProjects("case_study"),
-    getVideoSectionData(),
+    getVideoWorksData(),
   ]);
 
   const heroTagline = (siteContent.hero_tagline?.text as string | undefined) ?? "";
@@ -58,16 +58,8 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Video & content production — one unified gallery, basic and
-            advanced editing work alike, differentiated by each work's
-            own level_label rather than a separate "more works" tier. */}
-        {videoSectionData &&
-          (videoSectionData.featured.length > 0 || videoSectionData.more.length > 0) && (
-            <VideoGallery
-              works={[...videoSectionData.featured, ...videoSectionData.more]}
-              reelLinksByWorkId={videoSectionData.reelLinksByWorkId}
-            />
-          )}
+        {/* 03 / VIDEO WORKS -- video_categories + videos (v2 tables). */}
+        {videoCategories && <VideoWorksSection categories={videoCategories} />}
 
         {/* Footer */}
         <footer className="border-t border-line">
