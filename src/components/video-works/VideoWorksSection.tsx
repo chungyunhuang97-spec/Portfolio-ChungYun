@@ -252,6 +252,9 @@ export function VideoWorksSection({
     if (Math.abs(dx) > SWIPE_PX) selectVideo(videoIndex + (dx < 0 ? 1 : -1));
   }
 
+  const hasMoreInfo =
+    multi || Boolean(category.brief_image_url) || Boolean(category.profile_url) || category.tags.length > 0;
+
   const meta: [string, string][] = [];
   if (video.roles.length > 0) meta.push(["角色", video.roles.join(" / ")]);
   if (video.client) meta.push(["客戶", video.client]);
@@ -516,17 +519,20 @@ export function VideoWorksSection({
               )}
             </div>
 
-            {/* Phone: everything below collapses behind one toggle. */}
-            <button
-              type="button"
-              onClick={() => setInfoOpen((o) => !o)}
-              aria-expanded={infoOpen}
-              aria-controls="video-info-more"
-              className="mt-4 inline-flex min-h-11 items-center gap-1.5 font-nunito text-sm font-bold text-cream md:hidden"
-            >
-              {multi ? `查看全部 (${videos.length})` : "更多資訊"}
-              <CaretDown size={14} weight="bold" className={`transition-transform ${infoOpen ? "rotate-180" : ""}`} />
-            </button>
+            {/* Phone: everything below collapses behind one toggle -- shown
+                only when there is something to expand. */}
+            {hasMoreInfo && (
+              <button
+                type="button"
+                onClick={() => setInfoOpen((o) => !o)}
+                aria-expanded={infoOpen}
+                aria-controls="video-info-more"
+                className="mt-4 inline-flex min-h-11 items-center gap-1.5 font-nunito text-sm font-bold text-cream md:hidden"
+              >
+                {multi ? `查看全部 (${videos.length})` : "更多資訊"}
+                <CaretDown size={14} weight="bold" className={`transition-transform ${infoOpen ? "rotate-180" : ""}`} />
+              </button>
+            )}
 
             <div id="video-info-more" className={infoOpen ? "block" : "hidden md:block"}>
               {multi && (
