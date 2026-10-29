@@ -2,7 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { BadgeStatus, CardSize, CardTheme, Decoration, DecorationPosition, ProjectStatus } from "@/lib/types";
+import type {
+  BadgeStatus,
+  CardSize,
+  CardTheme,
+  Decoration,
+  DecorationPosition,
+  ProjectStatus,
+  VideoEmbedType,
+  VideoWorkType,
+} from "@/lib/types";
 
 export async function updateProjectMeta(
   projectId: string,
@@ -122,5 +131,126 @@ export async function updateSiteContent(key: string, content: Record<string, unk
 
   revalidatePath("/");
   revalidatePath(`/admin/site-content/${key}`);
+  return { success: true as const };
+}
+
+function revalidateVideoSection(workId?: string) {
+  revalidatePath("/");
+  revalidatePath("/admin/video-section");
+  if (workId) revalidatePath(`/admin/video-section/${workId}`);
+}
+
+export async function updateVideoSectionVisibility(settingsId: string, isVisible: boolean) {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("video_section_settings")
+    .update({ is_visible: isVisible, updated_at: new Date().toISOString() })
+    .eq("id", settingsId);
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  revalidateVideoSection();
+  return { success: true as const };
+}
+
+export async function createVideoWork(type: VideoWorkType, title: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("video_works")
+    .insert({ type, title, tags: [] })
+    .select("id")
+    .single();
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  revalidateVideoSection();
+  return { success: true as const, id: data.id as string };
+}
+
+export interface VideoWorkFields {
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  role_items: string[] | null;
+  tags: string[];
+  thumbnail_url: string | null;
+  video_url: string | null;
+  embed_type: VideoEmbedType | null;
+  brief_image_url: string | null;
+  level_label: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export async function updateVideoWork(workId: string, fields: VideoWorkFields) {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("video_works").update(fields).eq("id", workId);
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  revalidateVideoSection(workId);
+  return { success: true as const };
+}
+
+export async function deleteVideoWork(workId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("video_works").delete().eq("id", workId);
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  revalidateVideoSection();
+  return { success: true as const };
+}
+
+export interface ReelLinkFields {
+  label: string;
+  url: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export async function createReelLink(videoWorkId: string, fields: ReelLinkFields) {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("reel_links")
+    .insert({ video_work_id: videoWorkId, ...fields });
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  revalidateVideoSection(videoWorkId);
+  return { success: true as const };
+}
+
+export async function updateReelLink(linkId: string, videoWorkId: string, fields: ReelLinkFields) {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("reel_links").update(fields).eq("id", linkId);
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  revalidateVideoSection(videoWorkId);
+  return { success: true as const };
+}
+
+export async function deleteReelLink(linkId: string, videoWorkId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("reel_links").delete().eq("id", linkId);
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  revalidateVideoSection(videoWorkId);
   return { success: true as const };
 }

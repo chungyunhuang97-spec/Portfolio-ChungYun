@@ -105,6 +105,15 @@ export function AdminSidebar({ projects, siteContent }: { projects: Project[]; s
           </div>
         </div>
       )}
+
+      <div>
+        <p className="px-2.5 text-[10px] font-semibold tracking-[0.15em] text-admin-text-faint">VIDEO SECTION</p>
+        <div className="mt-2 flex flex-col gap-0.5">
+          <NavLink href="/admin/video-section" isActive={isActive("/admin/video-section")} onNavigate={close}>
+            影片製作
+          </NavLink>
+        </div>
+      </div>
     </nav>
   );
 

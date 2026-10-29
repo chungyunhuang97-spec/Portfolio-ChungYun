@@ -1,15 +1,17 @@
-import { getAllSiteContent, getProjectGridSettings, getPublishedProjects } from "@/lib/data";
+import { getAllSiteContent, getProjectGridSettings, getPublishedProjects, getVideoSectionData } from "@/lib/data";
 import { FadeIn } from "@/components/FadeIn";
 import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/design-system/Navbar";
 import { ProjectsSection } from "@/components/projects/ProjectsSection";
+import { VideoGallery } from "@/components/video-section/VideoGallery";
 
 export const revalidate = 60;
 
 export default async function Home() {
-  const [siteContent, caseStudies] = await Promise.all([
+  const [siteContent, caseStudies, videoSectionData] = await Promise.all([
     getAllSiteContent(),
     getPublishedProjects("case_study"),
+    getVideoSectionData(),
   ]);
 
   const heroTagline = (siteContent.hero_tagline?.text as string | undefined) ?? "";
@@ -55,6 +57,17 @@ export default async function Home() {
             </FadeIn>
           </div>
         </section>
+
+        {/* Video & content production — one unified gallery, basic and
+            advanced editing work alike, differentiated by each work's
+            own level_label rather than a separate "more works" tier. */}
+        {videoSectionData &&
+          (videoSectionData.featured.length > 0 || videoSectionData.more.length > 0) && (
+            <VideoGallery
+              works={[...videoSectionData.featured, ...videoSectionData.more]}
+              reelLinksByWorkId={videoSectionData.reelLinksByWorkId}
+            />
+          )}
 
         {/* Footer */}
         <footer className="border-t border-line">
