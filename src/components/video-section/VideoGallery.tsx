@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUpRight, Play, X } from "@phosphor-icons/react/dist/ssr";
+import { ArrowUpRight, CaretLeft, CaretRight, Play, X } from "@phosphor-icons/react/dist/ssr";
 import type { ReelLink, VideoWork } from "@/lib/types";
 import { resolveEmbedUrl, resolveFallbackThumbnailUrl, resolveThumbnailUrl } from "@/lib/video";
 import { ThumbnailImage } from "@/components/video-section/ThumbnailImage";
@@ -12,6 +12,157 @@ import { FadeIn } from "@/components/FadeIn";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const SPRING_3D = { type: "spring" as const, stiffness: 150, damping: 20 };
+
+// Reel carousel geometry -- a shallow 3D fan (not a flat row), each card
+// positioned purely by its numeric offset from the active index so Motion
+// can tween smoothly between positions.
+const REEL_CARD_SPACING = 108;
+const REEL_CARD_ROTATION = 24;
+const REEL_MAX_VISIBLE_OFFSET = 3;
+
+function reelFloatTransition(delay: number) {
+  return { duration: 4.5, repeat: Infinity, ease: "easeInOut" as const, delay };
+}
+
+/**
+ * One card in the reel carousel. Only the active (offset 0) card mounts a
+ * live embed; side cards are lightweight label placeholders used purely as
+ * click targets -- that keeps a 6-reel work from loading six Instagram
+ * iframes at once, and side cards are tilted/cropped too small to watch
+ * anyway. Every card gets the same glass-card treatment: translucent
+ * blurred surface, soft shadow, gentle perpetual float.
+ */
+function ReelCard({
+  reel,
+  offset,
+  isActive,
+  onSelect,
+  floatDelay,
+}: {
+  reel: ReelLink;
+  offset: number;
+  isActive: boolean;
+  onSelect: () => void;
+  floatDelay: number;
+}) {
+  const embedSrc = isActive ? resolveEmbedUrl(reel.url) : null;
+  const hidden = Math.abs(offset) > REEL_MAX_VISIBLE_OFFSET;
+
+  return (
+    <div
+      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+      style={{ zIndex: 100 - Math.abs(offset), pointerEvents: hidden ? "none" : undefined }}
+    >
+      <motion.div
+        style={{ transformStyle: "preserve-3d" }}
+        animate={{
+          x: offset * REEL_CARD_SPACING,
+          rotateY: Math.max(-65, Math.min(65, offset * -REEL_CARD_ROTATION)),
+          scale: Math.max(0.42, 1 - Math.min(Math.abs(offset), 4) * 0.14),
+          opacity: hidden ? 0 : 1 - Math.min(Math.abs(offset), 2) * 0.28,
+        }}
+        transition={SPRING_3D}
+      >
+        <motion.button
+          type="button"
+          onClick={onSelect}
+          disabled={isActive}
+          aria-current={isActive}
+          aria-label={reel.label}
+          animate={{ y: [0, -6, 0] }}
+          transition={reelFloatTransition(floatDelay)}
+          className={`relative block aspect-[9/16] w-[168px] overflow-hidden rounded-2xl border border-ink/10 bg-bg/40 shadow-[0_25px_55px_-22px_rgba(23,23,22,0.45)] backdrop-blur-md md:w-[188px] ${
+            isActive ? "cursor-default" : "cursor-pointer"
+          }`}
+        >
+          {embedSrc ? (
+            <iframe
+              src={embedSrc}
+              title={reel.label}
+              className="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <span className="flex h-full w-full flex-col items-center justify-center gap-2 px-3 text-center">
+              <Play size={18} weight="fill" className="text-ink/60" />
+              <span className="text-xs leading-snug text-ink-muted">{reel.label}</span>
+            </span>
+          )}
+        </motion.button>
+      </motion.div>
+    </div>
+  );
+}
+
+/**
+ * The reel switcher itself: a shallow 3D fan of cards (replaces the old
+ * text link list) -- clicking a side card, the arrow buttons, or the
+ * left/right arrow keys all move the active index; every card repositions
+ * with a spring, which reads as the whole fan turning.
+ */
+function ReelCarousel({
+  reelLinks,
+  activeReelIndex,
+  onSelectReel,
+}: {
+  reelLinks: ReelLink[];
+  activeReelIndex: number;
+  onSelectReel: (i: number) => void;
+}) {
+  const activeReel = reelLinks[activeReelIndex] ?? reelLinks[0];
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft") onSelectReel(Math.max(0, activeReelIndex - 1));
+      if (e.key === "ArrowRight") onSelectReel(Math.min(reelLinks.length - 1, activeReelIndex + 1));
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeReelIndex, reelLinks.length, onSelectReel]);
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative h-[320px] w-full md:h-[360px]" style={{ perspective: "1800px" }}>
+        {reelLinks.map((reel, i) => (
+          <ReelCard
+            key={reel.id}
+            reel={reel}
+            offset={i - activeReelIndex}
+            isActive={i === activeReelIndex}
+            onSelect={() => onSelectReel(i)}
+            floatDelay={(i % 4) * 0.2}
+          />
+        ))}
+      </div>
+
+      <div className="mt-5 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => onSelectReel(Math.max(0, activeReelIndex - 1))}
+          disabled={activeReelIndex === 0}
+          aria-label="上一支"
+          className="text-ink-faint transition-colors hover:text-ink disabled:opacity-20"
+        >
+          <CaretLeft size={18} weight="bold" />
+        </button>
+        <span className="text-xs tracking-[0.1em] text-ink-faint">
+          {activeReel?.label} · {String(activeReelIndex + 1).padStart(2, "0")} /{" "}
+          {String(reelLinks.length).padStart(2, "0")}
+        </span>
+        <button
+          type="button"
+          onClick={() => onSelectReel(Math.min(reelLinks.length - 1, activeReelIndex + 1))}
+          disabled={activeReelIndex === reelLinks.length - 1}
+          aria-label="下一支"
+          className="text-ink-faint transition-colors hover:text-ink disabled:opacity-20"
+        >
+          <CaretRight size={18} weight="bold" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 interface ActiveEmbed {
   src: string;
@@ -39,8 +190,8 @@ function PlayOverlay() {
  *   never goes fullscreen. Instagram's own embed widget has a fixed,
  *   usually-vertical natural size that a wide fullscreen box can't match
  *   (it just leaves empty space on the sides), so instead the stage shows
- *   the active reel inline, in a vertical-shaped frame close to its real
- *   proportions; the right-side reel list swaps which one plays here.
+ *   a 3D fan of reel cards (see ReelCarousel below) -- clicking a side
+ *   card, the arrow buttons, or the arrow keys swap which one plays.
  * Either way, switching the *work* itself still rotates the whole frame
  * around the Y axis (a real 3D turn) -- the "cards winding past each
  * other" feel.
@@ -49,6 +200,7 @@ function HelixStage({
   work,
   reelLinks,
   activeReelIndex,
+  onSelectReel,
   embed,
   onOpenPrimary,
   onClose,
@@ -56,6 +208,7 @@ function HelixStage({
   work: VideoWork;
   reelLinks: ReelLink[];
   activeReelIndex: number;
+  onSelectReel: (i: number) => void;
   embed: ActiveEmbed | null;
   onOpenPrimary: () => void;
   onClose: () => void;
@@ -75,97 +228,55 @@ function HelixStage({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [expanded, onClose]);
 
-  if (hasReelLinks) {
-    const activeReel = reelLinks[activeReelIndex] ?? reelLinks[0];
-    const embedSrc = resolveEmbedUrl(activeReel.url);
-
-    return (
-      <div className="flex justify-center md:justify-start">
-        <div
-          className="relative aspect-[9/16] w-full max-w-[340px] overflow-hidden bg-ink"
-          style={{ perspective: "1800px" }}
-        >
-          <AnimatePresence mode="popLayout">
-            <motion.div
-              key={`${work.id}-${activeReel.id}`}
-              className="absolute inset-0"
-              style={{ transformStyle: "preserve-3d" }}
-              initial={{ opacity: 0, rotateY: 75, x: 60, scale: 0.9 }}
-              animate={{ opacity: 1, rotateY: 0, x: 0, scale: 1 }}
-              exit={{ opacity: 0, rotateY: -75, x: -60, scale: 0.9 }}
-              transition={SPRING_3D}
-            >
-              {embedSrc ? (
-                <iframe
-                  src={embedSrc}
-                  title={activeReel.label}
-                  className="h-full w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              ) : (
-                <a
-                  href={activeReel.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-full w-full flex-col items-center justify-center gap-2 bg-ink-faint/20 px-4 text-center text-sm text-ink-muted"
-                >
-                  {activeReel.label}
-                  <span className="inline-flex items-center gap-1 text-xs text-ink">
-                    開新分頁觀看
-                    <ArrowUpRight size={12} weight="light" />
-                  </span>
-                </a>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
-      <div
-        className="relative aspect-[4/3] w-full md:aspect-[16/10]"
-        style={{ perspective: "1800px" }}
-      >
+      <div className="relative w-full" style={{ perspective: "1800px" }}>
         <AnimatePresence mode="popLayout">
           <motion.div
             key={work.id}
-            className="absolute inset-0"
             style={{ transformStyle: "preserve-3d" }}
             initial={{ opacity: 0, rotateY: 75, x: 90, scale: 0.86 }}
             animate={{ opacity: 1, rotateY: 0, x: 0, scale: 1 }}
             exit={{ opacity: 0, rotateY: -75, x: -90, scale: 0.86 }}
             transition={SPRING_3D}
           >
-            {!expanded && (
-              <motion.button
-                type="button"
-                layoutId={layoutId}
-                onClick={onOpenPrimary}
-                className="group block h-full w-full cursor-pointer overflow-hidden bg-ink"
-                aria-label={`放大播放${work.title}`}
-              >
-                {thumbnailUrl ? (
-                  <ThumbnailImage
-                    src={thumbnailUrl}
-                    fallbackSrc={thumbnailFallbackUrl}
-                    alt={`${work.title} 縮圖`}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="h-full w-full bg-ink-faint/20" aria-hidden />
+            {hasReelLinks ? (
+              <ReelCarousel
+                reelLinks={reelLinks}
+                activeReelIndex={activeReelIndex}
+                onSelectReel={onSelectReel}
+              />
+            ) : (
+              <div className="relative aspect-[4/3] w-full md:aspect-[16/10]">
+                {!expanded && (
+                  <motion.button
+                    type="button"
+                    layoutId={layoutId}
+                    onClick={onOpenPrimary}
+                    className="group block h-full w-full cursor-pointer overflow-hidden bg-ink"
+                    aria-label={`放大播放${work.title}`}
+                  >
+                    {thumbnailUrl ? (
+                      <ThumbnailImage
+                        src={thumbnailUrl}
+                        fallbackSrc={thumbnailFallbackUrl}
+                        alt={`${work.title} 縮圖`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-ink-faint/20" aria-hidden />
+                    )}
+                    <PlayOverlay />
+                  </motion.button>
                 )}
-                <PlayOverlay />
-              </motion.button>
+              </div>
             )}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {typeof document !== "undefined" &&
+      {!hasReelLinks &&
+        typeof document !== "undefined" &&
         createPortal(
           <AnimatePresence>
             {embed && (
@@ -215,9 +326,8 @@ function HelixStage({
  * Homepage "影片製作" gallery — every video_work (single pieces and
  * multi-link columns like 教學性質短影片 / 生活記事 Vlog alike) in one
  * numbered list that switches the active work on the stage, with a
- * detail readout alongside. A multi-link work's reel_links render as a
- * switcher list of their own: clicking one swaps which reel plays inline
- * on the stage (see HelixStage above).
+ * detail readout alongside. A multi-link work's reel_links render as the
+ * ReelCarousel fan (see HelixStage above) instead of a text list.
  */
 export function VideoGallery({
   works,
@@ -295,6 +405,7 @@ export function VideoGallery({
               work={active}
               reelLinks={activeReelLinks}
               activeReelIndex={activeReelIndex}
+              onSelectReel={setActiveReelIndex}
               embed={embed}
               onOpenPrimary={handleOpenPrimary}
               onClose={() => setEmbed(null)}
@@ -346,30 +457,6 @@ export function VideoGallery({
                         <li key={item} className="flex gap-2 text-sm leading-relaxed text-ink-muted">
                           <span className="mt-2 size-1 shrink-0 rounded-full bg-accent" aria-hidden />
                           {item}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {activeReelLinks.length > 0 && (
-                    <ul className="mt-5 space-y-2 border-t border-line pt-4">
-                      {activeReelLinks.map((link, i) => (
-                        <li key={link.id}>
-                          <button
-                            type="button"
-                            onClick={() => setActiveReelIndex(i)}
-                            aria-current={i === activeReelIndex}
-                            className={`group inline-flex items-center gap-1.5 text-sm transition-colors hover:text-accent ${
-                              i === activeReelIndex ? "text-accent" : "text-ink-muted"
-                            }`}
-                          >
-                            <Play
-                              size={11}
-                              weight="fill"
-                              className={`shrink-0 ${i === activeReelIndex ? "" : "opacity-50"}`}
-                            />
-                            {link.label}
-                          </button>
                         </li>
                       ))}
                     </ul>
