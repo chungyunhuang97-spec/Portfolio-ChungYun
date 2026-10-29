@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { StatusBadge } from "@/components/admin/StatusBadge";
-import type { Project, ProjectStatus, SiteContent } from "@/lib/types";
+import type { Project, ProjectStatus, SiteContent, VideoSectionSettings } from "@/lib/types";
 
 const STATUS_FILTERS: (ProjectStatus | "all")[] = ["all", "published", "draft", "archived"];
 
@@ -26,9 +26,13 @@ function ListRow({ href, title, status }: { href: string; title: string; status?
 export function AdminDashboardOverview({
   projects,
   siteContent,
+  videoSectionSettings,
+  videoWorkCount,
 }: {
   projects: Project[];
   siteContent: SiteContent[];
+  videoSectionSettings?: VideoSectionSettings | null;
+  videoWorkCount?: number;
 }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all");
@@ -133,6 +137,36 @@ export function AdminDashboardOverview({
                 status={project.status}
               />
             ))}
+          </div>
+        </section>
+      )}
+
+      {videoSectionSettings !== undefined && q === "" && statusFilter === "all" && (
+        <section className="mt-10">
+          <h2 className="text-xs font-semibold tracking-[0.15em] text-admin-text-faint">VIDEO SECTION</h2>
+          <div className="mt-3 overflow-hidden rounded-lg border border-admin-border bg-admin-surface">
+            <Link
+              href="/admin/video-section"
+              className="flex items-center justify-between gap-3 px-4 py-3.5 transition-colors hover:bg-admin-surface-hover"
+            >
+              <span className="text-sm text-admin-text">
+                影片製作
+                <span className="ml-2 text-xs text-admin-text-faint">{videoWorkCount ?? 0} 個作品</span>
+              </span>
+              <div className="flex shrink-0 items-center gap-3">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium tracking-[0.1em] ${
+                    videoSectionSettings?.is_visible
+                      ? "bg-admin-success-soft text-admin-success"
+                      : "bg-admin-border text-admin-text-faint"
+                  }`}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                  {videoSectionSettings?.is_visible ? "顯示中" : "已隱藏"}
+                </span>
+                <span className="text-xs text-admin-text-faint">Edit →</span>
+              </div>
+            </Link>
           </div>
         </section>
       )}

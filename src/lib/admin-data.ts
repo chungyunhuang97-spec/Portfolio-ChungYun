@@ -1,5 +1,12 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Project, ProjectSection, SiteContent } from "@/lib/types";
+import type {
+  Project,
+  ProjectSection,
+  ReelLink,
+  SiteContent,
+  VideoSectionSettings,
+  VideoWork,
+} from "@/lib/types";
 
 export async function getAllProjectsAdmin(): Promise<Project[]> {
   const supabase = await createSupabaseServerClient();
@@ -53,4 +60,61 @@ export async function getAllSiteContentAdmin(): Promise<SiteContent[]> {
     return [];
   }
   return (data ?? []) as SiteContent[];
+}
+
+export async function getVideoSectionSettingsAdmin(): Promise<VideoSectionSettings | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("video_section_settings")
+    .select("*")
+    .maybeSingle<VideoSectionSettings>();
+
+  if (error) {
+    console.error("Admin: failed to load video section settings:", error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function getAllVideoWorksAdmin(): Promise<VideoWork[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("video_works")
+    .select("*")
+    .order("type", { ascending: true })
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Admin: failed to load video works:", error.message);
+    return [];
+  }
+  return (data ?? []) as VideoWork[];
+}
+
+export async function getVideoWorkWithReelLinksAdmin(
+  id: string
+): Promise<{ work: VideoWork; reelLinks: ReelLink[] } | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data: work, error: workError } = await supabase
+    .from("video_works")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle<VideoWork>();
+
+  if (workError || !work) {
+    return null;
+  }
+
+  const { data: reelLinks, error: reelLinksError } = await supabase
+    .from("reel_links")
+    .select("*")
+    .eq("video_work_id", id)
+    .order("sort_order", { ascending: true });
+
+  if (reelLinksError) {
+    console.error("Admin: failed to load reel links:", reelLinksError.message);
+    return { work, reelLinks: [] };
+  }
+
+  return { work, reelLinks: (reelLinks ?? []) as ReelLink[] };
 }
