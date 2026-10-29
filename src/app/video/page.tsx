@@ -5,7 +5,7 @@ import { resolveFallbackThumbnailUrl, resolveThumbnailUrl } from "@/lib/video";
 import { Navbar } from "@/components/design-system/Navbar";
 import { VideoHero } from "@/components/video-section/VideoHero";
 import { FeaturedWorkRow } from "@/components/video-section/FeaturedWorkRow";
-import { MoreWorkCard } from "@/components/video-section/MoreWorkCard";
+import { MoreWorksSection } from "@/components/video-section/MoreWorksSection";
 import { FadeIn } from "@/components/FadeIn";
 
 export const revalidate = 60;
@@ -69,22 +69,7 @@ export default async function VideoPage() {
           </section>
         )}
 
-        {more.length > 0 && (
-          <section aria-label="更多作品" className="border-t border-line">
-            <div className="mx-auto max-w-[1400px] px-6 py-16 md:px-10 md:py-24">
-              <FadeIn>
-                <h2 className="text-2xl md:text-3xl">更多作品</h2>
-              </FadeIn>
-              <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
-                {more.map((work, i) => (
-                  <FadeIn key={work.id} delay={0.1 + i * 0.1}>
-                    <MoreWorkCard work={work} reelLinks={reelLinksByWorkId[work.id] ?? []} />
-                  </FadeIn>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+        <MoreWorksSection more={more} reelLinksByWorkId={reelLinksByWorkId} />
 
         <footer className="border-t border-line">
           <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-6 py-10 text-sm text-ink-faint md:flex-row md:items-center md:justify-between md:px-10">
