@@ -5,6 +5,7 @@ import { getAllSiteContentAdmin } from "@/lib/admin-data";
 import { updateSiteContent } from "@/lib/admin-actions";
 import { ContentEditor } from "@/components/admin/ContentEditor";
 import { LEGACY_SITE_CONTENT } from "@/lib/about-video";
+import { SITE_CONTENT_INFO, siteContentLabel } from "@/lib/admin-field-guide";
 import { ChangesProvider } from "@/components/admin/ChangesContext";
 import { GlobalSaveBar } from "@/components/admin/GlobalSaveBar";
 
@@ -40,12 +41,15 @@ export default async function SiteContentEditPage({ params }: PageProps) {
             ADMIN
           </Link>
           <CaretRight size={10} weight="bold" />
-          <span className="truncate text-admin-text">{item.key}</span>
+          <span className="truncate text-admin-text">{siteContentLabel(item.key)}</span>
         </nav>
 
         <GlobalSaveBar />
 
-        <h1 className="mt-4 text-2xl font-semibold text-admin-text">{item.key}</h1>
+        <h1 className="mt-4 text-2xl font-semibold text-admin-text">{siteContentLabel(item.key)}</h1>
+        {SITE_CONTENT_INFO[item.key] && (
+          <p className="mt-1 text-sm text-admin-text-muted">{SITE_CONTENT_INFO[item.key].description}</p>
+        )}
 
         {legacy && (
           <p className="mt-4 max-w-2xl rounded-md border border-admin-warning bg-admin-warning-soft px-4 py-3 text-sm text-admin-warning">

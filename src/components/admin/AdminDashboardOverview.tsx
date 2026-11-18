@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ProjectReorderList } from "@/components/admin/ProjectReorderList";
 import type { Project, ProjectStatus, SiteContent, VideoSectionSettings } from "@/lib/types";
 import { LEGACY_SITE_CONTENT } from "@/lib/about-video";
+import { siteContentLabel } from "@/lib/admin-field-guide";
 
 const STATUS_FILTERS: (ProjectStatus | "all")[] = ["all", "published", "draft", "archived"];
 
@@ -43,7 +44,7 @@ export function AdminDashboardOverview({
   const filteredSiteContent = useMemo(
     () =>
       siteContent.filter(
-        (item) => !LEGACY_SITE_CONTENT[item.key] && item.key.toLowerCase().includes(q)
+        (item) => !LEGACY_SITE_CONTENT[item.key] && (item.key.toLowerCase().includes(q) || siteContentLabel(item.key).includes(q))
       ),
     [siteContent, q]
   );
@@ -116,7 +117,7 @@ export function AdminDashboardOverview({
             <p className="px-4 py-6 text-sm text-admin-text-faint">沒有符合的內容</p>
           )}
           {filteredSiteContent.map((item) => (
-            <ListRow key={item.key} href={`/admin/site-content/${item.key}`} title={item.key} />
+            <ListRow key={item.key} href={`/admin/site-content/${item.key}`} title={siteContentLabel(item.key)} />
           ))}
         </div>
       </section>

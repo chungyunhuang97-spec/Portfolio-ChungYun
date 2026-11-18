@@ -9,6 +9,7 @@ import { AddSectionForm } from "@/components/admin/AddSectionForm";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ChangesProvider } from "@/components/admin/ChangesContext";
 import { GlobalSaveBar } from "@/components/admin/GlobalSaveBar";
+import { ProjectPreviewShell } from "@/components/admin/ProjectPreviewShell";
 import type { SectionType } from "@/lib/types";
 
 interface PageProps {
@@ -62,6 +63,7 @@ export default async function ProjectEditPage({ params }: PageProps) {
 
   return (
     <ChangesProvider>
+      <ProjectPreviewShell slug={project.slug}>
       <div>
         <nav className="flex items-center gap-1.5 text-xs text-admin-text-faint">
           <Link
@@ -133,6 +135,7 @@ export default async function ProjectEditPage({ params }: PageProps) {
           </div>
         </div>
       </div>
+      </ProjectPreviewShell>
     </ChangesProvider>
   );
 }

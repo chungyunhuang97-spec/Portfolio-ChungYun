@@ -514,6 +514,8 @@ const COMMON: Record<string, FieldLabel> = {
   auth: { label: "登入方式" },
   color: { label: "代表色" },
   id: { label: "識別碼（勿改）", hint: "程式用來對應畫面，修改會讓畫面對不上" },
+  decor_cell_link: { label: "裝飾格連結", hint: "例如 /#about" },
+  decor_cell_label: { label: "裝飾格文字" },
   tech_stack: { label: "技術棧" },
   narrative: { label: "一句話敘事" },
   admin_highlights: { label: "後台亮點（條列）" },
@@ -752,4 +754,22 @@ export function sectionLabel(sectionType: string): string {
 export function frontPageUrl(slug: string, sectionType?: string): string {
   const anchor = sectionType === "hero" ? "#hero" : sectionType === "reflection" ? "#closing" : "";
   return `/work/${slug}${anchor}`;
+}
+
+// ---------------------------------------------------------------------------
+// Site-content entries (the non-project pieces of the homepage)
+// ---------------------------------------------------------------------------
+
+export interface SiteContentInfo {
+  label: string;
+  description: string;
+}
+
+export const SITE_CONTENT_INFO: Record<string, SiteContentInfo> = {
+  hero_tagline: { label: "首頁 Hero 標語", description: "首頁最上方、姓名下方的一段自我定位文字" },
+  project_grid_settings: { label: "首頁作品卡片區設定", description: "作品 Bento 卡片區的裝飾格與動態效果設定" },
+};
+
+export function siteContentLabel(key: string): string {
+  return SITE_CONTENT_INFO[key]?.label ?? key;
 }
