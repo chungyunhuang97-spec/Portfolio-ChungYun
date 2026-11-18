@@ -1,5 +1,6 @@
 "use client";
 
+import { useAdminFeedback } from "@/components/admin/AdminFeedback";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash } from "@phosphor-icons/react";
@@ -54,6 +55,7 @@ export function NewCategoryForm() {
 
 export function VideoCategoryForm({ category }: { category: VideoCategory }) {
   const router = useRouter();
+  const { confirm } = useAdminFeedback();
   const [fields, setFields] = useState<VideoCategoryFields>({
     title: category.title,
     subtitle: category.subtitle,
@@ -87,7 +89,7 @@ export function VideoCategoryForm({ category }: { category: VideoCategory }) {
   }
 
   async function handleDelete() {
-    if (!window.confirm(`確定要刪除「${category.title}」？分類底下的所有影片也會一起刪除。`)) return;
+    if (!(await confirm({ title: `刪除「${category.title}」？`, message: "分類底下的所有影片也會一起刪除，無法復原。", confirmLabel: "刪除", danger: true }))) return;
     const result = await deleteVideoCategory(category.id);
     if (!result.success) return setError(result.error);
     router.push("/admin/videos");

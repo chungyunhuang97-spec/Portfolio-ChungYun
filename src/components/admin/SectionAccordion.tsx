@@ -7,6 +7,7 @@ import { ContentEditor } from "@/components/admin/ContentEditor";
 import { DeleteSectionButton } from "@/components/admin/DeleteSectionButton";
 import { CompletionBadge } from "@/components/admin/StatusBadge";
 import { useChangesContext } from "@/components/admin/ChangesContext";
+import { VersionHistory } from "@/components/admin/VersionHistory";
 import type { ProjectSection } from "@/lib/types";
 import { resolveFieldLabel, sectionLabel, SECTION_INFO } from "@/lib/admin-field-guide";
 
@@ -40,7 +41,16 @@ export function SectionAccordion({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const { filled, total, missing } = computeCompletion(section.content, mediaPathPrefix);
+  // Remounts the editor with restored content after a version restore.
+  const [editorState, setEditorState] = useState({ content: section.content, nonce: 0 });
+  // Keeps `editorState.content` equal to "what is saved", so the version
+  // diff and the missing-field list follow every successful save.
+  async function saveAndTrack(content: Record<string, unknown>) {
+    const result = await onSave(content);
+    if (result.success) setEditorState((prev) => ({ ...prev, content }));
+    return result;
+  }
+  const { filled, total, missing } = computeCompletion(editorState.content, mediaPathPrefix);
   const changes = useChangesContext();
   const isDirty = changes?.dirtyEntries.some((e) => e.id === `section-${section.id}`) ?? false;
 
@@ -104,14 +114,25 @@ export function SectionAccordion({
                 </div>
               )}
               <ContentEditor
-                initialContent={section.content}
-                onSave={onSave}
+                key={editorState.nonce}
+                initialContent={editorState.content}
+                onSave={saveAndTrack}
                 mediaPathPrefix={mediaPathPrefix}
                 trackingId={`section-${section.id}`}
                 trackingLabel={sectionLabel(section.section_type)}
               />
               <div className="mt-6 border-t border-admin-border pt-4">
-                <DeleteSectionButton sectionId={section.id} onDelete={onDelete} />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <VersionHistory
+                    entity="project_section"
+                    entityKey={section.id}
+                    pathPrefix={mediaPathPrefix}
+                    currentContent={editorState.content}
+                    onSave={saveAndTrack}
+                    onRestored={(content) => setEditorState((prev) => ({ content, nonce: prev.nonce + 1 }))}
+                  />
+                  <DeleteSectionButton sectionId={section.id} sectionName={sectionLabel(section.section_type)} onDelete={onDelete} />
+                </div>
               </div>
             </div>
           </motion.div>

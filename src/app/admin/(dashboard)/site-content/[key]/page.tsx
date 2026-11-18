@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { getAllSiteContentAdmin } from "@/lib/admin-data";
 import { updateSiteContent } from "@/lib/admin-actions";
-import { ContentEditor } from "@/components/admin/ContentEditor";
+import { SiteContentEditor } from "@/components/admin/SiteContentEditor";
 import { LEGACY_SITE_CONTENT } from "@/lib/about-video";
 import { SITE_CONTENT_INFO, siteContentLabel } from "@/lib/admin-field-guide";
 import { ChangesProvider } from "@/components/admin/ChangesContext";
@@ -62,12 +62,7 @@ export default async function SiteContentEditPage({ params }: PageProps) {
         )}
 
         <div className="mt-8 max-w-2xl rounded-lg border border-admin-border bg-admin-surface p-5">
-          <ContentEditor
-            initialContent={item.content}
-            onSave={save}
-            trackingId={`site-content-${item.key}`}
-            trackingLabel={item.key}
-          />
+          <SiteContentEditor contentKey={item.key} initialContent={item.content} onSave={save} />
         </div>
       </div>
     </ChangesProvider>

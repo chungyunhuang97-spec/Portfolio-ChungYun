@@ -3,6 +3,7 @@
 import { useCallback, useId, useRef, useState } from "react";
 import { ArrowSquareOut, ArrowsClockwise, CloudArrowUp, Info, Trash, X } from "@phosphor-icons/react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { compressImage } from "@/lib/compress-image";
 import {
   HARD_MAX_IMAGE_BYTES,
   HARD_MAX_VIDEO_BYTES,
@@ -219,8 +220,9 @@ export function AdminMediaDropzone({
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
   const [dims, setDims] = useState<string | null>(null);
+  const [compressing, setCompressing] = useState(false);
   const url = value ?? "";
-  const uploading = progress !== null;
+  const uploading = progress !== null || compressing;
   const acceptAttr = accept ?? (guide ? acceptFromGuide(guide) : "image/*,video/*");
 
   const handleFile = useCallback(
@@ -234,7 +236,17 @@ export function AdminMediaDropzone({
         if (inputRef.current) inputRef.current.value = "";
         return;
       }
+      // Re-encode large JPG/PNG as WebP (and cap the long edge) before
+      // measuring and uploading -- the size/ratio advice below then reflects
+      // what will actually be stored.
+      setCompressing(true);
+      const result = await compressImage(file);
+      setCompressing(false);
+      file = result.file;
       const advice = await softWarnings(file, guide, warnIfOverBytes);
+      if (result.compressed) {
+        advice.unshift(`已自動壓縮：${formatBytes(result.originalBytes)} → ${formatBytes(file.size)}（WebP）`);
+      }
       if (advice.length > 0) setWarnings(advice);
       setProgress(0);
       try {
@@ -292,9 +304,9 @@ export function AdminMediaDropzone({
             {uploading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/55 px-2">
                 <div className="h-1 w-full overflow-hidden rounded-full bg-white/30">
-                  <div className="h-full rounded-full bg-white" style={{ width: `${progress}%` }} />
+                  <div className="h-full rounded-full bg-white" style={{ width: `${progress ?? 0}%` }} />
                 </div>
-                <span className="text-[10px] text-white">{progress}%</span>
+                <span className="text-[10px] text-white">{compressing ? "壓縮中" : `${progress ?? 0}%`}</span>
               </div>
             )}
           </div>
@@ -355,10 +367,10 @@ export function AdminMediaDropzone({
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-admin-border">
                 <div
                   className="h-full rounded-full bg-admin-accent transition-[width] duration-150"
-                  style={{ width: `${progress}%` }}
+                  style={{ width: `${progress ?? 0}%` }}
                 />
               </div>
-              <p className="text-[11px] text-admin-text-muted">上傳中… {progress}%</p>
+              <p className="text-[11px] text-admin-text-muted">{compressing ? "壓縮中…" : `上傳中… ${progress}%`}</p>
             </div>
           ) : (
             <>

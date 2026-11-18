@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { snapshotBeforeSave } from "@/lib/content-versions";
 import type {
   BadgeStatus,
   CardSize,
@@ -66,6 +67,18 @@ export async function upsertSection(
   displayOrder: number
 ) {
   const supabase = await createSupabaseServerClient();
+
+  // Keep the content we're about to overwrite so it can be restored.
+  const { data: existing } = await supabase
+    .from("project_sections")
+    .select("id, content")
+    .eq("project_id", projectId)
+    .eq("section_type", sectionType)
+    .maybeSingle();
+  if (existing) {
+    await snapshotBeforeSave("project_section", existing.id, `${slug} / ${sectionType}`, existing.content);
+  }
+
   const { error } = await supabase.from("project_sections").upsert(
     {
       project_id: projectId,
@@ -121,6 +134,8 @@ export async function reorderProjects(updates: { id: string; display_order: numb
 
 export async function updateSiteContent(key: string, content: Record<string, unknown>) {
   const supabase = await createSupabaseServerClient();
+  const { data: existing } = await supabase.from("site_content").select("content").eq("key", key).maybeSingle();
+  await snapshotBeforeSave("site_content", key, key, existing?.content);
   const { error } = await supabase.from("site_content").update({ content }).eq("key", key);
 
   if (error) {

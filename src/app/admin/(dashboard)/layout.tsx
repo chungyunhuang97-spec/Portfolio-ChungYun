@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/admin/SignOutButton";
 import { AdminSidebar, AdminSidebarProvider, AdminMenuButton } from "@/components/admin/AdminSidebar";
+import { AdminFeedbackProvider } from "@/components/admin/AdminFeedback";
 import { getAllProjectsAdmin, getAllSiteContentAdmin } from "@/lib/admin-data";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -18,6 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const [projects, siteContent] = await Promise.all([getAllProjectsAdmin(), getAllSiteContentAdmin()]);
 
   return (
+    <AdminFeedbackProvider>
     <AdminSidebarProvider>
       <div className="admin-shell min-h-[100dvh] bg-admin-bg text-admin-text">
         <AdminSidebar projects={projects} siteContent={siteContent} />
@@ -42,5 +44,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </div>
     </AdminSidebarProvider>
+    </AdminFeedbackProvider>
   );
 }

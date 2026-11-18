@@ -1,5 +1,6 @@
 "use client";
 
+import { useAdminFeedback } from "@/components/admin/AdminFeedback";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash } from "@phosphor-icons/react";
@@ -66,6 +67,7 @@ function fieldsFromVideo(v: Video): VideoFields {
 
 export function VideoEditor({ video, category }: { video: Video; category: VideoCategory }) {
   const router = useRouter();
+  const { confirm } = useAdminFeedback();
   const [fields, setFields] = useState<VideoFields>(() => fieldsFromVideo(video));
   const [rolesText, setRolesText] = useState(video.roles.join(", "));
   const [status, setStatus] = useState<SaveStatus>("idle");
@@ -138,7 +140,7 @@ export function VideoEditor({ video, category }: { video: Video; category: Video
   }
 
   async function handleDelete() {
-    if (!window.confirm(`確定要刪除「${video.title}」？`)) return;
+    if (!(await confirm({ title: `刪除「${video.title}」？`, message: "刪除後無法復原。", confirmLabel: "刪除", danger: true }))) return;
     const result = await deleteVideo(video.id, category.id);
     if (!result.success) return setSaveError(result.error);
     router.push(`/admin/videos/categories/${category.id}`);

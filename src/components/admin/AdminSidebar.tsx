@@ -122,6 +122,12 @@ export function AdminSidebar({ projects, siteContent }: { projects: Project[]; s
         </div>
       </div>
 
+      <div className="flex flex-col gap-0.5">
+        <NavLink href="/admin/media" isActive={isActive("/admin/media")} onNavigate={close}>
+          媒體庫
+        </NavLink>
+      </div>
+
       <div>
         <Heading>作品集 · 案例研究</Heading>
         <div className="mt-2 flex flex-col gap-0.5">

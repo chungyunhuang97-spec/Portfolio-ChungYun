@@ -5,6 +5,7 @@ import { Plus, Trash, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { AdminMediaDropzone } from "@/components/admin/AdminMediaDropzone";
 import { useTrackChanges } from "@/components/admin/ChangesContext";
 import { useAdminDevMode } from "@/components/admin/useAdminDevMode";
+import { useAdminFeedback } from "@/components/admin/AdminFeedback";
 import { resolveFieldLabel, resolveMediaGuide } from "@/lib/admin-field-guide";
 
 type FieldType = "text" | "structured" | "media" | "raw";
@@ -665,6 +666,7 @@ export function ContentEditor({
   const [newFieldType, setNewFieldType] = useState<FieldType>("text");
   const [baseline, setBaseline] = useState<Record<string, unknown>>(initialContent);
   const [devMode, setDevMode] = useAdminDevMode();
+  const { toast } = useAdminFeedback();
 
   function updateField(index: number, value: unknown) {
     setFields((prev) => prev.map((f, i) => (i === index ? { ...f, value } : f)));
@@ -692,6 +694,7 @@ export function ContentEditor({
       } catch {
         setStatus("error");
         setErrorMessage("Raw JSON is invalid — fix it before saving.");
+        toast(`「${trackingLabel ?? saveLabel}」儲存失敗：Raw JSON 格式錯誤`, "error");
         return;
       }
     } else {
@@ -702,10 +705,12 @@ export function ContentEditor({
     if (result.success) {
       setBaseline(content);
       setStatus("saved");
+      toast(`已儲存「${trackingLabel ?? saveLabel}」`, "success");
       setTimeout(() => setStatus("idle"), 2000);
     } else {
       setStatus("error");
       setErrorMessage(result.error ?? "Unknown error");
+      toast(`「${trackingLabel ?? saveLabel}」儲存失敗：${result.error ?? "未知錯誤"}`, "error");
     }
   }
 
