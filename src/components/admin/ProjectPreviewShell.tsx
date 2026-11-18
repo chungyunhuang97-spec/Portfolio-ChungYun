@@ -1,10 +1,34 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowClockwise, ArrowSquareOut, DeviceMobile, Desktop, Eye, X } from "@phosphor-icons/react";
 import { useChangesContext } from "@/components/admin/ChangesContext";
 
 type Device = "desktop" | "mobile";
+
+const PreviewContext = createContext<{ open: boolean; setOpen: (v: boolean) => void } | null>(null);
+
+/** Header button that toggles the preview pane (must sit inside the shell). */
+export function PreviewToggleButton() {
+  const ctx = useContext(PreviewContext);
+  if (!ctx) return null;
+  const { open, setOpen } = ctx;
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(!open)}
+      aria-pressed={open}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-4 py-2 text-xs font-medium tracking-wide transition-colors ${
+        open
+          ? "border-admin-accent bg-admin-accent-soft text-admin-accent"
+          : "border-admin-border text-admin-text-muted hover:border-admin-accent hover:text-admin-accent"
+      }`}
+    >
+      <Eye size={14} weight="bold" />
+      {open ? "關閉預覽" : "預覽"}
+    </button>
+  );
+}
 
 /**
  * Wraps a project's edit page with a live preview of its public page.
@@ -47,23 +71,9 @@ export function ProjectPreviewShell({ slug, children }: { slug: string; children
   const src = `/work/${slug}`;
 
   return (
+    <PreviewContext.Provider value={{ open, setOpen }}>
     <div className={open ? "xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(400px,46%)] xl:items-start xl:gap-8" : ""}>
       <div className="min-w-0">
-        <div className="mb-2 flex justify-end">
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-pressed={open}
-            className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium tracking-wide transition-colors ${
-              open
-                ? "border-admin-accent bg-admin-accent-soft text-admin-accent"
-                : "border-admin-border text-admin-text-muted hover:border-admin-accent hover:text-admin-accent"
-            }`}
-          >
-            <Eye size={14} weight="bold" />
-            {open ? "關閉預覽" : "開啟預覽"}
-          </button>
-        </div>
         {children}
       </div>
 
@@ -135,5 +145,6 @@ export function ProjectPreviewShell({ slug, children }: { slug: string; children
         </aside>
       )}
     </div>
+    </PreviewContext.Provider>
   );
 }

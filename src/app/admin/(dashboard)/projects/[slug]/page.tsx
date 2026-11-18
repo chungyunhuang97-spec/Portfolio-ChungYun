@@ -9,7 +9,7 @@ import { AddSectionForm } from "@/components/admin/AddSectionForm";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ChangesProvider } from "@/components/admin/ChangesContext";
 import { GlobalSaveBar } from "@/components/admin/GlobalSaveBar";
-import { ProjectPreviewShell } from "@/components/admin/ProjectPreviewShell";
+import { ProjectPreviewShell, PreviewToggleButton } from "@/components/admin/ProjectPreviewShell";
 import type { SectionType } from "@/lib/types";
 
 interface PageProps {
@@ -65,7 +65,7 @@ export default async function ProjectEditPage({ params }: PageProps) {
     <ChangesProvider>
       <ProjectPreviewShell slug={project.slug}>
       <div>
-        <nav className="flex items-center gap-1.5 text-xs text-admin-text-faint">
+        <nav className="mb-4 flex items-center gap-1.5 text-xs text-admin-text-faint">
           <Link
             href="/admin"
             className="inline-flex items-center gap-1.5 transition-colors hover:text-admin-text"
@@ -87,26 +87,39 @@ export default async function ProjectEditPage({ params }: PageProps) {
             </div>
             <p className="mt-1 font-mono text-xs text-admin-text-faint">/work/{project.slug}</p>
           </div>
-          <a
-            href={`/work/${project.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-md border border-admin-border px-4 py-2 text-xs font-medium tracking-wide text-admin-text-muted transition-colors hover:border-admin-accent hover:text-admin-accent"
-          >
-            查看前台頁面
-            <ArrowSquareOut size={14} weight="bold" />
-          </a>
+          <div className="flex items-center gap-2">
+            <PreviewToggleButton />
+            <a
+              href={`/work/${project.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-md border border-admin-border px-4 py-2 text-xs font-medium tracking-wide text-admin-text-muted transition-colors hover:border-admin-accent hover:text-admin-accent"
+            >
+              查看前台頁面
+              <ArrowSquareOut size={14} weight="bold" />
+            </a>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+          <span className="text-admin-text-faint">快速跳到：</span>
+          <a href="#group-basic" className="text-admin-accent hover:underline">基本資訊</a>
+          <a href="#group-publish" className="text-admin-accent hover:underline">發佈設定</a>
+          <a href="#group-cover" className="text-admin-accent hover:underline">首頁卡片</a>
+          <a href="#page-sections" className="text-admin-accent hover:underline">頁面內容區塊（{sections.length}）</a>
         </div>
 
         <div className="mt-10 max-w-3xl">
-          <h2 className="text-xs font-semibold tracking-[0.15em] text-admin-text-faint">DETAILS</h2>
-          <div className="mt-4 rounded-lg border border-admin-border bg-admin-surface p-5">
+          <h2 className="text-base font-semibold text-admin-text">專案資訊</h2>
+          <p className="mt-1 text-sm text-admin-text-muted">標題、發佈狀態與首頁卡片的外觀。點開各分組編輯。</p>
+          <div className="mt-4">
             <ProjectMetaForm project={project} onSave={saveMeta} siblingProjects={siblingProjects} />
           </div>
         </div>
 
-        <div className="mt-10 max-w-3xl">
-          <h2 className="text-xs font-semibold tracking-[0.15em] text-admin-text-faint">SECTIONS</h2>
+        <div id="page-sections" className="mt-12 max-w-3xl scroll-mt-32">
+          <h2 className="text-base font-semibold text-admin-text">頁面內容區塊</h2>
+          <p className="mt-1 text-sm text-admin-text-muted">專案頁由這些區塊組成，點開區塊編輯文字與圖片。</p>
           <div className="mt-4 space-y-3">
             {sections.map((section) => {
               async function save(content: Record<string, unknown>) {
