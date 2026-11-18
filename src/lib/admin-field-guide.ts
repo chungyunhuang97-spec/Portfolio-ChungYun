@@ -696,6 +696,13 @@ export function resolveFieldLabel(pathPrefix: string | undefined, key: string): 
     return { label: `${group}｜${panel}（${metro[3] === "Desktop" ? "桌機版" : "手機版"}畫面）` };
   }
 
+  // Nest Stay's per-step phone screens: uiFlow<Step>MobileMediaUrl
+  const flow = /^uiFlow(Search|Browse|Detail|Join|Apply|Complete)MobileMediaUrl$/.exec(key);
+  if (slug === "nest-stay" && flow) {
+    const step = { Search: "搜尋", Browse: "瀏覽", Detail: "詳情", Join: "加入", Apply: "申請", Complete: "完成" }[flow[1]];
+    return { label: `UI 流程｜${step}（手機版畫面）` };
+  }
+
   // Generic mobile/desktop variants of an otherwise-known key:
   // "fooMobile" -> "<foo>（手機版）".
   const variant = /^(.+?)(Mobile|Desktop)$/.exec(key);

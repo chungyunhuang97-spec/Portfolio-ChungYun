@@ -3,6 +3,7 @@
 import { useCallback, useId, useRef, useState } from "react";
 import { ArrowSquareOut, ArrowsClockwise, CloudArrowUp, Info, Trash, X } from "@phosphor-icons/react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { AnimatePresence, motion } from "framer-motion";
 import { compressImage } from "@/lib/compress-image";
 import {
   HARD_MAX_IMAGE_BYTES,
@@ -353,7 +354,7 @@ export function AdminMediaDropzone({
             handleFile(e.dataTransfer.files?.[0]);
           }}
           className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 text-center transition-colors focus-within:border-admin-accent ${
-            compact ? "py-4" : "py-6"
+            compact ? "py-3" : "py-4"
           } ${
             uploading
               ? "cursor-not-allowed border-admin-border bg-admin-surface-hover"
@@ -417,34 +418,84 @@ export function AdminMediaDropzone({
   );
 }
 
-/** Compact "what goes here" card shown above every guided upload slot. */
+/**
+ * One-line "what goes here" header above every guided upload slot. The
+ * detailed spec (where it shows, ratio, size, format) stays folded away
+ * behind the 規格 button so a long section doesn't turn into a wall of text.
+ */
 function MediaGuideCard({ guide, mediaPathPrefix }: { guide: MediaGuide; mediaPathPrefix?: string }) {
+  const [open, setOpen] = useState(false);
   const [slug = "", section = ""] = (mediaPathPrefix ?? "").split("/");
   // Only section-editor paths look like `<slug>/<section>/...`; cover/hover
   // paths (`<slug>/cover`) still link to the project page, just with no anchor.
   const href = slug ? frontPageUrl(slug, section) : null;
+  const shortRatio = guide.ratio?.split("（")[0];
+
+  const rows: [string, string][] = [
+    ["位置", guide.where],
+    ...(guide.ratio ? ([["比例", guide.ratio]] as [string, string][]) : []),
+    ["建議", guide.size],
+    ["格式", kindLabel(guide)],
+    ...(guide.note ? ([["備註", guide.note]] as [string, string][]) : []),
+  ];
+
   return (
-    <div className="rounded-md border border-admin-border bg-admin-accent-soft/40 px-3 py-2">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-medium text-admin-text">{guide.title}</p>
-        {href && (
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex shrink-0 items-center gap-1 text-[11px] text-admin-accent hover:underline"
-          >
-            看前台位置
-            <ArrowSquareOut size={11} weight="bold" />
-          </a>
+    <div>
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 truncate text-xs font-medium text-admin-text">{guide.title}</p>
+        {shortRatio && (
+          <span className="shrink-0 rounded-full bg-black/[0.06] px-2 py-0.5 font-mono text-[10px] text-admin-text-muted">
+            {shortRatio}
+          </span>
         )}
+        <span className="ml-auto flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+              open ? "bg-admin-lime text-admin-ink" : "bg-black/[0.05] text-admin-text-muted hover:bg-admin-lime hover:text-admin-ink"
+            }`}
+          >
+            <Info size={12} weight="bold" />
+            規格
+          </button>
+          {href && (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="在新分頁看這張圖在前台的位置"
+              className="inline-flex items-center gap-1 rounded-full bg-black/[0.05] px-2.5 py-1 text-[11px] font-medium text-admin-text-muted hover:bg-admin-ink hover:text-white"
+            >
+              前台
+              <ArrowSquareOut size={11} weight="bold" />
+            </a>
+          )}
+        </span>
       </div>
-      <p className="mt-0.5 text-[11px] leading-relaxed text-admin-text-muted">📍 {guide.where}</p>
-      <p className="mt-1 text-[11px] leading-relaxed text-admin-text-faint">
-        {guide.ratio ? `${guide.ratio} · ` : ""}
-        {guide.size} · {kindLabel(guide)}
-        {guide.note ? ` · ${guide.note}` : ""}
-      </p>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.dl
+            key="spec"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 380, damping: 34 }}
+            className="mt-2 overflow-hidden rounded-2xl border border-admin-border bg-white shadow-[0_10px_30px_-20px_rgba(12,12,14,0.35)]"
+          >
+            <div className="divide-y divide-admin-border">
+              {rows.map(([label, text]) => (
+                <div key={label} className="flex gap-3 px-3.5 py-2">
+                  <dt className="w-9 shrink-0 text-[11px] font-medium text-admin-text-faint">{label}</dt>
+                  <dd className="min-w-0 text-xs leading-relaxed text-admin-text">{text}</dd>
+                </div>
+              ))}
+            </div>
+          </motion.dl>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
