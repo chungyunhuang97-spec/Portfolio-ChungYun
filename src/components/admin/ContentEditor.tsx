@@ -739,7 +739,12 @@ export function ContentEditor({
     }
   }, [rawMode, fields, rawText]);
 
-  const isDirty = currentContent !== null && JSON.stringify(currentContent) !== JSON.stringify(baseline);
+  // Serialising a whole section on every render is the main typing cost in
+  // the big sections -- only redo it when the content or baseline changes.
+  const isDirty = useMemo(
+    () => currentContent !== null && JSON.stringify(currentContent) !== JSON.stringify(baseline),
+    [currentContent, baseline]
+  );
 
   const grouped = useMemo(() => groupFields(fields), [fields]);
 

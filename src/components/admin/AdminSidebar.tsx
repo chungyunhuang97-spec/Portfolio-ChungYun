@@ -64,16 +64,18 @@ function NavItem({
 }: {
   href: string;
   active: boolean;
-  onNavigate: () => void;
+  onNavigate: (href: string) => void;
   layoutPrefix: string;
   icon?: Icon;
   dot?: string;
   children: ReactNode;
 }) {
+  // Light up the pill the moment the link is pressed, before the next page
+  // has finished loading (useLinkStatus flips to pending right away).
   return (
     <Link
       href={href}
-      onClick={onNavigate}
+      onClick={() => onNavigate(href)}
       className={`admin-press relative flex items-center gap-2.5 rounded-full px-3 py-2 text-sm transition-colors ${
         active ? "font-medium text-admin-ink" : "text-admin-text-muted hover:bg-black/[0.04] hover:text-admin-text"
       }`}
@@ -119,8 +121,17 @@ function SidebarNav({
   const homepageContent = siteContent.filter((item) => SITE_CONTENT_INFO[item.key]);
   const otherContent = siteContent.filter((item) => !SITE_CONTENT_INFO[item.key] && !LEGACY_SITE_CONTENT[item.key]);
 
-  const isActive = (href: string) => pathname === href || Boolean(pathname?.startsWith(`${href}/`));
-  const item = { onNavigate: close, layoutPrefix };
+  // Optimistic highlight: the pressed item turns active immediately; the
+  // marker is ignored once the route actually changes.
+  const [pending, setPending] = useState<{ href: string; from: string | null } | null>(null);
+  const pendingHref = pending && pending.from === pathname ? pending.href : null;
+  const isActive = (href: string) =>
+    pendingHref ? pendingHref === href : pathname === href || Boolean(pathname?.startsWith(`${href}/`));
+  const go = (href: string) => {
+    setPending({ href, from: pathname });
+    close();
+  };
+  const item = { onNavigate: go, layoutPrefix };
 
   return (
     <LayoutGroup id={layoutPrefix}>
@@ -133,7 +144,7 @@ function SidebarNav({
         </Link>
 
         <div className="flex flex-col gap-0.5">
-          <NavItem href="/admin" active={pathname === "/admin"} icon={House} {...item}>
+          <NavItem href="/admin" active={pendingHref ? pendingHref === "/admin" : pathname === "/admin"} icon={House} {...item}>
             總覽
           </NavItem>
           <NavItem href="/admin/media" active={isActive("/admin/media")} icon={Images} {...item}>
@@ -225,7 +236,7 @@ export function AdminSidebar({ projects, siteContent }: { projects: Project[]; s
   return (
     <>
       {/* Desktop: floating rounded panel */}
-      <aside className="fixed bottom-4 left-4 top-4 z-30 hidden w-60 overflow-hidden rounded-[28px] border border-white/70 bg-white/80 shadow-[0_20px_50px_-30px_rgba(12,12,14,0.35)] backdrop-blur-xl md:block">
+      <aside className="fixed bottom-4 left-4 top-4 z-30 hidden w-60 overflow-hidden rounded-[28px] border border-white/70 bg-white/95 shadow-[0_20px_50px_-30px_rgba(12,12,14,0.35)] md:block">
         <SidebarNav projects={projects} siteContent={siteContent} pathname={pathname} close={close} layoutPrefix="desk" />
       </aside>
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { snapshotBeforeSave } from "@/lib/content-versions";
+import { snapshotBeforeSave } from "@/lib/content-versions-server";
 import type {
   BadgeStatus,
   CardSize,
@@ -55,7 +55,6 @@ export async function updateProjectMeta(
 
   revalidatePath("/");
   revalidatePath(`/work/${slug}`);
-  revalidatePath(`/admin/projects/${slug}`);
   return { success: true as const };
 }
 
@@ -76,7 +75,7 @@ export async function upsertSection(
     .eq("section_type", sectionType)
     .maybeSingle();
   if (existing) {
-    await snapshotBeforeSave("project_section", existing.id, `${slug} / ${sectionType}`, existing.content);
+    snapshotBeforeSave("project_section", existing.id, `${slug} / ${sectionType}`, existing.content, content);
   }
 
   const { error } = await supabase.from("project_sections").upsert(
@@ -93,9 +92,10 @@ export async function upsertSection(
     return { success: false as const, error: error.message };
   }
 
+  // Public pages only. Revalidating the admin page itself would make Next
+  // re-render the whole editor (layout + page queries) after every save.
   revalidatePath("/");
   revalidatePath(`/work/${slug}`);
-  revalidatePath(`/admin/projects/${slug}`);
   return { success: true as const };
 }
 
@@ -109,7 +109,6 @@ export async function deleteSection(sectionId: string, slug: string) {
 
   revalidatePath("/");
   revalidatePath(`/work/${slug}`);
-  revalidatePath(`/admin/projects/${slug}`);
   return { success: true as const };
 }
 
@@ -135,7 +134,7 @@ export async function reorderProjects(updates: { id: string; display_order: numb
 export async function updateSiteContent(key: string, content: Record<string, unknown>) {
   const supabase = await createSupabaseServerClient();
   const { data: existing } = await supabase.from("site_content").select("content").eq("key", key).maybeSingle();
-  await snapshotBeforeSave("site_content", key, key, existing?.content);
+  snapshotBeforeSave("site_content", key, key, existing?.content, content);
   const { error } = await supabase.from("site_content").update({ content }).eq("key", key);
 
   if (error) {
@@ -143,7 +142,6 @@ export async function updateSiteContent(key: string, content: Record<string, unk
   }
 
   revalidatePath("/");
-  revalidatePath(`/admin/site-content/${key}`);
   return { success: true as const };
 }
 

@@ -18,7 +18,8 @@ interface PageProps {
 
 export default async function ProjectEditPage({ params }: PageProps) {
   const { slug } = await params;
-  const result = await getProjectWithSectionsAdmin(slug);
+  // Independent queries -- run them together instead of one after another.
+  const [result, allProjects] = await Promise.all([getProjectWithSectionsAdmin(slug), getAllProjectsAdmin()]);
 
   if (!result) {
     notFound();
@@ -26,7 +27,6 @@ export default async function ProjectEditPage({ params }: PageProps) {
 
   const { project, sections } = result;
 
-  const allProjects = await getAllProjectsAdmin();
   const siblingProjects = allProjects
     .filter((p) => p.project_type === "case_study" && p.id !== project.id)
     .map((p) => ({

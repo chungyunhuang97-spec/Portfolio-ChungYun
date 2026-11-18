@@ -32,28 +32,20 @@ export async function getProjectWithSectionsAdmin(
   slug: string
 ): Promise<{ project: Project; sections: ProjectSection[] } | null> {
   const supabase = await createSupabaseServerClient();
-  const { data: project, error: projectError } = await supabase
+  // One round trip: the project row with its sections embedded.
+  const { data, error } = await supabase
     .from("projects")
-    .select("*")
+    .select("*, project_sections(*)")
     .eq("slug", slug)
-    .maybeSingle<Project>();
+    .order("display_order", { referencedTable: "project_sections", ascending: true })
+    .maybeSingle();
 
-  if (projectError || !project) {
+  if (error || !data) {
     return null;
   }
 
-  const { data: sections, error: sectionsError } = await supabase
-    .from("project_sections")
-    .select("*")
-    .eq("project_id", project.id)
-    .order("display_order", { ascending: true });
-
-  if (sectionsError) {
-    console.error("Admin: failed to load sections:", sectionsError.message);
-    return { project, sections: [] };
-  }
-
-  return { project, sections: (sections ?? []) as ProjectSection[] };
+  const { project_sections, ...project } = data as Project & { project_sections: ProjectSection[] };
+  return { project: project as Project, sections: project_sections ?? [] };
 }
 
 export async function getAllSiteContentAdmin(): Promise<SiteContent[]> {

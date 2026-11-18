@@ -10,15 +10,16 @@ import { getAllProjectsAdmin, getAllSiteContentAdmin } from "@/lib/admin-data";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Session was already verified by the proxy; this is a cheap local JWT check.
+  const [{ data: claimsData }, projects, siteContent] = await Promise.all([
+    supabase.auth.getClaims(),
+    getAllProjectsAdmin(),
+    getAllSiteContentAdmin(),
+  ]);
 
-  if (!user) {
+  if (!claimsData?.claims) {
     redirect("/admin/login");
   }
-
-  const [projects, siteContent] = await Promise.all([getAllProjectsAdmin(), getAllSiteContentAdmin()]);
 
   return (
     <AdminFeedbackProvider>

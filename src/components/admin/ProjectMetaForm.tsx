@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { CaretDown } from "@phosphor-icons/react";
 import { useTrackChanges } from "@/components/admin/ChangesContext";
 import { StatusBadge } from "@/components/admin/StatusBadge";
@@ -173,6 +174,7 @@ export function ProjectMetaForm({
    * this form's own pending edits stand in for that. */
   siblingProjects?: BentoPreviewProject[];
 }) {
+  const router = useRouter();
   const initial = fieldsFromProject(project);
 
   const [fields, setFields] = useState<MetaFields>(initial);
@@ -211,6 +213,9 @@ export function ProjectMetaForm({
     };
     const result = await onSave(project.id, project.slug, nextFields);
     if (result.success) {
+      // The sidebar shows this project's title and status; the save no longer
+      // re-renders the whole page, so refresh only when one of those changed.
+      if (nextFields.title !== baseline.title || nextFields.status !== baseline.status) router.refresh();
       setBaseline(nextFields);
       setStatus("saved");
       setTimeout(() => setStatus("idle"), 2000);
