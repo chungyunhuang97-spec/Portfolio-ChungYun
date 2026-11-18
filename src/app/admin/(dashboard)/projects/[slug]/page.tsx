@@ -82,7 +82,7 @@ export default async function ProjectEditPage({ params }: PageProps) {
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-semibold text-admin-text">{project.title}</h1>
+              <h1 className="text-3xl font-semibold text-admin-text md:text-4xl">{project.title}</h1>
               <StatusBadge status={project.status} />
             </div>
             <p className="mt-1 font-mono text-xs text-admin-text-faint">/work/{project.slug}</p>
@@ -93,7 +93,7 @@ export default async function ProjectEditPage({ params }: PageProps) {
               href={`/work/${project.slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md border border-admin-border px-4 py-2 text-xs font-medium tracking-wide text-admin-text-muted transition-colors hover:border-admin-accent hover:text-admin-accent"
+              className="admin-press inline-flex items-center gap-1.5 rounded-full border border-admin-border bg-white px-4 py-2 text-xs font-medium tracking-wide text-admin-text-muted transition-colors hover:border-admin-ink hover:text-admin-ink"
             >
               查看前台頁面
               <ArrowSquareOut size={14} weight="bold" />
@@ -103,10 +103,10 @@ export default async function ProjectEditPage({ params }: PageProps) {
 
         <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
           <span className="text-admin-text-faint">快速跳到：</span>
-          <a href="#group-basic" className="text-admin-accent hover:underline">基本資訊</a>
-          <a href="#group-publish" className="text-admin-accent hover:underline">發佈設定</a>
-          <a href="#group-cover" className="text-admin-accent hover:underline">首頁卡片</a>
-          <a href="#page-sections" className="text-admin-accent hover:underline">頁面內容區塊（{sections.length}）</a>
+          <a href="#group-basic" className="rounded-full bg-white px-3 py-1 text-admin-text-muted transition-colors hover:bg-admin-lime hover:text-admin-ink">基本資訊</a>
+          <a href="#group-publish" className="rounded-full bg-white px-3 py-1 text-admin-text-muted transition-colors hover:bg-admin-lime hover:text-admin-ink">發佈設定</a>
+          <a href="#group-cover" className="rounded-full bg-white px-3 py-1 text-admin-text-muted transition-colors hover:bg-admin-lime hover:text-admin-ink">首頁卡片</a>
+          <a href="#page-sections" className="rounded-full bg-white px-3 py-1 text-admin-text-muted transition-colors hover:bg-admin-lime hover:text-admin-ink">頁面內容區塊（{sections.length}）</a>
         </div>
 
         <div className="mt-10 max-w-3xl">

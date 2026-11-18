@@ -378,7 +378,6 @@ export function AdminMediaDropzone({
               <p className="text-xs text-admin-text-muted">
                 拖曳{guide ? kindLabel(guide) : "檔案"}到這裡，或<span className="text-admin-accent">點擊選擇</span>
               </p>
-              {guide && <p className="text-[10px] text-admin-text-faint">{guide.ratio ? `${guide.ratio} · ` : ""}{guide.size}</p>}
             </>
           )}
         </label>

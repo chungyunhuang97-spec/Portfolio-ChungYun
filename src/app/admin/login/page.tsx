@@ -30,10 +30,10 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="admin-shell flex min-h-[100dvh] items-center justify-center bg-admin-bg px-6">
-      <div className="w-full max-w-sm rounded-lg border border-admin-border bg-admin-surface p-8">
-        <p className="text-xs font-semibold tracking-[0.2em] text-admin-text-faint">ADMIN</p>
-        <h1 className="mt-3 text-2xl font-semibold text-admin-text">Sign in</h1>
+    <main className="admin-shell flex min-h-[100dvh] items-center justify-center px-6">
+      <div className="w-full max-w-sm rounded-[32px] border border-white/70 bg-white p-8 shadow-[0_30px_70px_-40px_rgba(12,12,14,0.5)]">
+        <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-admin-text-faint"><span className="size-2 rounded-full bg-admin-lime ring-4 ring-admin-ink/90" />ADMIN</p>
+        <h1 className="mt-3 text-3xl font-semibold text-admin-text">登入後台</h1>
 
         <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
           <div className="flex flex-col gap-2">
@@ -71,9 +71,9 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 rounded-md bg-admin-text px-4 py-2.5 text-sm font-medium tracking-wide text-white transition-colors hover:bg-admin-accent disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-2 rounded-full bg-admin-ink px-4 py-3 text-sm font-medium tracking-wide text-white transition-colors hover:bg-admin-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "登入中…" : "登入"}
           </button>
         </form>
       </div>

@@ -1,14 +1,13 @@
 "use client";
 
+import { FloppyDisk } from "@phosphor-icons/react";
 import { useChangesContext } from "@/components/admin/ChangesContext";
 
 /**
  * The single, persistent save action for a project/site-content edit page.
- * Replaces the old per-section and per-form "Save" buttons -- every editor
- * on the page still tracks its own dirty state locally, but this is the
- * only button that actually writes anything. Always visible (not a toast
- * that appears/disappears) so it's a predictable, findable spot rather
- * than something that pops in and out as fields change.
+ * Always visible (a floating pill under the top bar) so saving is a
+ * predictable, findable spot. It turns lime while there is something
+ * unsaved, so the state reads at a glance.
  */
 export function GlobalSaveBar() {
   const ctx = useChangesContext();
@@ -20,18 +19,19 @@ export function GlobalSaveBar() {
 
   return (
     <div
-      className={`sticky top-14 z-20 -mx-4 mb-8 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 transition-colors md:-mx-10 md:px-10 ${
-        hasChanges ? "border-admin-warning/30 bg-admin-warning-soft" : "border-admin-border bg-admin-surface"
+      className={`sticky top-[4.9rem] z-20 mb-8 flex flex-wrap items-center justify-between gap-3 rounded-full border py-2 pl-5 pr-2 shadow-[0_10px_30px_-18px_rgba(12,12,14,0.35)] backdrop-blur transition-colors duration-300 md:top-[5.4rem] ${
+        hasChanges ? "border-admin-lime bg-admin-lime" : "border-white/70 bg-white/85"
       }`}
     >
       <div className="flex min-w-0 items-center gap-2.5">
-        <span className={`h-2 w-2 shrink-0 rounded-full ${hasChanges ? "bg-admin-warning" : "bg-admin-success"}`} />
+        <span className="relative flex size-2.5 shrink-0">
+          {hasChanges && <span className="absolute inline-flex size-full animate-ping rounded-full bg-admin-ink opacity-40" />}
+          <span className={`relative inline-flex size-2.5 rounded-full ${hasChanges ? "bg-admin-ink" : "bg-admin-success"}`} />
+        </span>
         {hasChanges ? (
-          <p className="truncate text-sm text-admin-text">
-            <span className="font-medium">{count} 個區塊尚未儲存</span>
-            <span className="ml-2 hidden text-admin-text-muted sm:inline">
-              {dirtyEntries.map((e) => e.label).join("、")}
-            </span>
+          <p className="truncate text-sm text-admin-ink">
+            <span className="font-semibold">{count} 個區塊尚未儲存</span>
+            <span className="ml-2 hidden text-admin-ink/60 sm:inline">{dirtyEntries.map((e) => e.label).join("、")}</span>
           </p>
         ) : (
           <p className="text-sm text-admin-text-muted">已全部儲存</p>
@@ -41,10 +41,11 @@ export function GlobalSaveBar() {
         type="button"
         onClick={saveAll}
         disabled={!hasChanges || savingAll}
-        className="shrink-0 rounded-md bg-admin-accent px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors hover:bg-admin-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex shrink-0 items-center gap-2 rounded-full bg-admin-ink px-5 py-2.5 text-xs font-medium tracking-wide text-white hover:bg-admin-accent-hover disabled:cursor-not-allowed disabled:bg-black/10 disabled:text-admin-text-faint"
       >
+        <FloppyDisk size={14} weight="bold" />
         {savingAll ? "儲存中…" : hasChanges ? `儲存全部（${count}）` : "儲存"}
-        {hasChanges && !savingAll && <span className="ml-2 hidden opacity-70 md:inline">⌘S</span>}
+        {hasChanges && !savingAll && <span className="hidden text-white/50 md:inline">⌘S</span>}
       </button>
     </div>
   );

@@ -16,8 +16,7 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-admin-text">Dashboard</h1>
-      <div className="mt-6">
+      <div>
         <AdminDashboardOverview
           projects={projects}
           siteContent={siteContent}

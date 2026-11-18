@@ -59,23 +59,29 @@
      accent, sans-serif only. Changing the marketing palette must never
      touch these, and vice versa -- that's the whole point of the split.
      --------------------------------------------------------------- */
-  --color-admin-bg: #f6f6f7;
+  --color-admin-bg: #e9e9eb;
   --color-admin-surface: #ffffff;
-  --color-admin-surface-hover: #f1f1f3;
-  --color-admin-border: #e4e4e7;
-  --color-admin-border-strong: #d4d4d8;
-  --color-admin-text: #18181b;
-  --color-admin-text-muted: #52525b;
-  --color-admin-text-faint: #a1a1aa;
-  --color-admin-accent: #1d4ed8;
-  --color-admin-accent-hover: #1e3a8a;
-  --color-admin-accent-soft: #eff6ff;
-  --color-admin-danger: #dc2626;
-  --color-admin-danger-soft: #fef2f2;
-  --color-admin-success: #16a34a;
-  --color-admin-success-soft: #f0fdf4;
-  --color-admin-warning: #d97706;
-  --color-admin-warning-soft: #fffbeb;
+  --color-admin-surface-hover: #f3f3f5;
+  --color-admin-border: #e5e5e8;
+  --color-admin-border-strong: #d2d2d8;
+  --color-admin-text: #0c0c0e;
+  --color-admin-text-muted: #54545c;
+  --color-admin-text-faint: #9393a0;
+  /* Accent is ink-black (buttons, links, focus); the lime below is the
+     "energy" colour for active / highlighted states. Black-on-lime keeps
+     contrast high; lime text on white would not. */
+  --color-admin-accent: #0c0c0e;
+  --color-admin-accent-hover: #2a2a30;
+  --color-admin-accent-soft: #eaf8b8;
+  --color-admin-lime: #c6f432;
+  --color-admin-lime-soft: #eaf8b8;
+  --color-admin-ink: #0c0c0e;
+  --color-admin-danger: #e5322d;
+  --color-admin-danger-soft: #fdecec;
+  --color-admin-success: #17a34a;
+  --color-admin-success-soft: #e3f7ea;
+  --color-admin-warning: #c46a00;
+  --color-admin-warning-soft: #fff1d6;
   --color-admin-canvas: #dcdce0;
 
   /* Card corner radius, shared with the Navbar pill's rounded language
@@ -136,6 +142,9 @@
   --color-admin-warning: var(--color-admin-warning);
   --color-admin-warning-soft: var(--color-admin-warning-soft);
   --color-admin-canvas: var(--color-admin-canvas);
+  --color-admin-lime: var(--color-admin-lime);
+  --color-admin-lime-soft: var(--color-admin-lime-soft);
+  --color-admin-ink: var(--color-admin-ink);
 
   --radius-card: var(--radius-card);
   --radius-card-lg: var(--radius-card-lg);
@@ -182,6 +191,144 @@ h4 {
 .admin-shell h3,
 .admin-shell h4 {
   font-family: var(--font-sans);
+}
+
+/* ---------------------------------------------------------------
+   Admin visual language: soft grey canvas, large rounded panels, black
+   pills, one lime highlight, and tactile press / ripple feedback.
+   Everything is scoped to .admin-shell.
+   --------------------------------------------------------------- */
+.admin-shell {
+  /* Bigger corner radii for the whole admin -- every rounded-md/lg/xl
+     utility inside picks these up. rounded-full is unaffected. */
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --radius-2xl: 32px;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(198, 244, 50, 0.16), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(255, 255, 255, 0.7), transparent 60%),
+    var(--color-admin-bg);
+  font-feature-settings: "ss01", "cv11";
+}
+
+.admin-shell h1,
+.admin-shell h2.admin-display {
+  font-family: var(--font-outfit), var(--font-sans);
+  letter-spacing: -0.02em;
+}
+
+/* Inputs: soft lime focus ring instead of a hard coloured border. */
+.admin-shell input:not([type="checkbox"]):not([type="color"]):focus,
+.admin-shell textarea:focus,
+.admin-shell select:focus {
+  outline: none;
+  border-color: var(--color-admin-ink);
+  box-shadow: 0 0 0 4px rgba(198, 244, 50, 0.45);
+}
+.admin-shell input:not([type="checkbox"]):not([type="color"]),
+.admin-shell textarea,
+.admin-shell select {
+  transition: border-color 0.15s ease, box-shadow 0.2s ease, background-color 0.15s ease;
+}
+
+/* Tactile press: every enabled button / summary / pressable card dips on
+   click, then springs back. */
+.admin-shell button:not(:disabled),
+.admin-shell summary,
+.admin-shell .admin-press {
+  transition:
+    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.2s ease,
+    opacity 0.15s ease;
+}
+.admin-shell button:not(:disabled):active,
+.admin-shell summary:active,
+.admin-shell .admin-press:active {
+  transform: scale(0.96);
+}
+
+/* Cards that lift on hover and whose circular arrow button rotates. */
+.admin-card {
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s ease,
+    background-color 0.2s ease;
+}
+.admin-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px -14px rgba(12, 12, 14, 0.28);
+}
+.admin-card:active {
+  transform: translateY(-1px) scale(0.985);
+}
+.admin-card .admin-arrow {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, color 0.2s ease;
+}
+.admin-card:hover .admin-arrow {
+  transform: rotate(45deg);
+  background-color: var(--color-admin-ink);
+  color: #fff;
+}
+
+/* Click ripple (spawned by AdminClickFx). */
+.admin-ripple {
+  position: fixed;
+  z-index: 90;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 9999px;
+  border: 2px solid var(--color-admin-lime);
+  background: rgba(198, 244, 50, 0.25);
+  pointer-events: none;
+  animation: admin-ripple 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes admin-ripple {
+  from {
+    transform: scale(0.4);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(5.5);
+    opacity: 0;
+  }
+}
+
+/* Staggered entrance for page content. */
+.admin-rise > * {
+  animation: admin-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.admin-rise > *:nth-child(2) { animation-delay: 0.05s; }
+.admin-rise > *:nth-child(3) { animation-delay: 0.1s; }
+.admin-rise > *:nth-child(4) { animation-delay: 0.15s; }
+.admin-rise > *:nth-child(5) { animation-delay: 0.2s; }
+.admin-rise > *:nth-child(n + 6) { animation-delay: 0.25s; }
+@keyframes admin-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell *,
+  .admin-shell *::before,
+  .admin-shell *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .admin-ripple {
+    display: none;
+  }
 }
 
 /* ---------------------------------------------------------------

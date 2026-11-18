@@ -18,10 +18,10 @@ export function PreviewToggleButton() {
       type="button"
       onClick={() => setOpen(!open)}
       aria-pressed={open}
-      className={`inline-flex items-center gap-1.5 rounded-md border px-4 py-2 text-xs font-medium tracking-wide transition-colors ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-medium tracking-wide transition-colors ${
         open
-          ? "border-admin-accent bg-admin-accent-soft text-admin-accent"
-          : "border-admin-border text-admin-text-muted hover:border-admin-accent hover:text-admin-accent"
+          ? "border-admin-lime bg-admin-lime text-admin-ink"
+          : "border-admin-border bg-white text-admin-text-muted hover:border-admin-ink hover:text-admin-ink"
       }`}
     >
       <Eye size={14} weight="bold" />
@@ -78,7 +78,7 @@ export function ProjectPreviewShell({ slug, children }: { slug: string; children
       </div>
 
       {open && (
-        <aside className="fixed inset-0 z-50 flex flex-col bg-admin-bg xl:sticky xl:inset-auto xl:top-20 xl:z-10 xl:h-[calc(100dvh-7rem)] xl:rounded-lg xl:border xl:border-admin-border">
+        <aside className="fixed inset-0 z-50 flex flex-col bg-admin-bg xl:sticky xl:inset-auto xl:top-[5.4rem] xl:z-10 xl:h-[calc(100dvh-7rem)] xl:overflow-hidden xl:rounded-[28px] xl:border xl:border-white/70 xl:shadow-[0_20px_50px_-30px_rgba(12,12,14,0.4)]">
           <div className="flex items-center justify-between gap-2 border-b border-admin-border bg-admin-surface px-3 py-2">
             <div className="flex items-center gap-1">
               {(

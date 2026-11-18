@@ -244,7 +244,7 @@ function inputClass() {
 }
 
 function fieldLabelClass() {
-  return "text-[11px] font-medium tracking-[0.1em] text-admin-text-faint";
+  return "text-[13px] font-medium text-admin-text-faint";
 }
 
 /**
@@ -557,7 +557,7 @@ function NestedObjectFields({
     <div className="space-y-3">
       {entries.map(([k, v]) => (
         <div key={k} className="space-y-1">
-          <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">
+          <label className="text-xs font-medium text-admin-text-faint">
             <FieldName prefix={mediaPathPrefix} fieldKey={k} fallback={humanizeKey(k)} />
           </label>
           <FieldHint prefix={mediaPathPrefix} fieldKey={k} />
