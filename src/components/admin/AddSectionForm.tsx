@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "@phosphor-icons/react";
 import type { SectionType } from "@/lib/types";
+import { SECTION_INFO } from "@/lib/admin-field-guide";
 
 const ALL_SECTION_TYPES: SectionType[] = [
   "hero",
@@ -32,13 +33,21 @@ export function AddSectionForm({
   const missing = ALL_SECTION_TYPES.filter((t) => !existingTypes.includes(t));
   const [selected, setSelected] = useState<SectionType | "">(missing[0] ?? "");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (missing.length === 0) return null;
 
   async function handleAdd() {
+    if (!selected) return;
     setLoading(true);
-    await onAdd(selected, {}, nextDisplayOrder);
+    setError(null);
+    const template = SECTION_INFO[selected]?.template ?? {};
+    const result = await onAdd(selected, template, nextDisplayOrder);
     setLoading(false);
+    if (!result.success) {
+      setError(result.error ?? "新增失敗");
+      return;
+    }
     router.refresh();
   }
 
@@ -53,7 +62,7 @@ export function AddSectionForm({
         >
           {missing.map((t) => (
             <option key={t} value={t}>
-              {t}
+              {SECTION_INFO[t] ? `${SECTION_INFO[t].label}（${t}）` : t}
             </option>
           ))}
         </select>
@@ -67,6 +76,12 @@ export function AddSectionForm({
         <Plus size={14} weight="bold" />
         {loading ? "ADDING…" : "ADD"}
       </button>
+      {selected && SECTION_INFO[selected] && (
+        <p className="basis-full text-[11px] text-admin-text-faint">
+          {SECTION_INFO[selected].description}。新增後會帶入基本欄位範本。
+        </p>
+      )}
+      {error && <p className="basis-full text-xs text-admin-danger">{error}</p>}
     </div>
   );
 }

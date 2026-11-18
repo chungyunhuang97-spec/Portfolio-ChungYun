@@ -687,3 +687,69 @@ export function resolveFieldLabel(pathPrefix: string | undefined, key: string): 
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Section metadata (names, templates, front-end anchors)
+// ---------------------------------------------------------------------------
+
+export interface SectionInfo {
+  /** 中文名稱 */
+  label: string;
+  /** What this section is for on the public page. */
+  description: string;
+  /** Starter content for a brand-new section of this type. */
+  template: Record<string, unknown>;
+}
+
+export const SECTION_INFO: Record<string, SectionInfo> = {
+  hero: {
+    label: "Hero 主視覺",
+    description: "頁面最上方：專案標題、副標、標籤與主視覺畫面",
+    template: { title: "", subtitle: "", kicker: "", timeframeLabel: "", badges: [], mockup_media_url: "" },
+  },
+  overview: {
+    label: "專案概述",
+    description: "專案背景與目標的一段介紹",
+    template: { text: "" },
+  },
+  challenge: {
+    label: "挑戰與問題",
+    description: "要解決的問題、痛點與限制",
+    template: { note: "", items: [{ title: "", desc: "" }] },
+  },
+  role: {
+    label: "我的角色",
+    description: "我的職位、職責與主導的決策",
+    template: { position: "", decision_ownership: "" },
+  },
+  process: {
+    label: "設計過程",
+    description: "研究、策略與介面設計的主要內容（各專案欄位差異最大）",
+    template: { note: "" },
+  },
+  outcome: {
+    label: "成果",
+    description: "成果數據、上線狀態或 Demo 連結",
+    template: { items: [], status: "", demo_url: "" },
+  },
+  reflection: {
+    label: "反思與結語",
+    description: "頁尾的反思文字與結語金句",
+    template: { text: "", closingQuote: "", closingBody: "" },
+  },
+};
+
+export function sectionLabel(sectionType: string): string {
+  return SECTION_INFO[sectionType]?.label ?? sectionType;
+}
+
+/**
+ * Public-page URL (with an anchor when the page has one) for the part of a
+ * project page a section renders into. Only #hero and #closing exist on every
+ * case-study page, so other sections open the page and rely on the guide
+ * text to say where to scroll.
+ */
+export function frontPageUrl(slug: string, sectionType?: string): string {
+  const anchor = sectionType === "hero" ? "#hero" : sectionType === "reflection" ? "#closing" : "";
+  return `/work/${slug}${anchor}`;
+}

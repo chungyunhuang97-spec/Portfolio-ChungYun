@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { CloudArrowUp, Info, Trash, X } from "@phosphor-icons/react";
+import { useCallback, useId, useRef, useState } from "react";
+import { ArrowSquareOut, ArrowsClockwise, CloudArrowUp, Info, Trash, X } from "@phosphor-icons/react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   HARD_MAX_IMAGE_BYTES,
   HARD_MAX_VIDEO_BYTES,
+  frontPageUrl,
   type MediaGuide,
 } from "@/lib/admin-field-guide";
 
@@ -216,6 +217,8 @@ export function AdminMediaDropzone({
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId();
+  const [dims, setDims] = useState<string | null>(null);
   const url = value ?? "";
   const uploading = progress !== null;
   const acceptAttr = accept ?? (guide ? acceptFromGuide(guide) : "image/*,video/*");
@@ -248,37 +251,85 @@ export function AdminMediaDropzone({
 
   return (
     <div className="space-y-2.5">
-      {guide && <MediaGuideCard guide={guide} />}
+      {guide && <MediaGuideCard guide={guide} mediaPathPrefix={mediaPathPrefix} />}
       {url ? (
-        <div className="flex items-center gap-3">
+        <div
+          className={`flex items-center gap-3 rounded-lg ${dragOver ? "ring-2 ring-admin-accent" : ""}`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            handleFile(e.dataTransfer.files?.[0]);
+          }}
+        >
           <div
-            className={`overflow-hidden rounded-lg border border-admin-border bg-admin-surface ${compact ? "h-16 w-16" : "h-20 w-32"}`}
+            className={`relative shrink-0 overflow-hidden rounded-lg border border-admin-border bg-admin-surface ${compact ? "h-16 w-16" : "h-20 w-32"}`}
           >
             {isVideoUrl(url) ? (
-              <video src={url} className="h-full w-full object-cover" muted />
+              <video
+                src={url}
+                className="h-full w-full object-cover"
+                muted
+                onLoadedMetadata={(e) => setDims(`${e.currentTarget.videoWidth}×${e.currentTarget.videoHeight}`)}
+              />
             ) : isImageUrl(url) ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={url} alt="" className="h-full w-full object-cover" />
+              <img
+                src={url}
+                alt=""
+                className="h-full w-full object-cover"
+                onLoad={(e) => setDims(`${e.currentTarget.naturalWidth}×${e.currentTarget.naturalHeight}`)}
+              />
             ) : (
               <span className="flex h-full w-full items-center justify-center font-mono text-[10px] uppercase text-admin-text-faint">
                 {url.split("?")[0].split(".").pop()}
               </span>
             )}
+            {uploading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/55 px-2">
+                <div className="h-1 w-full overflow-hidden rounded-full bg-white/30">
+                  <div className="h-full rounded-full bg-white" style={{ width: `${progress}%` }} />
+                </div>
+                <span className="text-[10px] text-white">{progress}%</span>
+              </div>
+            )}
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <p className="truncate font-mono text-[11px] text-admin-text-faint">{url.split("/").pop()}</p>
-            <button
-              type="button"
-              onClick={() => onChange("")}
-              className="inline-flex w-fit items-center gap-1 text-xs text-admin-danger transition-colors hover:underline"
-            >
-              <Trash size={12} weight="bold" />
-              移除
-            </button>
+            {dims && <p className="text-[10px] text-admin-text-faint">{dims} px</p>}
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => inputRef.current?.click()}
+                className="inline-flex w-fit items-center gap-1 text-xs font-medium text-admin-accent transition-colors hover:underline disabled:opacity-50"
+              >
+                <ArrowsClockwise size={12} weight="bold" />
+                替換
+              </button>
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => {
+                  setDims(null);
+                  onChange("");
+                }}
+                className="inline-flex w-fit items-center gap-1 text-xs text-admin-danger transition-colors hover:underline disabled:opacity-50"
+              >
+                <Trash size={12} weight="bold" />
+                移除
+              </button>
+            </div>
+            <p className="text-[10px] text-admin-text-faint">也可以把新檔案直接拖到縮圖上來替換</p>
           </div>
         </div>
       ) : (
         <label
+          htmlFor={inputId}
           onDragOver={(e) => {
             e.preventDefault();
             setDragOver(true);
@@ -299,14 +350,6 @@ export function AdminMediaDropzone({
                 : "border-admin-border-strong bg-admin-surface hover:border-admin-accent/60 hover:bg-admin-surface-hover"
           }`}
         >
-          <input
-            ref={inputRef}
-            type="file"
-            accept={acceptAttr}
-            disabled={uploading}
-            onChange={(e) => handleFile(e.target.files?.[0])}
-            className="sr-only"
-          />
           {uploading ? (
             <div className="w-full max-w-[180px] space-y-1.5">
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-admin-border">
@@ -328,6 +371,16 @@ export function AdminMediaDropzone({
           )}
         </label>
       )}
+
+      <input
+        ref={inputRef}
+        id={inputId}
+        type="file"
+        accept={acceptAttr}
+        disabled={uploading}
+        onChange={(e) => handleFile(e.target.files?.[0])}
+        className="sr-only"
+      />
 
       {error && (
         <p className="flex items-center gap-1 text-xs text-admin-danger">
@@ -354,10 +407,27 @@ export function AdminMediaDropzone({
 }
 
 /** Compact "what goes here" card shown above every guided upload slot. */
-function MediaGuideCard({ guide }: { guide: MediaGuide }) {
+function MediaGuideCard({ guide, mediaPathPrefix }: { guide: MediaGuide; mediaPathPrefix?: string }) {
+  const [slug = "", section = ""] = (mediaPathPrefix ?? "").split("/");
+  // Only section-editor paths look like `<slug>/<section>/...`; cover/hover
+  // paths (`<slug>/cover`) still link to the project page, just with no anchor.
+  const href = slug ? frontPageUrl(slug, section) : null;
   return (
     <div className="rounded-md border border-admin-border bg-admin-accent-soft/40 px-3 py-2">
-      <p className="text-xs font-medium text-admin-text">{guide.title}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-medium text-admin-text">{guide.title}</p>
+        {href && (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-1 text-[11px] text-admin-accent hover:underline"
+          >
+            看前台位置
+            <ArrowSquareOut size={11} weight="bold" />
+          </a>
+        )}
+      </div>
       <p className="mt-0.5 text-[11px] leading-relaxed text-admin-text-muted">📍 {guide.where}</p>
       <p className="mt-1 text-[11px] leading-relaxed text-admin-text-faint">
         {guide.ratio ? `${guide.ratio} · ` : ""}

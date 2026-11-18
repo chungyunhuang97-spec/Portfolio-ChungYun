@@ -8,18 +8,22 @@ import { DeleteSectionButton } from "@/components/admin/DeleteSectionButton";
 import { CompletionBadge } from "@/components/admin/StatusBadge";
 import { useChangesContext } from "@/components/admin/ChangesContext";
 import type { ProjectSection } from "@/lib/types";
+import { resolveFieldLabel, sectionLabel, SECTION_INFO } from "@/lib/admin-field-guide";
 
-function computeCompletion(content: Record<string, unknown>) {
+function isFilled(value: unknown) {
+  if (value == null) return false;
+  if (typeof value === "string") return value.trim() !== "";
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.keys(value as object).length > 0;
+  return true;
+}
+
+function computeCompletion(content: Record<string, unknown>, prefix: string) {
   const entries = Object.entries(content);
-  const total = entries.length;
-  const filled = entries.filter(([, value]) => {
-    if (value == null) return false;
-    if (typeof value === "string") return value.trim() !== "";
-    if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === "object") return Object.keys(value as object).length > 0;
-    return true;
-  }).length;
-  return { filled, total };
+  const missing = entries
+    .filter(([, value]) => !isFilled(value))
+    .map(([key]) => resolveFieldLabel(prefix, key)?.label ?? key);
+  return { filled: entries.length - missing.length, total: entries.length, missing };
 }
 
 export function SectionAccordion({
@@ -36,7 +40,7 @@ export function SectionAccordion({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const { filled, total } = computeCompletion(section.content);
+  const { filled, total, missing } = computeCompletion(section.content, mediaPathPrefix);
   const changes = useChangesContext();
   const isDirty = changes?.dirtyEntries.some((e) => e.id === `section-${section.id}`) ?? false;
 
@@ -55,7 +59,10 @@ export function SectionAccordion({
             className={`shrink-0 text-admin-text-faint transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
           />
           <span className="truncate text-sm font-medium text-admin-text">
-            {section.section_type.toUpperCase()}
+            {sectionLabel(section.section_type)}
+            <span className="ml-2 font-mono text-[10px] font-normal uppercase text-admin-text-faint">
+              {section.section_type}
+            </span>
           </span>
           {isDirty && (
             <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-admin-warning">
@@ -78,12 +85,30 @@ export function SectionAccordion({
             className="overflow-hidden border-t border-admin-border"
           >
             <div className="px-4 py-5">
+              {SECTION_INFO[section.section_type] && (
+                <p className="mb-4 text-xs text-admin-text-muted">{SECTION_INFO[section.section_type].description}</p>
+              )}
+              {missing.length > 0 && (
+                <div className="mb-5 rounded-md border border-admin-warning/30 bg-admin-warning-soft px-3 py-2.5">
+                  <p className="text-xs font-medium text-admin-text">尚未填寫（{missing.length}）</p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {missing.map((name) => (
+                      <span
+                        key={name}
+                        className="rounded-full border border-admin-border bg-admin-surface px-2 py-0.5 text-[11px] text-admin-text-muted"
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <ContentEditor
                 initialContent={section.content}
                 onSave={onSave}
                 mediaPathPrefix={mediaPathPrefix}
                 trackingId={`section-${section.id}`}
-                trackingLabel={section.section_type.toUpperCase()}
+                trackingLabel={sectionLabel(section.section_type)}
               />
               <div className="mt-6 border-t border-admin-border pt-4">
                 <DeleteSectionButton sectionId={section.id} onDelete={onDelete} />
