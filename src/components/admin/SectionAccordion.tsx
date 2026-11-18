@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CaretDown } from "@phosphor-icons/react";
 import { ContentEditor } from "@/components/admin/ContentEditor";
@@ -23,7 +23,7 @@ function computeCompletion(content: Record<string, unknown>, prefix: string) {
   const entries = Object.entries(content);
   const missing = entries
     .filter(([, value]) => !isFilled(value))
-    .map(([key]) => resolveFieldLabel(prefix, key)?.label ?? key);
+    .map(([key]) => ({ key, label: resolveFieldLabel(prefix, key)?.label ?? key }));
   return { filled: entries.length - missing.length, total: entries.length, missing };
 }
 
@@ -43,6 +43,23 @@ export function SectionAccordion({
   const [open, setOpen] = useState(defaultOpen);
   // Remounts the editor with restored content after a version restore.
   const [editorState, setEditorState] = useState({ content: section.content, nonce: 0 });
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  /** Scrolls to a field inside this section, flashes it and focuses its input. */
+  function jumpToField(key: string) {
+    const target = bodyRef.current?.querySelector<HTMLElement>(`[data-field-key="${CSS.escape(key)}"]`);
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.remove("admin-flash");
+    void target.offsetWidth; // restart the animation if it is clicked twice
+    target.classList.add("admin-flash");
+    window.setTimeout(() => target.classList.remove("admin-flash"), 1800);
+    const input = target.querySelector<HTMLElement>(
+      'input:not([type="file"]):not([type="checkbox"]), textarea, select'
+    );
+    window.setTimeout(() => input?.focus({ preventScroll: true }), 350);
+  }
+
   // Keeps `editorState.content` equal to "what is saved", so the version
   // diff and the missing-field list follow every successful save.
   async function saveAndTrack(content: Record<string, unknown>) {
@@ -94,21 +111,24 @@ export function SectionAccordion({
             transition={{ type: "spring", stiffness: 300, damping: 32 }}
             className="overflow-hidden border-t border-admin-border"
           >
-            <div className="px-4 py-5">
+            <div ref={bodyRef} className="px-4 py-5">
               {SECTION_INFO[section.section_type] && (
                 <p className="mb-4 text-xs text-admin-text-muted">{SECTION_INFO[section.section_type].description}</p>
               )}
               {missing.length > 0 && (
                 <div className="mb-5 rounded-md border border-admin-warning/30 bg-admin-warning-soft px-3 py-2.5">
-                  <p className="text-xs font-medium text-admin-text">尚未填寫（{missing.length}）</p>
+                  <p className="text-xs font-medium text-admin-text">尚未填寫（{missing.length}）<span className="ml-2 font-normal text-admin-text-faint">點標籤直接跳到該欄位</span></p>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {missing.map((name) => (
-                      <span
-                        key={name}
-                        className="rounded-full border border-admin-border bg-admin-surface px-2 py-0.5 text-[11px] text-admin-text-muted"
+                    {missing.map(({ key, label }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => jumpToField(key)}
+                        title="點擊跳到這個欄位"
+                        className="rounded-full border border-admin-border bg-admin-surface px-2.5 py-1 text-[11px] text-admin-text-muted hover:border-admin-ink hover:bg-admin-lime hover:text-admin-ink"
                       >
-                        {name}
-                      </span>
+                        {label}
+                      </button>
                     ))}
                   </div>
                 </div>

@@ -828,7 +828,7 @@ export function ContentEditor({
                     <FieldName prefix={mediaPathPrefix} fieldKey={g.desktop.field.key} fallback={humanizeKey(g.base)} />
                   </label>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
+                    <div data-field-key={g.desktop.field.key} className="scroll-mt-40">
                       <p className="mb-1.5 text-[10px] tracking-[0.1em] text-admin-text-faint">DESKTOP</p>
                       <AdminMediaDropzone
                         value={(g.desktop.field.value as string) ?? ""}
@@ -840,7 +840,7 @@ export function ContentEditor({
                         compact
                       />
                     </div>
-                    <div>
+                    <div data-field-key={g.mobile.field.key} className="scroll-mt-40">
                       <p className="mb-1.5 text-[10px] tracking-[0.1em] text-admin-text-faint">MOBILE</p>
                       <AdminMediaDropzone
                         value={(g.mobile.field.value as string) ?? ""}
@@ -861,7 +861,7 @@ export function ContentEditor({
               const { field, index, mediaByRow } = g;
               const isArray = Array.isArray(field.value);
               return (
-                <div key={field.key + index}>
+                <div key={field.key + index} data-field-key={field.key} className="scroll-mt-40">
                   <div className="mb-2 flex items-center justify-between">
                     <label className={fieldLabelClass()}>
                       <FieldName prefix={mediaPathPrefix} fieldKey={field.key} fallback={field.key.toUpperCase()} />
@@ -900,7 +900,7 @@ export function ContentEditor({
 
             const { field, index } = g;
             return (
-              <div key={field.key + index}>
+              <div key={field.key + index} data-field-key={field.key} className="scroll-mt-40">
                 <div className="mb-2 flex items-center justify-between">
                   <label className={fieldLabelClass()}>
                     <FieldName prefix={mediaPathPrefix} fieldKey={field.key} fallback={field.key.toUpperCase()} />
@@ -1010,7 +1010,7 @@ function ArrayWithRowMediaEditor({
           />
 
           {(mediaByRow.get(i) ?? []).map((m) => (
-            <div key={m.field.key} className="space-y-1">
+            <div key={m.field.key} data-field-key={m.field.key} className="scroll-mt-40 space-y-1">
               <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">{m.label}</label>
               <AdminMediaDropzone
                 value={(m.field.value as string) ?? ""}

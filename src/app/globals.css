@@ -298,6 +298,22 @@ h4 {
   }
 }
 
+/* Brief highlight on the field a "尚未填寫" chip jumps to. */
+.admin-flash {
+  animation: admin-flash 1.8s ease-out;
+  border-radius: 14px;
+}
+@keyframes admin-flash {
+  0%, 35% {
+    background-color: rgba(198, 244, 50, 0.55);
+    box-shadow: 0 0 0 8px rgba(198, 244, 50, 0.55);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
 /* Staggered entrance for page content. */
 .admin-rise > * {
   animation: admin-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;

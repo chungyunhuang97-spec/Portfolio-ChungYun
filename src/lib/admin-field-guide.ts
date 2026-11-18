@@ -680,6 +680,22 @@ export function resolveFieldLabel(pathPrefix: string | undefined, key: string): 
   if (specific) return specific;
   if (COMMON[key]) return COMMON[key];
 
+  // Metro's per-panel media slots: <group><Panel><Desktop|Mobile>MediaUrl
+  const metro = /^(interface|companion|bonus)(Search|Station|Helper|Helped|Achievement|Accessibility|Promo)(Desktop|Mobile)MediaUrl$/.exec(key);
+  if (slug === "metro" && metro) {
+    const group = { interface: "路線搜尋", companion: "捷伴陪同", bonus: "附加體驗" }[metro[1]];
+    const panel = {
+      Search: "搜尋路線",
+      Station: "站點資訊",
+      Helper: "協助者",
+      Helped: "被協助者",
+      Achievement: "成就",
+      Accessibility: "無障礙",
+      Promo: "優惠推播",
+    }[metro[2]];
+    return { label: `${group}｜${panel}（${metro[3] === "Desktop" ? "桌機版" : "手機版"}畫面）` };
+  }
+
   // Generic mobile/desktop variants of an otherwise-known key:
   // "fooMobile" -> "<foo>（手機版）".
   const variant = /^(.+?)(Mobile|Desktop)$/.exec(key);
