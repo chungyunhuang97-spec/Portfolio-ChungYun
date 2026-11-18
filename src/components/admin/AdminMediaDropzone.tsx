@@ -1,8 +1,13 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { CloudArrowUp, Trash, X } from "@phosphor-icons/react";
+import { CloudArrowUp, Info, Trash, X } from "@phosphor-icons/react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  HARD_MAX_IMAGE_BYTES,
+  HARD_MAX_VIDEO_BYTES,
+  type MediaGuide,
+} from "@/lib/admin-field-guide";
 
 const BUCKET = "project-media";
 
@@ -59,6 +64,107 @@ function uploadWithProgress({
   });
 }
 
+function formatBytes(bytes: number) {
+  return bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)}MB` : `${Math.round(bytes / 1024)}KB`;
+}
+
+function acceptFromGuide(guide: MediaGuide): string {
+  return guide.kinds.map((k) => (k === "image" ? "image/*" : "video/*")).join(",");
+}
+
+function kindLabel(guide: MediaGuide): string {
+  const both = guide.kinds.includes("image") && guide.kinds.includes("video");
+  return both ? "圖片／GIF／影片" : guide.kinds.includes("video") ? "影片" : "圖片";
+}
+
+/** Reads a local file's pixel size without uploading it. Resolves null when
+ * the browser can't decode it (or takes > 4s) -- callers just skip the
+ * dimension checks in that case. */
+function readDimensions(file: File): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const done = (v: { width: number; height: number } | null) => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(v);
+    };
+    const timer = setTimeout(() => done(null), 4000);
+    if (file.type.startsWith("video/")) {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        clearTimeout(timer);
+        done(video.videoWidth ? { width: video.videoWidth, height: video.videoHeight } : null);
+      };
+      video.onerror = () => {
+        clearTimeout(timer);
+        done(null);
+      };
+      video.src = objectUrl;
+    } else {
+      const img = new Image();
+      img.onload = () => {
+        clearTimeout(timer);
+        done({ width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.onerror = () => {
+        clearTimeout(timer);
+        done(null);
+      };
+      img.src = objectUrl;
+    }
+  });
+}
+
+/** Blocking problem (returns a message) for a file the slot can never use. */
+function blockingProblem(file: File, guide: MediaGuide | undefined): string | null {
+  const isVideo = file.type.startsWith("video/");
+  const isImage = file.type.startsWith("image/");
+  if (guide) {
+    const allowed = (isImage && guide.kinds.includes("image")) || (isVideo && guide.kinds.includes("video"));
+    if (!allowed) {
+      return `這個欄位只接受${kindLabel(guide)}，但你選的是「${file.name}」（${file.type || "未知格式"}）`;
+    }
+  }
+  if (isImage && file.size > HARD_MAX_IMAGE_BYTES) {
+    return `圖片 ${formatBytes(file.size)} 太大，請先壓縮到 ${formatBytes(HARD_MAX_IMAGE_BYTES)} 以內`;
+  }
+  if (isVideo && file.size > HARD_MAX_VIDEO_BYTES) {
+    return `影片 ${formatBytes(file.size)} 太大，請先壓縮到 ${formatBytes(HARD_MAX_VIDEO_BYTES)} 以內`;
+  }
+  return null;
+}
+
+/** Non-blocking advice about a file against the slot's guide. */
+async function softWarnings(file: File, guide: MediaGuide | undefined, warnIfOverBytes?: number): Promise<string[]> {
+  const out: string[] = [];
+  const isVideo = file.type.startsWith("video/");
+  const limit = warnIfOverBytes ?? (guide ? (isVideo ? guide.maxVideoBytes : guide.maxImageBytes) : undefined);
+  if (limit && file.size > limit) {
+    out.push(`檔案 ${formatBytes(file.size)}，建議壓縮到 ${formatBytes(limit)} 以內，否則前台會載入較慢`);
+  }
+  if (guide && (guide.ratioValue || guide.minWidth)) {
+    const dims = await readDimensions(file);
+    if (dims) {
+      const { width, height } = dims;
+      if (guide.ratioValue) {
+        const actual = width / height;
+        const diff = Math.abs(actual - guide.ratioValue) / guide.ratioValue;
+        if (diff > 0.15) {
+          out.push(
+            guide.fit === "contain"
+              ? `比例是 ${width}×${height}，與建議的 ${guide.ratio} 不同，前台會出現留白`
+              : `比例是 ${width}×${height}，與建議的 ${guide.ratio} 差異較大，前台會被裁切`
+          );
+        }
+      }
+      if (guide.minWidth && Math.min(width, height * (guide.ratioValue ?? 1)) < guide.minWidth * 0.8) {
+        out.push(`解析度 ${width}×${height} 偏低，在高解析螢幕上可能模糊（${guide.size}）`);
+      }
+    }
+  }
+  return out;
+}
+
 /** Uploads one file to the `project-media` bucket and returns its public
  * URL. Shared by the dropzone and by callers that generate files
  * themselves (e.g. a poster frame captured from an mp4). */
@@ -87,7 +193,8 @@ export function AdminMediaDropzone({
   mediaPathPrefix,
   compact = false,
   warnIfOverBytes,
-  accept = "image/*,video/*",
+  accept,
+  guide,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -95,6 +202,10 @@ export function AdminMediaDropzone({
   compact?: boolean;
   /** `<input accept>`; defaults to images + videos. */
   accept?: string;
+  /** What this slot is for on the public page (name, location, ratio,
+   * recommended size, accepted kinds). Drives the on-screen guidance and
+   * the pre-upload checks. */
+  guide?: MediaGuide;
   /** Shows a non-blocking warning under the dropzone when the selected
    * file exceeds this size -- doesn't stop the upload (e.g.
    * hover_preview_video's "keep it under 3MB" guidance). */
@@ -103,21 +214,25 @@ export function AdminMediaDropzone({
   const [dragOver, setDragOver] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sizeWarning, setSizeWarning] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const url = value ?? "";
   const uploading = progress !== null;
+  const acceptAttr = accept ?? (guide ? acceptFromGuide(guide) : "image/*,video/*");
 
   const handleFile = useCallback(
     async (file: File | undefined) => {
       if (!file) return;
       setError(null);
-      setSizeWarning(null);
-      if (warnIfOverBytes && file.size > warnIfOverBytes) {
-        setSizeWarning(
-          `檔案大小 ${(file.size / (1024 * 1024)).toFixed(1)}MB，建議壓縮到 ${(warnIfOverBytes / (1024 * 1024)).toFixed(0)}MB 以內`
-        );
+      setWarnings([]);
+      const blocked = blockingProblem(file, guide);
+      if (blocked) {
+        setError(blocked);
+        if (inputRef.current) inputRef.current.value = "";
+        return;
       }
+      const advice = await softWarnings(file, guide, warnIfOverBytes);
+      if (advice.length > 0) setWarnings(advice);
       setProgress(0);
       try {
         onChange(await uploadMediaFile(file, mediaPathPrefix, setProgress));
@@ -128,11 +243,12 @@ export function AdminMediaDropzone({
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [mediaPathPrefix, onChange, warnIfOverBytes]
+    [mediaPathPrefix, onChange, warnIfOverBytes, guide]
   );
 
   return (
     <div className="space-y-2.5">
+      {guide && <MediaGuideCard guide={guide} />}
       {url ? (
         <div className="flex items-center gap-3">
           <div
@@ -186,7 +302,7 @@ export function AdminMediaDropzone({
           <input
             ref={inputRef}
             type="file"
-            accept={accept}
+            accept={acceptAttr}
             disabled={uploading}
             onChange={(e) => handleFile(e.target.files?.[0])}
             className="sr-only"
@@ -205,8 +321,9 @@ export function AdminMediaDropzone({
             <>
               <CloudArrowUp size={20} weight="light" className="text-admin-text-faint" />
               <p className="text-xs text-admin-text-muted">
-                拖曳檔案到這裡，或<span className="text-admin-accent">點擊選擇</span>
+                拖曳{guide ? kindLabel(guide) : "檔案"}到這裡，或<span className="text-admin-accent">點擊選擇</span>
               </p>
+              {guide && <p className="text-[10px] text-admin-text-faint">{guide.ratio ? `${guide.ratio} · ` : ""}{guide.size}</p>}
             </>
           )}
         </label>
@@ -219,7 +336,12 @@ export function AdminMediaDropzone({
         </p>
       )}
 
-      {sizeWarning && <p className="text-xs text-admin-warning">{sizeWarning}</p>}
+      {warnings.map((w) => (
+        <p key={w} className="flex items-start gap-1 text-xs text-admin-warning">
+          <Info size={12} weight="bold" className="mt-0.5 shrink-0" />
+          {w}
+        </p>
+      ))}
 
       <input
         value={url}
@@ -227,6 +349,21 @@ export function AdminMediaDropzone({
         placeholder="或直接貼上圖片／影片網址"
         className="w-full rounded-md border border-admin-border bg-admin-surface px-3 py-1.5 font-mono text-[11px] text-admin-text outline-none transition-colors focus:border-admin-accent"
       />
+    </div>
+  );
+}
+
+/** Compact "what goes here" card shown above every guided upload slot. */
+function MediaGuideCard({ guide }: { guide: MediaGuide }) {
+  return (
+    <div className="rounded-md border border-admin-border bg-admin-accent-soft/40 px-3 py-2">
+      <p className="text-xs font-medium text-admin-text">{guide.title}</p>
+      <p className="mt-0.5 text-[11px] leading-relaxed text-admin-text-muted">📍 {guide.where}</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-admin-text-faint">
+        {guide.ratio ? `${guide.ratio} · ` : ""}
+        {guide.size} · {kindLabel(guide)}
+        {guide.note ? ` · ${guide.note}` : ""}
+      </p>
     </div>
   );
 }

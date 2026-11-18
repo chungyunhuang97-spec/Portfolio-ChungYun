@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { Plus, Trash, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { AdminMediaDropzone } from "@/components/admin/AdminMediaDropzone";
 import { useTrackChanges } from "@/components/admin/ChangesContext";
+import { useAdminDevMode } from "@/components/admin/useAdminDevMode";
+import { resolveFieldLabel, resolveMediaGuide } from "@/lib/admin-field-guide";
 
 type FieldType = "text" | "structured" | "media" | "raw";
 
@@ -26,7 +28,7 @@ interface Field {
 // and without it here it only ever rendered as a plain text input -- no
 // dropzone, no drag-and-drop, no file picker -- even though
 // `AdminMediaDropzone` already supports uploading images, gifs, and videos.
-const MEDIA_KEY_PATTERN = /(_media_url|_image_url|_video_url|screenshot_url|MediaUrl|ImageUrl|VideoUrl)$/i;
+const MEDIA_KEY_PATTERN = /(_media_url|_image_url|_video_url|screenshot_url|IllustrationUrl|MediaUrl|ImageUrl|VideoUrl)$/i;
 const DESKTOP_MOBILE_PATTERN = /desktop|mobile/i;
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{3}([0-9a-f]{3}([0-9a-f]{2})?)?$/i;
 
@@ -244,6 +246,43 @@ function fieldLabelClass() {
   return "text-[11px] font-medium tracking-[0.1em] text-admin-text-faint";
 }
 
+/**
+ * Friendly field name: the registered Chinese label (with the raw key kept
+ * small beside it for reference), or -- for keys nobody has registered yet --
+ * whatever `fallback` the caller was already showing.
+ */
+function FieldName({
+  prefix,
+  fieldKey,
+  fallback,
+}: {
+  prefix: string | undefined;
+  fieldKey: string;
+  fallback: string;
+}) {
+  const info = resolveFieldLabel(prefix, fieldKey);
+  if (!info) return <>{fallback}</>;
+  return (
+    <>
+      <span className="normal-case tracking-normal text-admin-text">{info.label}</span>
+      <code className="ml-2 font-mono text-[9px] font-normal normal-case tracking-normal text-admin-text-faint">
+        {fieldKey}
+      </code>
+    </>
+  );
+}
+
+function FieldHint({ prefix, fieldKey }: { prefix: string | undefined; fieldKey: string }) {
+  const info = resolveFieldLabel(prefix, fieldKey);
+  if (!info?.hint) return null;
+  return <p className="mb-1.5 text-[11px] leading-relaxed text-admin-text-faint">{info.hint}</p>;
+}
+
+function isMediaContainer(fieldKey: string | undefined, prefix: string | undefined) {
+  const lastSegment = (prefix ?? "").split("/").filter(Boolean).pop() ?? "";
+  return /media/i.test(fieldKey ?? "") || /media/i.test(lastSegment);
+}
+
 function expandShortHex(hex: string) {
   const [, r, g, b] = hex;
   return `#${r}${r}${g}${g}${b}${b}`;
@@ -298,6 +337,7 @@ function AnyValueEditor({
         value={(value as string) ?? ""}
         onChange={onChange}
         mediaPathPrefix={extendPrefix(mediaPathPrefix, fieldKey)}
+        guide={resolveMediaGuide(mediaPathPrefix, fieldKey) ?? undefined}
         compact
       />
     );
@@ -347,6 +387,52 @@ function AnyValueEditor({
 
   if (Array.isArray(value)) {
     const isStringArray = value.every((v) => typeof v === "string");
+
+    if (isStringArray && isMediaContainer(fieldKey, mediaPathPrefix) && value.length > 0 && (fieldKey ?? "") !== "") {
+      // e.g. nest-stay's `uiFlowDesktopMedia: { "01": [url, url], ... }` --
+      // a list of media URLs, each of which should get an uploader rather
+      // than a bare text box.
+      const items = value as string[];
+      const listGuide = resolveMediaGuide(mediaPathPrefix, fieldKey) ?? undefined;
+      return (
+        <div className="space-y-3">
+          {items.map((item, i) => (
+            <div key={i} className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-medium tracking-[0.1em] text-admin-text-faint">第 {i + 1} 張</span>
+                <button
+                  type="button"
+                  onClick={() => onChange(items.filter((_, idx) => idx !== i))}
+                  className="rounded-md px-2 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
+                  aria-label="Remove item"
+                >
+                  <Trash size={14} weight="light" />
+                </button>
+              </div>
+              <AdminMediaDropzone
+                value={item ?? ""}
+                onChange={(v) => {
+                  const next = [...items];
+                  next[i] = v;
+                  onChange(next);
+                }}
+                mediaPathPrefix={extendPrefix(extendPrefix(mediaPathPrefix, fieldKey), String(i))}
+                guide={listGuide}
+                compact
+              />
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => onChange([...items, ""])}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-muted transition-colors hover:text-admin-accent"
+          >
+            <Plus size={14} weight="bold" />
+            ADD IMAGE
+          </button>
+        </div>
+      );
+    }
 
     if (isStringArray) {
       const items = value as string[];
@@ -470,7 +556,10 @@ function NestedObjectFields({
     <div className="space-y-3">
       {entries.map(([k, v]) => (
         <div key={k} className="space-y-1">
-          <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">{humanizeKey(k)}</label>
+          <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">
+            <FieldName prefix={mediaPathPrefix} fieldKey={k} fallback={humanizeKey(k)} />
+          </label>
+          <FieldHint prefix={mediaPathPrefix} fieldKey={k} />
           <AnyValueEditor
             value={v}
             onChange={(nv) => onChange({ ...obj, [k]: nv })}
@@ -501,6 +590,7 @@ function FieldEditor({
         value={(field.value as string) ?? ""}
         onChange={onChange}
         mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${field.key}` : field.key}
+        guide={resolveMediaGuide(mediaPathPrefix, field.key) ?? undefined}
       />
     );
   }
@@ -574,6 +664,7 @@ export function ContentEditor({
   const [newFieldKey, setNewFieldKey] = useState("");
   const [newFieldType, setNewFieldType] = useState<FieldType>("text");
   const [baseline, setBaseline] = useState<Record<string, unknown>>(initialContent);
+  const [devMode, setDevMode] = useAdminDevMode();
 
   function updateField(index: number, value: unknown) {
     setFields((prev) => prev.map((f, i) => (i === index ? { ...f, value } : f)));
@@ -657,14 +748,31 @@ export function ContentEditor({
   return (
     <div>
       <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={toggleRawMode}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-faint transition-colors hover:text-admin-text"
-        >
-          {rawMode ? <CaretUp size={14} weight="bold" /> : <CaretDown size={14} weight="bold" />}
-          {rawMode ? "STRUCTURED VIEW" : "ADVANCED: EDIT RAW JSON"}
-        </button>
+        <div className="flex items-center gap-3">
+          <label
+            className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-admin-text-faint"
+            title="開啟後可新增／刪除欄位、編輯原始 JSON。一般內容編輯不需要，改錯欄位名稱會讓前台壞掉。"
+          >
+            <input
+              type="checkbox"
+              checked={devMode}
+              disabled={rawMode}
+              onChange={(e) => setDevMode(e.target.checked)}
+              className="size-3.5 accent-admin-accent"
+            />
+            開發者模式
+          </label>
+          {devMode && (
+            <button
+              type="button"
+              onClick={toggleRawMode}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-admin-text-faint transition-colors hover:text-admin-text"
+            >
+              {rawMode ? <CaretUp size={14} weight="bold" /> : <CaretDown size={14} weight="bold" />}
+              {rawMode ? "STRUCTURED VIEW" : "EDIT RAW JSON"}
+            </button>
+          )}
+        </div>
         {isDirty && status !== "saving" && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-admin-warning">
             <span className="h-1.5 w-1.5 rounded-full bg-admin-warning" />
@@ -706,7 +814,9 @@ export function ContentEditor({
             if (g.kind === "pair") {
               return (
                 <div key={g.base}>
-                  <label className={`${fieldLabelClass()} mb-2 block`}>{humanizeKey(g.base)}</label>
+                  <label className={`${fieldLabelClass()} mb-2 block`}>
+                    <FieldName prefix={mediaPathPrefix} fieldKey={g.desktop.field.key} fallback={humanizeKey(g.base)} />
+                  </label>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <p className="mb-1.5 text-[10px] tracking-[0.1em] text-admin-text-faint">DESKTOP</p>
@@ -716,6 +826,7 @@ export function ContentEditor({
                         mediaPathPrefix={
                           mediaPathPrefix ? `${mediaPathPrefix}/${g.desktop.field.key}` : g.desktop.field.key
                         }
+                        guide={resolveMediaGuide(mediaPathPrefix, g.desktop.field.key) ?? undefined}
                         compact
                       />
                     </div>
@@ -727,6 +838,7 @@ export function ContentEditor({
                         mediaPathPrefix={
                           mediaPathPrefix ? `${mediaPathPrefix}/${g.mobile.field.key}` : g.mobile.field.key
                         }
+                        guide={resolveMediaGuide(mediaPathPrefix, g.mobile.field.key) ?? undefined}
                         compact
                       />
                     </div>
@@ -741,16 +853,21 @@ export function ContentEditor({
               return (
                 <div key={field.key + index}>
                   <div className="mb-2 flex items-center justify-between">
-                    <label className={fieldLabelClass()}>{field.key.toUpperCase()}</label>
-                    <button
-                      type="button"
-                      onClick={() => removeField(index)}
-                      className="rounded-md p-1 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
-                      aria-label={`Remove field ${field.key}`}
-                    >
-                      <Trash size={14} weight="light" />
-                    </button>
+                    <label className={fieldLabelClass()}>
+                      <FieldName prefix={mediaPathPrefix} fieldKey={field.key} fallback={field.key.toUpperCase()} />
+                    </label>
+                    {devMode && (
+                      <button
+                        type="button"
+                        onClick={() => removeField(index)}
+                        className="rounded-md p-1 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
+                        aria-label={`Remove field ${field.key}`}
+                      >
+                        <Trash size={14} weight="light" />
+                      </button>
+                    )}
                   </div>
+                  <FieldHint prefix={mediaPathPrefix} fieldKey={field.key} />
                   {isArray && mediaByRow.size > 0 ? (
                     <ArrayWithRowMediaEditor
                       items={field.value as Record<string, unknown>[]}
@@ -775,21 +892,27 @@ export function ContentEditor({
             return (
               <div key={field.key + index}>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className={fieldLabelClass()}>{field.key.toUpperCase()}</label>
-                  <button
-                    type="button"
-                    onClick={() => removeField(index)}
-                    className="rounded-md p-1 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
-                    aria-label={`Remove field ${field.key}`}
-                  >
-                    <Trash size={14} weight="light" />
-                  </button>
+                  <label className={fieldLabelClass()}>
+                    <FieldName prefix={mediaPathPrefix} fieldKey={field.key} fallback={field.key.toUpperCase()} />
+                  </label>
+                  {devMode && (
+                    <button
+                      type="button"
+                      onClick={() => removeField(index)}
+                      className="rounded-md p-1 text-admin-text-faint transition-colors hover:bg-admin-danger-soft hover:text-admin-danger"
+                      aria-label={`Remove field ${field.key}`}
+                    >
+                      <Trash size={14} weight="light" />
+                    </button>
+                  )}
                 </div>
+                <FieldHint prefix={mediaPathPrefix} fieldKey={field.key} />
                 <FieldEditor field={field} onChange={(value) => updateField(index, value)} mediaPathPrefix={mediaPathPrefix} />
               </div>
             );
           })}
 
+          {devMode && (
           <div className="flex flex-wrap items-end gap-2 border-t border-admin-border pt-4">
             <div className="flex flex-col gap-1.5">
               <label className={fieldLabelClass()}>NEW FIELD KEY</label>
@@ -823,6 +946,7 @@ export function ContentEditor({
               ADD FIELD
             </button>
           </div>
+          )}
         </div>
       )}
 
@@ -882,6 +1006,7 @@ function ArrayWithRowMediaEditor({
                 value={(m.field.value as string) ?? ""}
                 onChange={(v) => onRowMediaChange(m.index, v)}
                 mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${m.field.key}` : m.field.key}
+                guide={resolveMediaGuide(mediaPathPrefix, m.field.key) ?? undefined}
                 compact
               />
             </div>

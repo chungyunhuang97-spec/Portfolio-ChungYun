@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useTrackChanges } from "@/components/admin/ChangesContext";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { AdminMediaDropzone } from "@/components/admin/AdminMediaDropzone";
+import { COVER_DESKTOP_GUIDE, COVER_MOBILE_GUIDE, HOVER_PREVIEW_GUIDE } from "@/lib/admin-field-guide";
 import { BentoPreviewMini, type BentoPreviewProject } from "@/components/admin/BentoPreviewMini";
 import type {
   BadgeStatus,
@@ -414,6 +415,7 @@ export function ProjectMetaForm({
               value={fields.cover_image_url ?? ""}
               onChange={(v) => set("cover_image_url", v || null)}
               mediaPathPrefix={`${project.slug}/cover`}
+              guide={COVER_DESKTOP_GUIDE}
             />
           </div>
           <div>
@@ -424,6 +426,7 @@ export function ProjectMetaForm({
               value={fields.cover_image_mobile ?? ""}
               onChange={(v) => set("cover_image_mobile", v || null)}
               mediaPathPrefix={`${project.slug}/cover-mobile`}
+              guide={COVER_MOBILE_GUIDE}
             />
           </div>
         </div>
@@ -581,6 +584,7 @@ export function ProjectMetaForm({
             value={fields.hover_preview_video ?? ""}
             onChange={(v) => set("hover_preview_video", v || null)}
             mediaPathPrefix={`${project.slug}/hover-preview`}
+            guide={HOVER_PREVIEW_GUIDE}
             warnIfOverBytes={HOVER_VIDEO_MAX_BYTES}
           />
         </div>

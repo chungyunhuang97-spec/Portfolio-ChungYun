@@ -44,6 +44,7 @@ export function GlobalSaveBar() {
         className="shrink-0 rounded-md bg-admin-accent px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors hover:bg-admin-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
       >
         {savingAll ? "儲存中…" : hasChanges ? `儲存全部（${count}）` : "儲存"}
+        {hasChanges && !savingAll && <span className="ml-2 hidden opacity-70 md:inline">⌘S</span>}
       </button>
     </div>
   );

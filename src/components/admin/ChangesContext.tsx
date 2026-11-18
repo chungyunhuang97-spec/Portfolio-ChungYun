@@ -165,6 +165,29 @@ export function ChangesProvider({ children }: { children: ReactNode }) {
 
   const status = useMemo(() => ({ dirtyEntries, savingAll }), [dirtyEntries, savingAll]);
 
+  // Safety nets while anything is unsaved: Cmd/Ctrl+S saves everything, and
+  // leaving / closing / reloading the tab asks for confirmation first.
+  const dirtyCount = dirtyEntries.length;
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (dirtyCount > 0) void saveAll();
+      }
+    }
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (dirtyCount === 0) return;
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [dirtyCount, saveAll]);
+
   return (
     <ActionsContext.Provider value={actions}>
       <StatusContext.Provider value={status}>{children}</StatusContext.Provider>
