@@ -23,8 +23,9 @@ export interface MediaGuide {
   ratio?: string;
   /** width / height, used to warn when an upload would be cropped badly. */
   ratioValue?: number;
-  /** "crop" = object-cover (edges get cut); "contain" = whole image shown. */
-  fit?: "crop" | "contain";
+  /** "crop" = object-cover (edges get cut); "contain" = whole image shown;
+   * "adapt" = the frame resizes to the media, so any phone-shaped ratio fits. */
+  fit?: "crop" | "contain" | "adapt";
   /** Recommended pixel size / delivery advice. */
   size: string;
   /** Warn when the shorter side is narrower than this many px. */
@@ -128,8 +129,9 @@ const RULES: GuideRule[] = [
       title: "介面設計手機畫面",
       where: "「核心介面優化與服務創新設計」各分頁面板中的手機 mockup（桌機版與手機版版面各有一個欄位）",
       ...PHONE_SCREEN,
+      fit: "adapt",
       kinds: ["image", "video"],
-      note: "桌機欄位建議放圖片、手機欄位建議放影片；" + AUTOPLAY_NOTE,
+      note: "手機框會自動貼合素材比例，直式錄影不會被裁切；桌機欄位建議放圖片、手機欄位建議放影片；" + AUTOPLAY_NOTE,
     },
   },
 
@@ -140,6 +142,7 @@ const RULES: GuideRule[] = [
       title: "UI 流程手機畫面",
       where: "「參與併團流程」各步驟（搜尋→瀏覽→詳情→加入→申請→完成）的手機 mockup",
       ...PHONE_SCREEN,
+      fit: "adapt",
       kinds: ["image", "video"],
       note: "uiFlowDesktopMedia 依步驟編號（01–06）排列，同一步驟可放 1–2 張；" + AUTOPLAY_NOTE,
     },

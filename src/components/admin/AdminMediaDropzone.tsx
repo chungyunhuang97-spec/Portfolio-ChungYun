@@ -149,7 +149,7 @@ async function softWarnings(file: File, guide: MediaGuide | undefined, warnIfOve
     const dims = await readDimensions(file);
     if (dims) {
       const { width, height } = dims;
-      if (guide.ratioValue) {
+      if (guide.ratioValue && guide.fit !== "adapt") {
         const actual = width / height;
         const diff = Math.abs(actual - guide.ratioValue) / guide.ratioValue;
         if (diff > 0.15) {

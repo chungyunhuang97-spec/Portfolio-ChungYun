@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { WifiHigh, CellSignalFull, BatteryFull } from "@phosphor-icons/react/dist/ssr";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * Reusable iPhone-style device frame for App Mockup slots across every
@@ -23,8 +23,52 @@ export function PhoneFrame({
   float?: boolean;
   className?: string;
 }) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  // Outer width/height ratio that makes the SCREEN area exactly match the
+  // uploaded media, so a recording that isn't 375:812 is neither cropped
+  // (object-cover) nor letter-boxed. null = use the default 375:812 body.
+  const [fitAspect, setFitAspect] = useState<number | null>(null);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    const media = frame?.querySelector<HTMLVideoElement | HTMLImageElement>("video, img");
+    if (!frame || !media) {
+      setFitAspect(null);
+      return;
+    }
+
+    const BORDER = 16; // 8px each side
+    function update() {
+      if (!frame || !media) return;
+      const natW = media instanceof HTMLVideoElement ? media.videoWidth : media.naturalWidth;
+      const natH = media instanceof HTMLVideoElement ? media.videoHeight : media.naturalHeight;
+      if (!natW || !natH) return;
+      const screenAspect = natW / natH;
+      // Only phone-shaped media adapts; a landscape image keeps the default body.
+      if (screenAspect < 0.3 || screenAspect > 0.8) return setFitAspect(null);
+      const width = frame.getBoundingClientRect().width;
+      if (width <= BORDER) return;
+      const next = width / ((width - BORDER) / screenAspect + BORDER);
+      setFitAspect((prev) => (prev !== null && Math.abs(prev - next) < 0.0005 ? prev : next));
+    }
+
+    update();
+    const loadEvent = media instanceof HTMLVideoElement ? "loadedmetadata" : "load";
+    media.addEventListener(loadEvent, update);
+    const observer = new ResizeObserver(update);
+    observer.observe(frame);
+    return () => {
+      media.removeEventListener(loadEvent, update);
+      observer.disconnect();
+    };
+    // `screen` is a fresh element each render, so this re-binds to whatever
+    // <video>/<img> is currently inside the frame.
+  }, [screen]);
+
   const frame = (
     <div
+      ref={frameRef}
+      style={fitAspect ? { aspectRatio: fitAspect } : undefined}
       className={`relative aspect-[375/812] w-full overflow-hidden rounded-[2.5rem] border-[8px] border-primary-black bg-proj-white shadow-[0_20px_60px_rgba(0,0,0,0.12)] ${className}`}
     >
       {/* status bar */}
