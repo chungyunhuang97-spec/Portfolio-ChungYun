@@ -257,7 +257,7 @@ export function Hero({
         {/* Mockup — flex-1 so it fills remaining space, capped to avoid overflow */}
         <motion.div variants={heroItem} className="flex min-h-0 flex-1 items-center justify-center py-1">
           <div className="h-full max-h-[300px] w-auto" style={{ aspectRatio: "375/812" }}>
-            <PhoneFrame label="前台畫面（上傳截圖後顯示）" screen={frontendMobileScreen} float />
+            <PhoneFrame fitMedia label="前台畫面（上傳截圖後顯示）" screen={frontendMobileScreen} float />
           </div>
         </motion.div>
       </motion.div>
@@ -312,7 +312,7 @@ export function Hero({
             own description than floating off the Hero mockup's corner. */}
         <motion.div variants={heroItem} className="w-[220px]">
           <TiltMockup>
-            <PhoneFrame label="前台畫面（上傳截圖後顯示）" screen={frontendScreen} float />
+            <PhoneFrame fitMedia label="前台畫面（上傳截圖後顯示）" screen={frontendScreen} float />
           </TiltMockup>
         </motion.div>
       </motion.div>

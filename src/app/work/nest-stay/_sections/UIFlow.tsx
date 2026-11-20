@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { SlideIn } from "@/components/design-system/SlideIn";
-import { PhoneFrame } from "@/components/design-system/PhoneFrame";
+import { PhoneFrame, PHONE_RECORDING_ASPECT } from "@/components/design-system/PhoneFrame";
 
 interface UiFlowStep {
   stepNumber: string;
@@ -106,7 +106,7 @@ function ChevronBadge() {
 function SingleMedia({ src }: { src?: string }) {
   return (
     <div className="w-[150px] shrink-0">
-      <PhoneFrame screen={mediaScreen(src)} />
+      <PhoneFrame screenAspect={PHONE_RECORDING_ASPECT} screen={mediaScreen(src)} />
     </div>
   );
 }
@@ -115,11 +115,11 @@ function MediaPair({ images }: { images: (string | undefined)[] }) {
   return (
     <div className="flex items-center gap-3">
       <div className="w-[150px] shrink-0">
-        <PhoneFrame screen={mediaScreen(images[0])} />
+        <PhoneFrame screenAspect={PHONE_RECORDING_ASPECT} screen={mediaScreen(images[0])} />
       </div>
       <ChevronBadge />
       <div className="w-[150px] shrink-0">
-        <PhoneFrame screen={mediaScreen(images[1])} />
+        <PhoneFrame screenAspect={PHONE_RECORDING_ASPECT} screen={mediaScreen(images[1])} />
       </div>
     </div>
   );
@@ -347,7 +347,7 @@ function TabPanel({ tab, media }: { tab: UiFlowTab; media?: string }) {
         className="flex flex-col items-center gap-4"
       >
         <div className="w-[46vw] max-w-[190px] min-w-[150px]">
-          <PhoneFrame screen={mediaScreen(media)} label="App 畫面（後臺可上傳影片或圖片）" />
+          <PhoneFrame screenAspect={PHONE_RECORDING_ASPECT} screen={mediaScreen(media)} label="App 畫面（後臺可上傳影片或圖片）" />
         </div>
         <div className="flex w-full flex-col gap-3">
           {tab.features.map((f) => (

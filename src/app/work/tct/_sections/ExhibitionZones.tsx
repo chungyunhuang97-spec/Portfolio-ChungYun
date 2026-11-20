@@ -5,7 +5,7 @@ import type { RefObject, SVGProps } from "react";
 import { AnimatePresence, motion, useScroll, useMotionValueEvent, useReducedMotion } from "framer-motion";
 import { ImageSquare, MagnifyingGlassPlus, X } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
-import { PausedBadge, useHoverPause } from "@/components/design-system/useHoverPause";
+import { VideoControls, useHoverPause } from "@/components/design-system/useHoverPause";
 import { SectionKicker } from "@/components/design-system/SectionKicker";
 
 /** Every zone's Design/Live frame renders at this same width on desktop,
@@ -290,7 +290,7 @@ function StepList({
  * is for a 16:10-ish screenshot rather than the Hero's portrait kiosk. */
 function DeviceFrame({ image, alt }: { image?: string; alt: string }) {
   const frameRef = useRef<HTMLDivElement>(null);
-  const { paused, handlers } = useHoverPause(frameRef);
+  const { controls, handlers } = useHoverPause(frameRef);
   return (
     <div ref={frameRef} {...handlers} className="relative overflow-hidden rounded-[14px] border border-grey-100 bg-proj-white shadow-[0_20px_60px_rgba(0,0,0,0.1)]">
       <div className="flex items-center gap-1.5 border-b border-grey-100 bg-grey-50 px-4 py-2.5">
@@ -304,7 +304,7 @@ function DeviceFrame({ image, alt }: { image?: string; alt: string }) {
        * content out of the taller ones. Contain + a neutral fill keeps the
        * whole screenshot visible regardless of its own aspect ratio. */}
       <div className="aspect-[3/2] w-full bg-grey-50">
-        <PausedBadge show={paused} />
+        <VideoControls {...controls} />
         {image ? (
           isVideoUrl(image) ? (
             <video

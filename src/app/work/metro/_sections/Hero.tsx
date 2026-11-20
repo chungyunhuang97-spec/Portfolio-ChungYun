@@ -70,7 +70,7 @@ export function Hero({
         </SlideIn>
 
         <SlideIn delay={1.15} className="mx-auto mt-8 w-[62%] max-w-[240px]">
-          <PhoneFrame screen={screen} float />
+          <PhoneFrame fitMedia screen={screen} float />
         </SlideIn>
 
         <BodyLarge className="mt-8 text-center text-grey-600">{body}</BodyLarge>
@@ -96,7 +96,7 @@ export function Hero({
         </SlideIn>
 
         <SlideIn direction="right" delay={1.15} className="w-[259px] shrink-0">
-          <PhoneFrame screen={screen} float />
+          <PhoneFrame fitMedia screen={screen} float />
         </SlideIn>
       </div>
     </section>

@@ -6,7 +6,7 @@ import Image from "next/image";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ExclamationMark } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
-import { PhoneFrame } from "@/components/design-system/PhoneFrame";
+import { PhoneFrame, PHONE_RECORDING_ASPECT } from "@/components/design-system/PhoneFrame";
 
 interface FeatureItem {
   title: string;
@@ -476,7 +476,7 @@ export function InterfaceBonusExperience({ process }: { process: Record<string, 
                   >
                     <div className="relative w-[46vw] max-w-[190px] min-w-[150px]">
                       <PhoneGlow>
-                        <PhoneFrame screen={mediaScreen(mobileMedia[activeTab])} label="App 畫面（後臺可上傳影片）" />
+                        <PhoneFrame screenAspect={PHONE_RECORDING_ASPECT} screen={mediaScreen(mobileMedia[activeTab])} label="App 畫面（後臺可上傳影片）" />
                       </PhoneGlow>
                       <MobilePainPointButton text={activeBlock.painPoint} />
                     </div>
@@ -516,7 +516,7 @@ export function InterfaceBonusExperience({ process }: { process: Record<string, 
                     exit={{ opacity: 0, scale: 0.97 }}
                     transition={{ duration: 0.25, ease: "easeOut" }}
                   >
-                    <PhoneFrame screen={mediaScreen(desktopMedia[activeTab])} />
+                    <PhoneFrame screenAspect={PHONE_RECORDING_ASPECT} screen={mediaScreen(desktopMedia[activeTab])} />
                   </motion.div>
                 </AnimatePresence>
               </PhoneGlow>

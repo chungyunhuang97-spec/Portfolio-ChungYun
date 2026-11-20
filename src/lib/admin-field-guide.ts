@@ -55,6 +55,19 @@ const PHONE_SCREEN = {
   maxVideoBytes: 8 * MB,
 };
 
+/** Tab-switched phone mockups (Metro panels, Nest Stay UI flow): the frame has
+ * one FIXED size shared by every tab, matching a typical iPhone screen
+ * recording, so it never jumps between tabs. Other ratios are cropped. */
+const TAB_PHONE_SCREEN = {
+  ratio: "約 1:2（iPhone 螢幕錄影，例如 726×1478）",
+  ratioValue: 0.492,
+  fit: "crop" as const,
+  size: "726×1478 px（或同比例）；圖片 ≤ 500KB，影片 ≤ 8MB",
+  minWidth: 600,
+  maxImageBytes: 500 * 1024,
+  maxVideoBytes: 8 * MB,
+};
+
 const AUTOPLAY_NOTE = "影片會自動循環、靜音播放；圖片可用 PNG / JPG / WebP / GIF";
 
 /** Segments of an editor path with array indices dropped:
@@ -95,6 +108,7 @@ const RULES: GuideRule[] = [
       title: "Hero 前台手機畫面",
       where: "頁面最上方 Hero 區的手機 mockup（優先於下方「前台」影片欄位）",
       ...PHONE_SCREEN,
+      fit: "adapt",
       kinds: ["image", "video"],
       note: "超出比例時會從頂端對齊裁切；" + AUTOPLAY_NOTE,
     },
@@ -105,6 +119,7 @@ const RULES: GuideRule[] = [
       title: "Hero 手機畫面",
       where: "頁面最上方 Hero 區的手機 mockup",
       ...PHONE_SCREEN,
+      fit: "adapt",
       kinds: ["image", "video"],
       note: AUTOPLAY_NOTE,
     },
@@ -128,10 +143,9 @@ const RULES: GuideRule[] = [
     guide: {
       title: "介面設計手機畫面",
       where: "「核心介面優化與服務創新設計」各分頁面板中的手機 mockup（桌機版與手機版版面各有一個欄位）",
-      ...PHONE_SCREEN,
-      fit: "adapt",
+      ...TAB_PHONE_SCREEN,
       kinds: ["image", "video"],
-      note: "手機框會自動貼合素材比例，直式錄影不會被裁切；桌機欄位建議放圖片、手機欄位建議放影片；" + AUTOPLAY_NOTE,
+      note: "切換分頁時手機框大小固定不變，比例不同的素材會被輕微裁切；" + AUTOPLAY_NOTE,
     },
   },
 
@@ -141,10 +155,9 @@ const RULES: GuideRule[] = [
     guide: {
       title: "UI 流程手機畫面",
       where: "「參與併團流程」各步驟（搜尋→瀏覽→詳情→加入→申請→完成）的手機 mockup",
-      ...PHONE_SCREEN,
-      fit: "adapt",
+      ...TAB_PHONE_SCREEN,
       kinds: ["image", "video"],
-      note: "uiFlowDesktopMedia 依步驟編號（01–06）排列，同一步驟可放 1–2 張；" + AUTOPLAY_NOTE,
+      note: "切換步驟時手機框大小固定不變；uiFlowDesktopMedia 依步驟編號（01–06）排列，同一步驟可放 1–2 張；" + AUTOPLAY_NOTE,
     },
   },
   {

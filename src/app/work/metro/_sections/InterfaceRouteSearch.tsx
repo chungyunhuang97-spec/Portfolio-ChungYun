@@ -6,7 +6,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { PenNib, ExclamationMark } from "@phosphor-icons/react/dist/ssr";
 import { SlideIn } from "@/components/design-system/SlideIn";
-import { PhoneFrame } from "@/components/design-system/PhoneFrame";
+import { PhoneFrame, PHONE_RECORDING_ASPECT } from "@/components/design-system/PhoneFrame";
 
 interface FeatureItem {
   title: string;
@@ -304,7 +304,7 @@ function DesktopPanel({
         </div>
         <div className="w-[280px] shrink-0">
           <PhoneGlow>
-            <PhoneFrame screen={mediaScreen(media)} />
+            <PhoneFrame screenAspect={PHONE_RECORDING_ASPECT} screen={mediaScreen(media)} />
           </PhoneGlow>
         </div>
       </div>
@@ -407,7 +407,7 @@ export function InterfaceRouteSearch({ process }: { process: Record<string, unkn
                   >
                     <div className="relative w-[46vw] max-w-[190px] min-w-[150px]">
                       <PhoneGlow>
-                        <PhoneFrame screen={mediaScreen(mobileMedia[activeTab])} label="App 畫面（後臺可上傳影片）" />
+                        <PhoneFrame screenAspect={PHONE_RECORDING_ASPECT} screen={mediaScreen(mobileMedia[activeTab])} label="App 畫面（後臺可上傳影片）" />
                       </PhoneGlow>
                       <MobilePainPointButton text={activeBlock.painPoint} />
                     </div>

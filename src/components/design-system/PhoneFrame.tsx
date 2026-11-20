@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { WifiHigh, CellSignalFull, BatteryFull } from "@phosphor-icons/react/dist/ssr";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { PausedBadge, useHoverPause } from "@/components/design-system/useHoverPause";
+import { VideoControls, useHoverPause } from "@/components/design-system/useHoverPause";
 
 /**
  * Reusable iPhone-style device frame for App Mockup slots across every
@@ -13,59 +13,77 @@ import { PausedBadge, useHoverPause } from "@/components/design-system/useHoverP
  * content (an <Image>/<video>) later; omit it to fall back to a soft
  * placeholder pattern.
  */
+/** Width/height of a typical iPhone screen recording (e.g. 726x1478). Used as
+ * the fixed screen ratio for tabbed mockups so recordings fit edge to edge. */
+export const PHONE_RECORDING_ASPECT = 0.492;
+
 export function PhoneFrame({
   screen,
   label = "App 畫面（後臺可上傳影片或圖片）",
   float = false,
   className = "",
+  screenAspect,
+  fitMedia = false,
 }: {
   screen?: ReactNode;
   label?: string;
   float?: boolean;
   className?: string;
+  /** Fixes the screen's width/height ratio. Use it wherever one frame swaps
+   * between several media (tabs): the frame keeps the SAME size on every tab
+   * instead of jumping when the new media has a different ratio. */
+  screenAspect?: number;
+  /** Resize the frame to the single media inside it. Only for frames that
+   * show one fixed asset (a page Hero); never for tab-switched frames. */
+  fitMedia?: boolean;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   // Outer width/height ratio that makes the SCREEN area exactly match the
   // uploaded media, so a recording that isn't 375:812 is neither cropped
   // (object-cover) nor letter-boxed. null = use the default 375:812 body.
   const [fitAspect, setFitAspect] = useState<number | null>(null);
-  const { paused, handlers: pauseHandlers } = useHoverPause(frameRef);
+  const { controls, handlers: pauseHandlers } = useHoverPause(frameRef);
 
   useEffect(() => {
     const frame = frameRef.current;
-    const media = frame?.querySelector<HTMLVideoElement | HTMLImageElement>("video, img");
-    if (!frame || !media) {
+    const media = fitMedia && !screenAspect
+      ? frame?.querySelector<HTMLVideoElement | HTMLImageElement>("video, img")
+      : null;
+    if (!frame || (!screenAspect && !media)) {
       setFitAspect(null);
       return;
     }
 
     const BORDER = 16; // 8px each side
     function update() {
-      if (!frame || !media) return;
-      const natW = media instanceof HTMLVideoElement ? media.videoWidth : media.naturalWidth;
-      const natH = media instanceof HTMLVideoElement ? media.videoHeight : media.naturalHeight;
-      if (!natW || !natH) return;
-      const screenAspect = natW / natH;
-      // Only phone-shaped media adapts; a landscape image keeps the default body.
-      if (screenAspect < 0.3 || screenAspect > 0.8) return setFitAspect(null);
+      if (!frame) return;
+      let aspect = screenAspect ?? 0;
+      if (!aspect && media) {
+        const natW = media instanceof HTMLVideoElement ? media.videoWidth : media.naturalWidth;
+        const natH = media instanceof HTMLVideoElement ? media.videoHeight : media.naturalHeight;
+        if (!natW || !natH) return;
+        aspect = natW / natH;
+        // Only phone-shaped media adapts; a landscape image keeps the default body.
+        if (aspect < 0.3 || aspect > 0.8) return setFitAspect(null);
+      }
       const width = frame.getBoundingClientRect().width;
       if (width <= BORDER) return;
-      const next = width / ((width - BORDER) / screenAspect + BORDER);
+      const next = width / ((width - BORDER) / aspect + BORDER);
       setFitAspect((prev) => (prev !== null && Math.abs(prev - next) < 0.0005 ? prev : next));
     }
 
     update();
     const loadEvent = media instanceof HTMLVideoElement ? "loadedmetadata" : "load";
-    media.addEventListener(loadEvent, update);
+    media?.addEventListener(loadEvent, update);
     const observer = new ResizeObserver(update);
     observer.observe(frame);
     return () => {
-      media.removeEventListener(loadEvent, update);
+      media?.removeEventListener(loadEvent, update);
       observer.disconnect();
     };
     // `screen` is a fresh element each render, so this re-binds to whatever
     // <video>/<img> is currently inside the frame.
-  }, [screen]);
+  }, [screen, screenAspect, fitMedia]);
 
   const frame = (
     <div
@@ -83,7 +101,7 @@ export function PhoneFrame({
           <BatteryFull size={16} weight="fill" />
         </div>
       </div>
-      <PausedBadge show={paused} />
+      <VideoControls {...controls} />
       {/* notch */}
       <div className="absolute left-1/2 top-0 z-10 h-[22px] w-[90px] -translate-x-1/2 rounded-b-2xl bg-primary-black" />
 

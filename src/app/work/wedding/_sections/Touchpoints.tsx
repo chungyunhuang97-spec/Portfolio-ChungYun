@@ -150,7 +150,7 @@ function TouchpointVisual({ touchpoint }: { touchpoint: Touchpoint }) {
     ) : undefined;
     return (
       <div className="relative mx-auto w-full max-w-[220px]">
-        <PhoneFrame screen={screen} label="電子喜帖畫面 素材製作中" />
+        <PhoneFrame fitMedia screen={screen} label="電子喜帖畫面 素材製作中" />
         <NotificationPing className="bottom-[21%]" />
         {touchpoint.demoUrl && (
           <SlideIn

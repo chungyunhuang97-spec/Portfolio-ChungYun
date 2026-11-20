@@ -1156,7 +1156,7 @@ function SharedScreenSlot({
         value={value}
         onChange={setBoth}
         mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${media.field.key}` : media.field.key}
-        guide={baseGuide ? { ...baseGuide, title: tabName ? `「${tabName}」的手機畫面` : "此分頁的手機畫面", note: "每個分頁各自一個畫面，不與其他分頁共用；桌機版與手機版共用同一個檔案，只需上傳一次；JPG／PNG 圖片或影片都可以；手機框會自動貼合素材比例，直式錄影不會被裁切；影片會自動循環、靜音播放" } : undefined}
+        guide={baseGuide ? { ...baseGuide, title: tabName ? `「${tabName}」的手機畫面` : "此分頁的手機畫面", note: "每個分頁各自一個畫面，不與其他分頁共用；桌機版與手機版共用同一個檔案，只需上傳一次；JPG／PNG 圖片或影片都可以；手機框大小固定，切換分頁時不會忽大忽小，比例不同的素材會被輕微裁切，建議用 iPhone 螢幕錄影（約 726×1478）；影片會自動循環、靜音播放" } : undefined}
         compact
       />
     </div>

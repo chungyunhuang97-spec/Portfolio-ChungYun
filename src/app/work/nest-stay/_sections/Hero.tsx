@@ -155,7 +155,7 @@ export function Hero({
         )}
 
         <motion.div variants={heroItem} className="mx-auto w-[62%] max-w-[240px] py-4">
-          <PhoneFrame screen={screen} float />
+          <PhoneFrame fitMedia screen={screen} float />
         </motion.div>
 
         <motion.div variants={heroItem}>
@@ -193,7 +193,7 @@ export function Hero({
 
         <motion.div variants={heroItem} className="w-[188px]">
           <TiltMockup>
-            <PhoneFrame screen={screen} float />
+            <PhoneFrame fitMedia screen={screen} float />
           </TiltMockup>
         </motion.div>
       </motion.div>
