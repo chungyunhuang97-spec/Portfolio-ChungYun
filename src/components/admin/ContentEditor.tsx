@@ -1057,6 +1057,7 @@ function ArrayWithRowMediaEditor({
             m.partner ? (
               <SharedScreenSlot
                 key={m.field.key}
+                tabName={rowTitle(item)}
                 media={m}
                 partner={m.partner}
                 onChange={onRowMediaChange}
@@ -1104,11 +1105,13 @@ function rowTitle(item: Record<string, unknown>): string {
  * different files, says so and lets the person pick which one to keep.
  */
 function SharedScreenSlot({
+  tabName,
   media,
   partner,
   onChange,
   mediaPathPrefix,
 }: {
+  tabName: string;
   media: AttachedMedia;
   partner: { field: Field; index: number };
   onChange: (fieldIndex: number, value: unknown) => void;
@@ -1153,7 +1156,7 @@ function SharedScreenSlot({
         value={value}
         onChange={setBoth}
         mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${media.field.key}` : media.field.key}
-        guide={baseGuide ? { ...baseGuide, title: "此分頁的手機畫面", note: "桌機版與手機版共用同一個檔案，只需上傳一次；手機框會自動貼合素材比例，直式錄影不會被裁切；影片會自動循環、靜音播放" } : undefined}
+        guide={baseGuide ? { ...baseGuide, title: tabName ? `「${tabName}」的手機畫面` : "此分頁的手機畫面", note: "每個分頁各自一個畫面，不與其他分頁共用；桌機版與手機版共用同一個檔案，只需上傳一次；JPG／PNG 圖片或影片都可以；手機框會自動貼合素材比例，直式錄影不會被裁切；影片會自動循環、靜音播放" } : undefined}
         compact
       />
     </div>
