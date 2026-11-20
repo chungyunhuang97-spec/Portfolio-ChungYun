@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { WifiHigh, CellSignalFull, BatteryFull } from "@phosphor-icons/react/dist/ssr";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { PausedBadge, useHoverPause } from "@/components/design-system/useHoverPause";
 
 /**
  * Reusable iPhone-style device frame for App Mockup slots across every
@@ -28,6 +29,7 @@ export function PhoneFrame({
   // uploaded media, so a recording that isn't 375:812 is neither cropped
   // (object-cover) nor letter-boxed. null = use the default 375:812 body.
   const [fitAspect, setFitAspect] = useState<number | null>(null);
+  const { paused, handlers: pauseHandlers } = useHoverPause(frameRef);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -68,6 +70,7 @@ export function PhoneFrame({
   const frame = (
     <div
       ref={frameRef}
+      {...pauseHandlers}
       style={fitAspect ? { aspectRatio: fitAspect } : undefined}
       className={`relative aspect-[375/812] w-full overflow-hidden rounded-[2.5rem] border-[8px] border-primary-black bg-proj-white shadow-[0_20px_60px_rgba(0,0,0,0.12)] ${className}`}
     >
@@ -80,6 +83,7 @@ export function PhoneFrame({
           <BatteryFull size={16} weight="fill" />
         </div>
       </div>
+      <PausedBadge show={paused} />
       {/* notch */}
       <div className="absolute left-1/2 top-0 z-10 h-[22px] w-[90px] -translate-x-1/2 rounded-b-2xl bg-primary-black" />
 
