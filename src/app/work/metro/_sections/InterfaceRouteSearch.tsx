@@ -353,14 +353,19 @@ export function InterfaceRouteSearch({ process }: { process: Record<string, unkn
   const sectionNumber = (process.interfaceSectionNumber as string) || "01";
   const sectionTitle = (process.interfaceSectionTitle as string) || "路線搜尋與規劃";
   const blocks = Array.isArray(process.interfaceBlocks) ? (process.interfaceBlocks as InterfaceBlock[]) : [];
-  const desktopMedia = [
+  const rawDesktopMedia = [
     process.interfaceSearchDesktopMediaUrl as string | undefined,
     process.interfaceStationDesktopMediaUrl as string | undefined,
   ];
-  const mobileMedia = [
+  const rawMobileMedia = [
     process.interfaceSearchMobileMediaUrl as string | undefined,
     process.interfaceStationMobileMediaUrl as string | undefined,
   ];
+  // Desktop and mobile show the same screen in the same phone frame, so a file
+  // set on either side serves both layouts (older content was uploaded to the
+  // desktop key only).
+  const desktopMedia = rawDesktopMedia.map((d, i) => d || rawMobileMedia[i]);
+  const mobileMedia = rawMobileMedia.map((m, i) => m || rawDesktopMedia[i]);
 
   const [activeTab, setActiveTab] = useState(0);
   const activeBlock = blocks[activeTab];

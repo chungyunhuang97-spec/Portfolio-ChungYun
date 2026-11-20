@@ -427,16 +427,21 @@ export function InterfaceCompanionService({ process }: { process: Record<string,
   const sectionNumber = (process.companionSectionNumber as string) || "02";
   const sectionTitle = (process.companionSectionTitle as string) || "捷伴陪同服務";
   const blocks = Array.isArray(process.companionBlocks) ? (process.companionBlocks as CompanionBlock[]) : [];
-  const desktopMedia = [
+  const rawDesktopMedia = [
     process.companionHelperDesktopMediaUrl as string | undefined,
     process.companionHelpedDesktopMediaUrl as string | undefined,
     process.companionAchievementDesktopMediaUrl as string | undefined,
   ];
-  const mobileMedia = [
+  const rawMobileMedia = [
     process.companionHelperMobileMediaUrl as string | undefined,
     process.companionHelpedMobileMediaUrl as string | undefined,
     process.companionAchievementMobileMediaUrl as string | undefined,
   ];
+  // Desktop and mobile show the same screen in the same phone frame, so a file
+  // set on either side serves both layouts (older content was uploaded to the
+  // desktop key only).
+  const desktopMedia = rawDesktopMedia.map((d, i) => d || rawMobileMedia[i]);
+  const mobileMedia = rawMobileMedia.map((m, i) => m || rawDesktopMedia[i]);
 
   const [activeTab, setActiveTab] = useState(0);
   const activeBlock = blocks[activeTab];

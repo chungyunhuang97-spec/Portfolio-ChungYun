@@ -428,14 +428,19 @@ export function InterfaceBonusExperience({ process }: { process: Record<string, 
   const sectionNumber = (process.bonusSectionNumber as string) || "03";
   const sectionTitle = (process.bonusSectionTitle as string) || "附加體驗與優化";
   const blocks = Array.isArray(process.bonusBlocks) ? (process.bonusBlocks as BonusBlock[]) : [];
-  const desktopMedia = [
+  const rawDesktopMedia = [
     process.bonusAccessibilityDesktopMediaUrl as string | undefined,
     process.bonusPromoDesktopMediaUrl as string | undefined,
   ];
-  const mobileMedia = [
+  const rawMobileMedia = [
     process.bonusAccessibilityMobileMediaUrl as string | undefined,
     process.bonusPromoMobileMediaUrl as string | undefined,
   ];
+  // Desktop and mobile show the same screen in the same phone frame, so a file
+  // set on either side serves both layouts (older content was uploaded to the
+  // desktop key only).
+  const desktopMedia = rawDesktopMedia.map((d, i) => d || rawMobileMedia[i]);
+  const mobileMedia = rawMobileMedia.map((m, i) => m || rawDesktopMedia[i]);
 
   const [activeTab, setActiveTab] = useState(0);
   const activeBlock = blocks[activeTab];
