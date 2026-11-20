@@ -20,11 +20,38 @@ function isFilled(value: unknown) {
 }
 
 function computeCompletion(content: Record<string, unknown>, prefix: string) {
+  const isMetro = prefix.startsWith("metro/");
   const entries = Object.entries(content);
-  const missing = entries
-    .filter(([, value]) => !isFilled(value))
-    .map(([key]) => ({ key, label: resolveFieldLabel(prefix, key)?.label ?? key }));
-  return { filled: entries.length - missing.length, total: entries.length, missing };
+  const handled = new Set<string>();
+  const units: { key: string; label: string; filled: boolean }[] = [];
+
+  for (const [key, value] of entries) {
+    if (handled.has(key)) continue;
+    const label = resolveFieldLabel(prefix, key)?.label ?? key;
+
+    // Metro's desktop/mobile screen pairs are edited as one shared slot, so
+    // they count (and jump) as one entry: filled if either side has a file.
+    const pair = isMetro ? /^(.+?)(Desktop|Mobile)(MediaUrl)$/.exec(key) : null;
+    if (pair) {
+      const partnerKey = `${pair[1]}${pair[2] === "Desktop" ? "Mobile" : "Desktop"}${pair[3]}`;
+      if (partnerKey in content) {
+        handled.add(key);
+        handled.add(partnerKey);
+        const desktopKey = pair[2] === "Desktop" ? key : partnerKey;
+        const desktopLabel = resolveFieldLabel(prefix, desktopKey)?.label ?? desktopKey;
+        units.push({
+          key: desktopKey,
+          label: desktopLabel.replace(/（桌機版畫面）$/, "（桌機＋手機共用）"),
+          filled: isFilled(value) || isFilled(content[partnerKey]),
+        });
+        continue;
+      }
+    }
+    units.push({ key, label, filled: isFilled(value) });
+  }
+
+  const missing = units.filter((u) => !u.filled).map(({ key, label }) => ({ key, label }));
+  return { filled: units.length - missing.length, total: units.length, missing };
 }
 
 export function SectionAccordion({

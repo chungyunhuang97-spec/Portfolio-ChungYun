@@ -136,7 +136,23 @@ interface AttachedMedia {
   label: string;
   field: Field;
   index: number;
+  /** When set, `field` and `partner` hold the SAME screen for two layouts
+   * (desktop + mobile) and are edited through one shared uploader. */
+  partner?: { field: Field; index: number };
 }
+
+/**
+ * Metro's three tabbed panels each keep one phone-screen per tab as a pair of
+ * flat keys (`<group><Panel>DesktopMediaUrl` / `...MobileMediaUrl`), in the
+ * same order as the panel's block array -- the front end indexes both lists
+ * with the active tab. Both layouts show the same recording in the same
+ * phone frame, so the admin edits each pair as one slot on its tab's card.
+ */
+const SHARED_SCREEN_PANELS: Record<string, { group: string; panels: string[] }> = {
+  interfaceBlocks: { group: "interface", panels: ["Search", "Station"] },
+  companionBlocks: { group: "companion", panels: ["Helper", "Helped", "Achievement"] },
+  bonusBlocks: { group: "bonus", panels: ["Accessibility", "Promo"] },
+};
 
 type GroupedField =
   | { kind: "single"; field: Field; index: number }
@@ -198,6 +214,31 @@ function groupFields(fields: Field[]): GroupedField[] {
         mediaByRow.set(rowIdx, list);
       });
     });
+
+    const shared = SHARED_SCREEN_PANELS[listField.key];
+    if (shared) {
+      shared.panels.forEach((panel, rowIdx) => {
+        if (rowIdx >= items.length) return;
+        const find = (side: "Desktop" | "Mobile") => {
+          const i = fields.findIndex((f, idx) => !used.has(idx) && f.type === "media" && f.key === `${shared.group}${panel}${side}MediaUrl`);
+          return i === -1 ? null : { field: fields[i], index: i };
+        };
+        const desktop = find("Desktop");
+        const mobile = find("Mobile");
+        const main = desktop ?? mobile;
+        if (!main) return;
+        used.add(main.index);
+        if (desktop && mobile) used.add(mobile.index);
+        const list = mediaByRow.get(rowIdx) ?? [];
+        list.push({
+          label: "手機畫面",
+          field: main.field,
+          index: main.index,
+          partner: desktop && mobile ? mobile : undefined,
+        });
+        mediaByRow.set(rowIdx, list);
+      });
+    }
 
     if (mediaByRow.size > 0) mediaByRowByField.set(listIndex, mediaByRow);
   }
@@ -988,7 +1029,10 @@ function ArrayWithRowMediaEditor({
       {items.map((item, i) => (
         <div key={i} className="space-y-3 rounded-md border border-admin-border bg-admin-surface p-3">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-medium tracking-[0.1em] text-admin-text-faint">#{i + 1}</span>
+            <span className="text-xs font-medium text-admin-text-muted">
+              <span className="mr-1.5 text-[10px] tracking-[0.1em] text-admin-text-faint">#{i + 1}</span>
+              {rowTitle(item)}
+            </span>
             <button
               type="button"
               onClick={() => onChange(items.filter((_, idx) => idx !== i))}
@@ -1009,18 +1053,28 @@ function ArrayWithRowMediaEditor({
             mediaPathPrefix={extendPrefix(mediaPathPrefix, String(i))}
           />
 
-          {(mediaByRow.get(i) ?? []).map((m) => (
-            <div key={m.field.key} data-field-key={m.field.key} className="scroll-mt-40 space-y-1">
-              <label className="text-[10px] tracking-[0.08em] text-admin-text-faint">{m.label}</label>
-              <AdminMediaDropzone
-                value={(m.field.value as string) ?? ""}
-                onChange={(v) => onRowMediaChange(m.index, v)}
-                mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${m.field.key}` : m.field.key}
-                guide={resolveMediaGuide(mediaPathPrefix, m.field.key) ?? undefined}
-                compact
+          {(mediaByRow.get(i) ?? []).map((m) =>
+            m.partner ? (
+              <SharedScreenSlot
+                key={m.field.key}
+                media={m}
+                partner={m.partner}
+                onChange={onRowMediaChange}
+                mediaPathPrefix={mediaPathPrefix}
               />
-            </div>
-          ))}
+            ) : (
+              <div key={m.field.key} data-field-key={m.field.key} className="scroll-mt-40 space-y-1">
+                <label className="text-xs font-medium text-admin-text-faint">{m.label}</label>
+                <AdminMediaDropzone
+                  value={(m.field.value as string) ?? ""}
+                  onChange={(v) => onRowMediaChange(m.index, v)}
+                  mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${m.field.key}` : m.field.key}
+                  guide={resolveMediaGuide(mediaPathPrefix, m.field.key) ?? undefined}
+                  compact
+                />
+              </div>
+            )
+          )}
         </div>
       ))}
       <button
@@ -1031,6 +1085,77 @@ function ArrayWithRowMediaEditor({
         <Plus size={14} weight="bold" />
         ADD ITEM
       </button>
+    </div>
+  );
+}
+
+/** A short title for an array row, from whichever naming field it has. */
+function rowTitle(item: Record<string, unknown>): string {
+  for (const k of ["tabLabel", "title", "name", "label", "app"]) {
+    const v = item[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "";
+}
+
+/**
+ * One uploader for a screen that is shown in both the desktop and the mobile
+ * layout. Writes the same URL to both keys. If the two keys currently hold
+ * different files, says so and lets the person pick which one to keep.
+ */
+function SharedScreenSlot({
+  media,
+  partner,
+  onChange,
+  mediaPathPrefix,
+}: {
+  media: AttachedMedia;
+  partner: { field: Field; index: number };
+  onChange: (fieldIndex: number, value: unknown) => void;
+  mediaPathPrefix?: string;
+}) {
+  const desktop = ((media.field.value as string) ?? "").trim();
+  const mobile = ((partner.field.value as string) ?? "").trim();
+  const differs = desktop !== "" && mobile !== "" && desktop !== mobile;
+  const value = desktop || mobile;
+  const baseGuide = resolveMediaGuide(mediaPathPrefix, media.field.key);
+
+  function setBoth(v: string) {
+    onChange(media.index, v);
+    onChange(partner.index, v);
+  }
+
+  return (
+    <div data-field-key={media.field.key} className="scroll-mt-40 space-y-1.5">
+      {differs && (
+        <div className="rounded-xl border border-admin-warning/40 bg-admin-warning-soft px-3 py-2 text-xs text-admin-text">
+          <p className="font-medium text-admin-warning">桌機版與手機版目前用的是兩個不同檔案</p>
+          <p className="mt-0.5 text-admin-text-muted">請選一個統一使用（另一個會被覆蓋）：</p>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setBoth(desktop)}
+              className="rounded-full border border-admin-border bg-white px-3 py-1 text-[11px] hover:bg-admin-lime"
+            >
+              用桌機版的：{desktop.split("/").pop()?.slice(-18)}
+            </button>
+            <button
+              type="button"
+              onClick={() => setBoth(mobile)}
+              className="rounded-full border border-admin-border bg-white px-3 py-1 text-[11px] hover:bg-admin-lime"
+            >
+              用手機版的：{mobile.split("/").pop()?.slice(-18)}
+            </button>
+          </div>
+        </div>
+      )}
+      <AdminMediaDropzone
+        value={value}
+        onChange={setBoth}
+        mediaPathPrefix={mediaPathPrefix ? `${mediaPathPrefix}/${media.field.key}` : media.field.key}
+        guide={baseGuide ? { ...baseGuide, title: "此分頁的手機畫面", note: "桌機版與手機版共用同一個檔案，只需上傳一次；手機框會自動貼合素材比例，直式錄影不會被裁切；影片會自動循環、靜音播放" } : undefined}
+        compact
+      />
     </div>
   );
 }
