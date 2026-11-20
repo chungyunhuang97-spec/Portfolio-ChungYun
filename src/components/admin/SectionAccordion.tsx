@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CaretDown } from "@phosphor-icons/react";
 import { ContentEditor } from "@/components/admin/ContentEditor";
@@ -125,10 +125,26 @@ export function SectionAccordion({
       pendingEdits.current = [];
       for (const [path, value] of edits) externalEditRef.current(path, value);
     }
-    // Closing unmounts the editor (and its unsaved state), so the preview
-    // should drop its drafts for this section too.
-    if (!open) publish(null);
-  }, [open, editorState.nonce, publish]);
+  }, [open, editorState.nonce]);
+
+  // The preview gets both the live draft and the saved content (it finds
+  // this section's text by the saved one). Closing unmounts the editor and
+  // its unsaved state, so the preview falls back to the saved content --
+  // but it stays published, or the preview couldn't find the text at all.
+  const liveContentRef = useRef<Record<string, unknown> | null>(null);
+  const savedContentRef = useRef(editorState.content);
+  useEffect(() => {
+    savedContentRef.current = editorState.content;
+    if (!open) liveContentRef.current = null;
+    publish(liveContentRef.current ?? editorState.content, editorState.content);
+  }, [open, editorState.content, publish]);
+  const publishLive = useCallback(
+    (content: Record<string, unknown>) => {
+      liveContentRef.current = content;
+      publish(content, savedContentRef.current);
+    },
+    [publish]
+  );
 
   const { filled, total, missing } = computeCompletion(editorState.content, mediaPathPrefix);
   const changes = useChangesContext();
@@ -203,7 +219,7 @@ export function SectionAccordion({
                 mediaPathPrefix={mediaPathPrefix}
                 trackingId={`section-${section.id}`}
                 trackingLabel={sectionLabel(section.section_type)}
-                onContentChange={publish}
+                onContentChange={publishLive}
                 externalEditRef={externalEditRef}
               />
               <div className="mt-6 border-t border-admin-border pt-4">

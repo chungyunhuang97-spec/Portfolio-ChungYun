@@ -256,8 +256,9 @@ export function ProjectMetaForm({
     },
   });
   useEffect(() => {
-    publishToPreview(currentFields as unknown as Record<string, unknown>);
-  }, [currentFields, publishToPreview]);
+    const pick = (f: MetaFields) => Object.fromEntries(INLINE_EDITABLE_META.map((k) => [k, f[k]]));
+    publishToPreview(pick(currentFields), pick(baseline));
+  }, [currentFields, baseline, publishToPreview]);
 
   const previewProjects: BentoPreviewProject[] = useMemo(() => {
     const self: BentoPreviewProject = {

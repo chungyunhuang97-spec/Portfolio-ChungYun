@@ -11,8 +11,9 @@
  *                      focus            the person clicked into a text
  *                      save             Cmd/Ctrl+S pressed inside the preview
  *   admin -> preview   enable           switch editing on
- *                      sync             latest form state for one target
- *                                       (null = forget local edits)
+ *                      sync             one target's live form state, plus
+ *                                       its saved content (what the page
+ *                                       was rendered from)
  *
  * A "target" names one editor in the admin: a section_type ("hero",
  * "overview", ...) for project_sections rows, or "project" for the
@@ -35,7 +36,13 @@ export type PreviewToAdminMessage =
 
 export type AdminToPreviewMessage =
   | { channel: typeof INLINE_EDIT_CHANNEL; type: "enable" }
-  | { channel: typeof INLINE_EDIT_CHANNEL; type: "sync"; target: string; content: InlineContent | null };
+  | {
+      channel: typeof INLINE_EDIT_CHANNEL;
+      type: "sync";
+      target: string;
+      content: InlineContent | null;
+      saved?: InlineContent | null;
+    };
 
 /** A message as written by a sender, before the channel tag is added. */
 export type Unsent<T> = T extends unknown ? Omit<T, "channel"> : never;

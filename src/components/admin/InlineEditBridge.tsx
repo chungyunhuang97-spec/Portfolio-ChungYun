@@ -18,7 +18,7 @@ interface TargetHandlers {
 
 interface BridgeValue {
   register: (target: string, handlers: TargetHandlers) => () => void;
-  publish: (target: string, content: InlineContent | null) => void;
+  publish: (target: string, content: InlineContent | null, saved: InlineContent | null) => void;
 }
 
 const BridgeContext = createContext<BridgeValue | null>(null);
@@ -39,7 +39,7 @@ export function InlineEditBridgeProvider({
   children: ReactNode;
 }) {
   const targets = useRef(new Map<string, TargetHandlers>());
-  const latest = useRef(new Map<string, InlineContent | null>());
+  const latest = useRef(new Map<string, { content: InlineContent | null; saved: InlineContent | null }>());
   const changes = useChangesContext();
   const saveAllRef = useRef<(() => void) | null>(null);
   useEffect(() => {
@@ -61,7 +61,7 @@ export function InlineEditBridgeProvider({
 
   const syncAll = useCallback(() => {
     send({ type: "enable" });
-    latest.current.forEach((content, target) => send({ type: "sync", target, content }));
+    latest.current.forEach(({ content, saved }, target) => send({ type: "sync", target, content, saved }));
   }, [send]);
 
   useEffect(() => {
@@ -96,11 +96,12 @@ export function InlineEditBridgeProvider({
           if (targets.current.get(target) === handlers) targets.current.delete(target);
         };
       },
-      publish(target, content) {
+      publish(target, content, saved) {
+        const next = { content, saved };
         const prev = latest.current.get(target);
-        if (prev !== undefined && JSON.stringify(prev) === JSON.stringify(content)) return;
-        latest.current.set(target, content);
-        send({ type: "sync", target, content });
+        if (prev !== undefined && JSON.stringify(prev) === JSON.stringify(next)) return;
+        latest.current.set(target, next);
+        send({ type: "sync", target, content, saved });
       },
     }),
     [send]
@@ -110,9 +111,10 @@ export function InlineEditBridgeProvider({
 }
 
 /**
- * Lets a form take part in preview editing. Returns `publish` (call it
- * with the form's current content whenever it changes, or null to drop the
- * preview's drafts for this target). Safe outside the provider: it no-ops.
+ * Lets a form take part in preview editing. Returns `publish`: call it with
+ * the form's live content and its saved content whenever either changes.
+ * The preview finds editable text by the saved content and shows the live
+ * one. Safe outside the provider: it no-ops.
  */
 export function useInlineEditTarget(target: string, handlers: TargetHandlers) {
   const bridge = useContext(BridgeContext);
@@ -131,8 +133,8 @@ export function useInlineEditTarget(target: string, handlers: TargetHandlers) {
   }, [bridge, target]);
 
   return useCallback(
-    (content: InlineContent | null) => {
-      bridge?.publish(target, content);
+    (content: InlineContent | null, saved: InlineContent | null) => {
+      bridge?.publish(target, content, saved);
     },
     [bridge, target]
   );
