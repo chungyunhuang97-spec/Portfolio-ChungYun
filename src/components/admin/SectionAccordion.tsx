@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CaretDown } from "@phosphor-icons/react";
 import { ContentEditor } from "@/components/admin/ContentEditor";
@@ -8,6 +8,7 @@ import { DeleteSectionButton } from "@/components/admin/DeleteSectionButton";
 import { CompletionBadge } from "@/components/admin/StatusBadge";
 import { useChangesContext } from "@/components/admin/ChangesContext";
 import { VersionHistory } from "@/components/admin/VersionHistory";
+import { revealField, useInlineEditTarget } from "@/components/admin/InlineEditBridge";
 import type { ProjectSection } from "@/lib/types";
 import { resolveFieldLabel, sectionLabel, SECTION_INFO } from "@/lib/admin-field-guide";
 
@@ -72,15 +73,15 @@ export function SectionAccordion({
   const [editorState, setEditorState] = useState({ content: section.content, nonce: 0 });
   const bodyRef = useRef<HTMLDivElement>(null);
 
+  function findField(key: string) {
+    return bodyRef.current?.querySelector<HTMLElement>(`[data-field-key="${CSS.escape(key)}"]`);
+  }
+
   /** Scrolls to a field inside this section, flashes it and focuses its input. */
   function jumpToField(key: string) {
-    const target = bodyRef.current?.querySelector<HTMLElement>(`[data-field-key="${CSS.escape(key)}"]`);
+    const target = findField(key);
     if (!target) return;
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
-    target.classList.remove("admin-flash");
-    void target.offsetWidth; // restart the animation if it is clicked twice
-    target.classList.add("admin-flash");
-    window.setTimeout(() => target.classList.remove("admin-flash"), 1800);
+    revealField(target);
     const input = target.querySelector<HTMLElement>(
       'input:not([type="file"]):not([type="checkbox"]), textarea, select'
     );
@@ -94,6 +95,41 @@ export function SectionAccordion({
     if (result.success) setEditorState((prev) => ({ ...prev, content }));
     return result;
   }
+  // --- Editing from the preview -----------------------------------------
+  // The preview addresses this section by its section_type. Its edits are
+  // written into the ContentEditor like normal typing; while the accordion
+  // is closed (no editor mounted) they're buffered, the accordion opens,
+  // and the buffer is replayed once the editor is there.
+  const externalEditRef = useRef<((path: string, value: string) => void) | null>(null);
+  const pendingEdits = useRef<[string, string][]>([]);
+  const publish = useInlineEditTarget(section.section_type, {
+    onEdit(path, value) {
+      if (externalEditRef.current) {
+        externalEditRef.current(path, value);
+      } else {
+        pendingEdits.current.push([path, value]);
+        setOpen(true);
+      }
+    },
+    onFocus(path) {
+      setOpen(true);
+      const key = path.split(".")[0];
+      // Wait for the open animation to lay the field out.
+      window.setTimeout(() => revealField(findField(key)), open ? 0 : 350);
+    },
+  });
+
+  useEffect(() => {
+    if (open && externalEditRef.current && pendingEdits.current.length > 0) {
+      const edits = pendingEdits.current;
+      pendingEdits.current = [];
+      for (const [path, value] of edits) externalEditRef.current(path, value);
+    }
+    // Closing unmounts the editor (and its unsaved state), so the preview
+    // should drop its drafts for this section too.
+    if (!open) publish(null);
+  }, [open, editorState.nonce, publish]);
+
   const { filled, total, missing } = computeCompletion(editorState.content, mediaPathPrefix);
   const changes = useChangesContext();
   const isDirty = changes?.dirtyEntries.some((e) => e.id === `section-${section.id}`) ?? false;
@@ -167,6 +203,8 @@ export function SectionAccordion({
                 mediaPathPrefix={mediaPathPrefix}
                 trackingId={`section-${section.id}`}
                 trackingLabel={sectionLabel(section.section_type)}
+                onContentChange={publish}
+                externalEditRef={externalEditRef}
               />
               <div className="mt-6 border-t border-admin-border pt-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">

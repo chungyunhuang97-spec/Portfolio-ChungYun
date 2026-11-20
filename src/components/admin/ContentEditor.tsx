@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type RefObject } from "react";
+import { setIn } from "@/lib/inline-edit";
 import { Plus, Trash, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { AdminMediaDropzone } from "@/components/admin/AdminMediaDropzone";
 import { useTrackChanges } from "@/components/admin/ChangesContext";
@@ -685,6 +686,8 @@ export function ContentEditor({
   mediaPathPrefix,
   trackingId,
   trackingLabel,
+  onContentChange,
+  externalEditRef,
 }: {
   initialContent: Record<string, unknown>;
   onSave: (content: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
@@ -696,6 +699,12 @@ export function ContentEditor({
   // entirely when this editor isn't inside a ChangesProvider.
   trackingId?: string;
   trackingLabel?: string;
+  /** Called with the live (unsaved) content whenever it changes -- feeds the
+   *  admin preview so it can show drafts. */
+  onContentChange?: (content: Record<string, unknown>) => void;
+  /** Filled with a function that writes one value at a dot path, so text
+   *  typed into the preview lands in this editor like normal typing. */
+  externalEditRef?: RefObject<((path: string, value: string) => void) | null>;
 }) {
   const [fields, setFields] = useState<Field[]>(() => contentToFields(initialContent));
   const [rawMode, setRawMode] = useState(false);
@@ -788,6 +797,39 @@ export function ContentEditor({
   );
 
   const grouped = useMemo(() => groupFields(fields), [fields]);
+
+  useEffect(() => {
+    if (currentContent) onContentChange?.(currentContent);
+  }, [currentContent, onContentChange]);
+
+  useEffect(() => {
+    if (!externalEditRef) return;
+    externalEditRef.current = (path, value) => {
+      const [key, ...rest] = path.split(".");
+      if (!key) return;
+      if (rawMode) {
+        setRawText((prev) => {
+          try {
+            return JSON.stringify(setIn(JSON.parse(prev), path, value), null, 2);
+          } catch {
+            return prev;
+          }
+        });
+        return;
+      }
+      setFields((prev) => {
+        const i = prev.findIndex((f) => f.key === key);
+        if (i === -1) {
+          const fresh = setIn(undefined, rest, value);
+          return [...prev, { key, type: detectType(fresh, key), value: fresh }];
+        }
+        return prev.map((f, idx) => (idx === i ? { ...f, value: setIn(f.value, rest, value) } : f));
+      });
+    };
+    return () => {
+      externalEditRef.current = null;
+    };
+  }, [externalEditRef, rawMode]);
 
   useTrackChanges(
     trackingId ?? mediaPathPrefix ?? "editor",

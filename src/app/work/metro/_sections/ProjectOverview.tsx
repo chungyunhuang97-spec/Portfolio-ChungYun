@@ -1,4 +1,5 @@
 import { SlideIn } from "@/components/design-system/SlideIn";
+import { Editable } from "@/components/inline-edit/Editable";
 import type { Project } from "@/lib/types";
 import {
   OverviewClockIcon,
@@ -56,10 +57,19 @@ export function ProjectOverview({
   const mobileContribution =
     (overview.mobileContribution as string) || contribution;
 
+  // In the admin preview, edits go to whichever field the shown text came
+  // from: the mobile override if it's set, otherwise the shared value.
+  const mobileTextPath = overview.mobileText ? "mobileText" : "text";
+  const mobileContributionPath = overview.mobileContribution ? "mobileContribution" : "contribution";
+  const mobileMeta = (key: "Timeframe" | "Team" | "Role", projectKey: "timeframe" | "team" | "role") =>
+    overview[`mobile${key}`]
+      ? { target: "overview", path: `mobile${key}` }
+      : { target: "project", path: projectKey };
+
   const infoCards = [
-    { label: "專案時間", value: timeframe },
-    { label: "團隊成員", value: team },
-    { label: "擔任角色", value: role },
+    { label: "專案時間", value: timeframe, path: "timeframe" },
+    { label: "團隊成員", value: team, path: "team" },
+    { label: "擔任角色", value: role, path: "role" },
   ];
 
   return (
@@ -88,7 +98,7 @@ export function ProjectOverview({
           <div className="relative rounded-lg border border-[#e6e6e6] bg-proj-white px-5 py-3">
             <QuoteMarkLeft className="absolute top-[11px] left-[5px]" />
             <p className="font-nunito px-3 text-center text-[14px] leading-[21px] font-normal text-grey-800">
-              {mobileText}
+              <Editable target="overview" path={mobileTextPath} value={mobileText} />
             </p>
             <QuoteMarkRight className="absolute top-[11px] right-[13px]" />
           </div>
@@ -102,7 +112,7 @@ export function ProjectOverview({
                   <OverviewClockIcon />
                 </span>
                 <p className="font-nunito text-[12px] font-bold text-grey-800">
-                  {mobileTimeframe}
+                  <Editable {...mobileMeta("Timeframe", "timeframe")} value={mobileTimeframe} />
                 </p>
               </div>
               <div className="flex flex-col items-center justify-center gap-1 rounded-lg border border-[#e6e6e6] bg-proj-white px-2.5 py-1.5">
@@ -110,7 +120,7 @@ export function ProjectOverview({
                   <OverviewPeopleIcon />
                 </span>
                 <p className="font-nunito text-[12px] font-bold text-grey-800">
-                  {mobileTeam}
+                  <Editable {...mobileMeta("Team", "team")} value={mobileTeam} />
                 </p>
               </div>
             </div>
@@ -120,11 +130,13 @@ export function ProjectOverview({
                 <div className="rounded-lg border border-primary-orange bg-proj-white px-2.5 py-1.5">
                   <p className="font-nunito text-[12px] font-bold text-grey-800">
                     擔任｜
-                    <span className="text-primary-orange">{mobileRole}</span>
+                    <span className="text-primary-orange">
+                      <Editable {...mobileMeta("Role", "role")} value={mobileRole} />
+                    </span>
                   </p>
                 </div>
                 <p className="font-nunito min-w-full text-center text-[13px] leading-[18px] font-normal text-grey-600">
-                  {mobileContribution}
+                  <Editable target="overview" path={mobileContributionPath} value={mobileContribution} />
                 </p>
               </div>
             )}
@@ -146,7 +158,9 @@ export function ProjectOverview({
                     <span className="text-grey-600">
                       {String(i + 1).padStart(2, "0")} /{" "}
                     </span>
-                    <span className="text-primary-orange">{card.title}</span>
+                    <span className="text-primary-orange">
+                      <Editable target="challenge" path={`items.${i}.title`} value={card.title} />
+                    </span>
                   </p>
                 </div>
               ))}
@@ -183,7 +197,7 @@ export function ProjectOverview({
               專案簡介
             </h3>
             <p className="font-nunito w-full text-[16px] leading-[24px] font-normal text-grey-800">
-              {overviewText}
+              <Editable target="overview" path="text" value={overviewText} />
             </p>
           </div>
 
@@ -205,7 +219,7 @@ export function ProjectOverview({
                       {card.label}
                     </p>
                     <p className="font-fredoka text-[28px] leading-[39px] text-primary-black">
-                      {card.value}
+                      <Editable target="project" path={card.path} value={card.value} />
                     </p>
                   </div>
                 </SlideIn>
@@ -223,7 +237,7 @@ export function ProjectOverview({
                     aria-hidden
                   />
                   <p className="font-nunito flex-1 text-[14px] leading-[22px] font-normal text-grey-500">
-                    {contribution}
+                    <Editable target="overview" path="contribution" value={contribution} />
                   </p>
                 </div>
               </SlideIn>
@@ -252,10 +266,11 @@ export function ProjectOverview({
               >
                 <div className="flex h-full flex-col gap-4 rounded-2xl border border-[#ededed] bg-proj-white p-8 shadow-[0_4px_8px_rgba(0,0,0,0.05)]">
                   <p className="font-nunito text-[24px] leading-[36px] font-bold text-primary-black">
-                    {String(i + 1).padStart(2, "0")} / {card.title}
+                    {String(i + 1).padStart(2, "0")} /{" "}
+                    <Editable target="challenge" path={`items.${i}.title`} value={card.title} />
                   </p>
                   <p className="font-nunito text-[15px] leading-[23px] font-normal text-grey-800">
-                    {card.desc}
+                    <Editable target="challenge" path={`items.${i}.desc`} value={card.desc} />
                   </p>
                 </div>
               </SlideIn>

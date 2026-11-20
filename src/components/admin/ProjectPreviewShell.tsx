@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowClockwise, ArrowSquareOut, DeviceMobile, Desktop, Eye, X } from "@phosphor-icons/react";
 import { useChangesContext } from "@/components/admin/ChangesContext";
+import { InlineEditBridgeProvider } from "@/components/admin/InlineEditBridge";
 
 type Device = "desktop" | "mobile";
 
@@ -72,6 +73,7 @@ export function ProjectPreviewShell({ slug, children }: { slug: string; children
 
   return (
     <PreviewContext.Provider value={{ open, setOpen }}>
+    <InlineEditBridgeProvider iframeRef={iframeRef}>
     <div className={open ? "xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(400px,46%)] xl:items-start xl:gap-8" : ""}>
       <div className="min-w-0">
         {children}
@@ -102,7 +104,7 @@ export function ProjectPreviewShell({ slug, children }: { slug: string; children
               ))}
             </div>
             <p className="hidden truncate text-[11px] text-admin-text-faint sm:block">
-              {dirtyCount > 0 ? "有未儲存的變更，儲存後預覽會自動更新" : "預覽顯示已儲存的內容"}
+              {dirtyCount > 0 ? "有未儲存的變更，按儲存才會寫入" : "點預覽裡的文字可直接編輯"}
             </p>
             <div className="flex items-center gap-1">
               <button
@@ -145,6 +147,7 @@ export function ProjectPreviewShell({ slug, children }: { slug: string; children
         </aside>
       )}
     </div>
+    </InlineEditBridgeProvider>
     </PreviewContext.Provider>
   );
 }

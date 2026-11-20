@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { CaretDown } from "@phosphor-icons/react";
 import { useTrackChanges } from "@/components/admin/ChangesContext";
+import { revealField, useInlineEditTarget } from "@/components/admin/InlineEditBridge";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { AdminMediaDropzone } from "@/components/admin/AdminMediaDropzone";
 import { COVER_DESKTOP_GUIDE, COVER_MOBILE_GUIDE, HOVER_PREVIEW_GUIDE } from "@/lib/admin-field-guide";
@@ -43,7 +44,7 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
+    <div data-field-key={en} className={`flex flex-col gap-1.5 ${className}`}>
       <label htmlFor={htmlFor} className="text-sm font-medium text-admin-text">
         {label}
         {en && <span className="ml-2 font-mono text-[10px] font-normal text-admin-text-faint">{en}</span>}
@@ -93,6 +94,9 @@ const STATUS_HELP: Record<ProjectStatus, string> = {
   published: "已發佈：前台公開，可以被所有人看到",
   archived: "封存：從前台移除，但資料保留在後台",
 };
+
+/** Project fields the preview may edit in place (plain text only). */
+const INLINE_EDITABLE_META = ["title", "subtitle", "category", "role", "timeframe", "team"] as const;
 
 type MetaFields = {
   title: string;
@@ -236,6 +240,24 @@ export function ProjectMetaForm({
   const isDirty = JSON.stringify(currentFields) !== JSON.stringify(baseline);
 
   useTrackChanges(`meta-${project.id}`, "專案資訊", isDirty, handleSave);
+
+  // Text typed into the preview for project-level fields (Hero kicker /
+  // subtitle, overview info cards) lands here like normal typing.
+  const publishToPreview = useInlineEditTarget("project", {
+    onEdit(path, value) {
+      if (!(INLINE_EDITABLE_META as readonly string[]).includes(path)) return;
+      const key = path as (typeof INLINE_EDITABLE_META)[number];
+      set(key, key === "title" ? value : value || null);
+    },
+    onFocus(path) {
+      const group = document.getElementById("group-basic");
+      if (group instanceof HTMLDetailsElement) group.open = true;
+      revealField(group?.querySelector<HTMLElement>(`[data-field-key="${CSS.escape(path)}"]`));
+    },
+  });
+  useEffect(() => {
+    publishToPreview(currentFields as unknown as Record<string, unknown>);
+  }, [currentFields, publishToPreview]);
 
   const previewProjects: BentoPreviewProject[] = useMemo(() => {
     const self: BentoPreviewProject = {

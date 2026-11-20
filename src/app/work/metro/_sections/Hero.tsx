@@ -2,6 +2,7 @@ import { DisplayHero, BodyLarge, LabelSmall } from "@/components/design-system/T
 import { Tag } from "@/components/design-system/Tag";
 import { PhoneFrame } from "@/components/design-system/PhoneFrame";
 import { SlideIn } from "@/components/design-system/SlideIn";
+import { Editable } from "@/components/inline-edit/Editable";
 import type { Project } from "@/lib/types";
 
 function isVideoUrl(url: string) {
@@ -65,30 +66,30 @@ export function Hero({
       {/* Mobile layout */}
       <div className="flex flex-col md:hidden">
         <SlideIn delay={1.0}>
-          <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
-          <DisplayHero className="mt-2 text-primary-black">{title}</DisplayHero>
+          <LabelSmall className="text-primary-orange"><Editable target="project" path="category" value={kicker} placeholder="UI/UX DESIGN PROJECT" /></LabelSmall>
+          <DisplayHero className="mt-2 text-primary-black"><Editable target="hero" path="title" value={title} /></DisplayHero>
         </SlideIn>
 
         <SlideIn delay={1.15} className="mx-auto mt-8 w-[62%] max-w-[240px]">
           <PhoneFrame fitMedia screen={screen} float />
         </SlideIn>
 
-        <BodyLarge className="mt-8 text-center text-grey-600">{body}</BodyLarge>
+        <BodyLarge className="mt-8 text-center text-grey-600"><Editable target="project" path="subtitle" value={body} /></BodyLarge>
       </div>
 
       {/* Desktop layout */}
       <div className="hidden w-full items-center justify-between gap-x-20 md:flex">
         <SlideIn delay={1.0} className="w-[749px] shrink-0">
-          <LabelSmall className="text-primary-orange">{kicker}</LabelSmall>
+          <LabelSmall className="text-primary-orange"><Editable target="project" path="category" value={kicker} placeholder="UI/UX DESIGN PROJECT" /></LabelSmall>
           <DisplayHero className="mt-5 whitespace-nowrap text-primary-black">
-            {title}
+            <Editable target="hero" path="title" value={title} />
           </DisplayHero>
-          <BodyLarge className="mt-5 max-w-[610px] text-grey-600">{body}</BodyLarge>
+          <BodyLarge className="mt-5 max-w-[610px] text-grey-600"><Editable target="project" path="subtitle" value={body} /></BodyLarge>
           {tags.length > 0 && (
             <div className="mt-5 flex gap-4">
-              {tags.map((tag) => (
+              {tags.map((tag, i) => (
                 <Tag key={tag} variant="orange">
-                  {tag}
+                  <Editable target="hero" path={`tagline.${i}`} value={tag} />
                 </Tag>
               ))}
             </div>
